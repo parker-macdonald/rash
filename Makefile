@@ -1,7 +1,8 @@
 PREFIX := /usr/local
 INCS := -Isrc/
 
-CFLAGS := -std=c17 -pedantic -Wall
+SANITIZER := 
+CFLAGS := -std=c17
 CFLAG_ERRORS := -Werror -Wall -Wextra -Wunreachable-code -Wshadow -Wpedantic
 LDFLAGS := $(INCS)
 CC := clang
@@ -29,11 +30,11 @@ all: build
 build: $(BUILD)/$(OUT)
 
 $(BUILD)/$(OUT): $(OBJ)
-	$(CC) -o $(BUILD)/$(OUT) $(LDFLAGS) $^  
+	$(CC) -o $(BUILD)/$(OUT) $(SANITIZER) $(LDFLAGS) $^  
 
 $(BUILD)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) $(SANITIZER) -c -o $@ $<
 
 clean:
 	@rm -r $(BUILD)
