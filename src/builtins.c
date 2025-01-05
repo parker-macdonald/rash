@@ -5,7 +5,7 @@
 
 int builtin_cd(char **const argv) {
   if (argv[1] == NULL) {
-    fprintf(stderr, "Usage: %s [PATH]\n", argv[1]);
+    fprintf(stderr, "Usage: %s [PATH]\n", argv[0]);
     return EXIT_FAILURE;
   }
 
