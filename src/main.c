@@ -1,8 +1,14 @@
-#include "vector.h"
+// for getline
+#define  _POSIX_C_SOURCE 200809L
+
+#include "execute.h"
+#include "lexer.h"
 #include <sched.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #define BUFFER_SIZE 256
 
@@ -22,39 +28,21 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Usage: %s [FILE]", argv[1]);
   }
 
-  char buffer[BUFFER_SIZE];
+  char* line = NULL;
+  size_t line_size = 0;
 
-  while (fgets(buffer, BUFFER_SIZE, fp) != NULL) {
-    char* pathname = strtok(buffer, " \t\n");
-    VECTOR(char*) args;
-    VECTOR_INIT(args);
+  bool should_exit = false;
+  while (!should_exit && getline(&line, &line_size, fp) > 0) {
+    char** tokens = get_tokens_from_line(line);
 
-    VECTOR_PUSH(args, pathname);
+    int status = execute(tokens, &should_exit);
 
-    char* token;
+    free(tokens);
 
-    while ((token = strtok(NULL, " \t\n")) != NULL) {
-      VECTOR_PUSH(args, token);
-    }
-
-    VECTOR_PUSH(args, NULL);
-
-    pid_t pid = fork();
-
-    if (pid == 0) {
-      int status = execvp(pathname, args.data);
-
-      if (status == -1) {
-        perror(pathname);
-      }
-    }
-
-    if (pid == -1) {
-      perror("fork");
-    }
-
-    VECTOR_DESTROY(args);
+    printf("Process ended with status: %d\n", status);
   }
+
+  free(line);
 
   fclose(fp);
 
