@@ -39,6 +39,10 @@ int spawn_process(char **const argv) {
 }
 
 int execute(char **const argv, bool *should_exit) {
+  if (argv[0] == NULL) {
+    return EXIT_SUCCESS;
+  }
+  
   for (size_t i = 0; i < NUM_OF_BUILTINS; i++) {
     if (strcmp(argv[0], builtins[i]) == 0) {
       if (i == EXIT) {
