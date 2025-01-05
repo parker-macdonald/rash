@@ -8,25 +8,25 @@
 #define VECTOR(type) \
 struct { \
   size_t capacity; \
-  size_t index; \
+  size_t length; \
   type *data; \
 }
 
 #define VECTOR_INIT(vector) \
 { \
   vector.capacity = VECTOR_DEFAULT_SIZE; \
-  vector.index = 0; \
+  vector.length = 0; \
   vector.data = malloc(sizeof(*vector.data) * VECTOR_DEFAULT_SIZE); \
 }
 
 #define VECTOR_PUSH(vector, value) \
 { \
-  if (vector.capacity <= vector.index) { \
+  if (vector.capacity <= vector.length) { \
     vector.capacity *= 2; \
-    vector.data = realloc(vector.data, vector.capacity); \
+    vector.data = realloc(vector.data, sizeof(*vector.data) * vector.capacity); \
   } \
-  vector.data[vector.index] = value; \
-  vector.index++; \
+  vector.data[vector.length] = value; \
+  vector.length++; \
 }
 
 #define VECTOR_DESTROY(vector) \
