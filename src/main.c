@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
   char buffer[BUFFER_SIZE];
 
   while (fgets(buffer, BUFFER_SIZE, fp) != NULL) {
-    char* pathname = strtok(buffer, " ");
+    char* pathname = strtok(buffer, " \t\n");
     VECTOR(char*) args;
     VECTOR_INIT(args);
 
@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
 
     char* token;
 
-    while ((token = strtok(NULL, " ")) != NULL) {
+    while ((token = strtok(NULL, " \t\n")) != NULL) {
       VECTOR_PUSH(args, token);
     }
 
@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
       int status = execvp(pathname, args.data);
 
       if (status == -1) {
-        perror("execv");
+        perror(pathname);
       }
     }
 
