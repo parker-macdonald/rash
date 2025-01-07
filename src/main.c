@@ -3,11 +3,8 @@
 
 #include "execute.h"
 #include "lexer.h"
-#include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 #include <stdbool.h>
 
 #define BUFFER_SIZE 256
