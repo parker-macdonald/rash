@@ -38,7 +38,15 @@ int main(int argc, char **argv) {
       printf("$ ");
     }
 
-    if (getline(&line, &line_size, fp) <= 0) {
+    ssize_t getline_status = getline(&line, &line_size, fp);
+
+    if (getline_status == 0) {
+      break;
+    } else if (getline_status == -1) {
+      if (!feof(fp)) {
+        perror("getline");
+      }
+
       break;
     }
 
