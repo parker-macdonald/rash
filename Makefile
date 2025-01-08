@@ -2,7 +2,7 @@ PREFIX := /usr/local
 INCS := -Isrc/
 
 SANITIZER := 
-CFLAGS := -std=c17
+CFLAGS := -std=gnu17 -D_GNU_SOURCE
 CFLAG_ERRORS := -Werror -Wall -Wextra -Wunreachable-code -Wshadow -Wpedantic
 LDFLAGS := $(INCS)
 CC := clang

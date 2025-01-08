@@ -1,4 +1,7 @@
 #include "builtins.h"
+#include "enviroment.h"
+#include <ctype.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -27,7 +30,32 @@ int builtin_help(char **const argv) {
 
 int builtin_exit(char **const argv) { exit(EXIT_SUCCESS); }
 
-const char *const builtins[NUM_OF_BUILTINS] = {"cd", "help", "exit"};
+int builtin_export(char **const argv) {
+  if (argv[1] == NULL) {
+    fprintf(stderr, "Usage: %s [VAR NAME]=[VAR VALUE]", argv[1]);
+    return EXIT_FAILURE;
+  }
 
-int (*builtin_fns[NUM_OF_BUILTINS])(char **const) = {&builtin_cd, &builtin_help,
-                                                     &builtin_exit};
+  for (size_t i = 1; argv[i] != NULL; i++) {
+    for (size_t j = 0; argv[i][j] != '\0'; j++) {
+      char c = argv[i][j];
+      if (c == '=') {
+        break;
+      }
+
+      if (!isalpha(c)) {
+        fprintf(stderr, "Invalid identifier: `%s`\n", argv[i]);
+        return EXIT_FAILURE;
+      }
+    }
+
+    env_add(argv[i]);
+  }
+
+  return EXIT_SUCCESS;
+}
+
+const char *const builtins[NUM_OF_BUILTINS] = {"cd", "help", "exit", "export"};
+
+int (*builtin_fns[NUM_OF_BUILTINS])(char **const) = {
+    &builtin_cd, &builtin_help, &builtin_exit, &builtin_export};

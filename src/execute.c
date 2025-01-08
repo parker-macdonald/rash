@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include "builtins.h"
+#include "enviroment.h"
 #include "execute.h"
 
 int spawn_process(char **const argv) {
@@ -11,7 +12,9 @@ int spawn_process(char **const argv) {
 
   // child
   if (pid == 0) {
-    int status = execvp(argv[0], argv);
+    char** envp = env_get_array();
+    int status = execvpe(argv[0], argv, envp);
+    free(envp);
 
     if (status == -1) {
       fprintf(stderr, "execvp: ");
