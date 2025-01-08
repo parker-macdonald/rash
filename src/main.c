@@ -19,13 +19,14 @@ int main(int argc, char **argv) {
 
     if (fp == NULL) {
       perror(argv[1]);
-      return 1;
+      return EXIT_FAILURE;
     }
   } else if (argc == 1) {
     interactive = true;
     fp = stdin;
   } else {
-    fprintf(stderr, "Usage: %s [FILE]", argv[1]);
+    fprintf(stderr, "Usage: %s [FILE]\n", argv[0]);
+    return EXIT_FAILURE;
   }
 
   char *line = NULL;
@@ -68,5 +69,5 @@ int main(int argc, char **argv) {
 
   fclose(fp);
 
-  return 0;
+  return EXIT_SUCCESS;
 }
