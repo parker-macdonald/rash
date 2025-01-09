@@ -34,6 +34,7 @@ env_t *env_get_node_from_name(const char *const env_str) {
       ;
 
     if (equals != env_equals) {
+      current = current->p_next;
       continue;
     }
 

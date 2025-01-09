@@ -4,9 +4,9 @@
 #include <string.h>
 #include <unistd.h>
 
-static VECTOR(char *) tokens;
 
 char **get_tokens_from_line(char *const line) {
+  VECTOR(char *) tokens;
   VECTOR_INIT(tokens);
 
   char *pathname = strtok(line, " \t\r\n");
