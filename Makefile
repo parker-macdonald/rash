@@ -38,3 +38,8 @@ $(BUILD)/%.o: %.c
 
 clean:
 	@rm -r $(BUILD)
+
+install:
+	mkdir -p ${DESTDIR}${PREFIX}/bin
+	cp -f ${BUILD}/${OUT} ${DESTDIR}${PREFIX}/bin
+	chmod 755 ${DESTDIR}${PREFIX}/bin/${out}
