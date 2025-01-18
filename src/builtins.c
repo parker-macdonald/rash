@@ -1,10 +1,13 @@
 #include "builtins.h"
 #include "enviroment.h"
+#include <errno.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+extern bool should_exit;
 
 int builtin_cd(char **const argv) {
   if (argv[1] == NULL) {
@@ -23,12 +26,28 @@ int builtin_cd(char **const argv) {
 }
 
 int builtin_help(char **const argv) {
-  printf("Example help command\n");
+  printf("Using rash from path: %s\n", argv[0]);
 
   return EXIT_SUCCESS;
 }
 
-int builtin_exit(char **const argv) { exit(EXIT_SUCCESS); }
+int builtin_exit(char **const argv) {
+  should_exit = true;
+
+  if (argv[1] == NULL) {
+    return 0;
+  }
+
+  int old_errno = errno;
+  long status = strtol(argv[1], NULL, 10);
+
+  if (old_errno != errno) {
+    perror("exit");
+    return 2;
+  }
+
+  return (int)status;
+}
 
 int builtin_export(char **const argv) {
   if (argv[1] == NULL) {

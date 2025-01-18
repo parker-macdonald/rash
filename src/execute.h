@@ -3,6 +3,6 @@
 
 #include <stdbool.h>
 
-int execute(char **const argv, bool *should_exit);
+int execute(char **const argv);
 
 #endif

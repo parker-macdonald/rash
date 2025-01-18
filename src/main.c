@@ -10,6 +10,8 @@
 
 #define BUFFER_SIZE 256
 
+bool should_exit = false;
+
 int main(int argc, char **argv) {
   FILE *fp = NULL;
   bool interactive = false;
@@ -31,8 +33,8 @@ int main(int argc, char **argv) {
 
   char *line = NULL;
   size_t line_size = 0;
+  int status = EXIT_SUCCESS;
 
-  bool should_exit = false;
   env_init();
   while (!should_exit) {
     if (interactive) {
@@ -53,9 +55,13 @@ int main(int argc, char **argv) {
 
     char **tokens = get_tokens_from_line(line);
 
-    int status = execute(tokens, &should_exit);
+    status = execute(tokens);
 
     free(tokens);
+
+    if (should_exit) {
+      break;
+    }
 
     // ? + = + 3 digit number (exit status is max of 255) + null terminator
     char status_env[1 + 1 + 3 + 1] = {0};
@@ -69,5 +75,5 @@ int main(int argc, char **argv) {
 
   fclose(fp);
 
-  return EXIT_SUCCESS;
+  return status;
 }
