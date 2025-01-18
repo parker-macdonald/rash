@@ -2,8 +2,8 @@ PREFIX := /usr/local
 INCS := -Isrc/
 
 SANITIZER := 
-CFLAGS := -std=gnu17 -D_GNU_SOURCE
-CFLAG_ERRORS := -Werror -Wall -Wextra -Wunreachable-code -Wshadow -Wpedantic
+CFLAGS := -std=c99 -D_GNU_SOURCE
+CFLAG_ERRORS := -Werror -Wall -Wvla -Wextra -Wunreachable-code -Wshadow -Wpedantic
 LDFLAGS := $(INCS)
 CC := clang
 
@@ -14,6 +14,18 @@ ifeq ($(DEBUG),1)
 else
 	CFLAGS += -O3
 	LDFLAGS += -s
+
+# use thin lto if using clang
+	ifeq ($(CC),clang)
+		CFLAGS += -flto=thin
+		LDFLAGS += -flto=thin
+	else
+# use lto if use gcc
+		ifeq ($(CC),gcc)
+			CFLAGS += -flto
+			LDFLAGS += -flto
+		endif
+	endif
 endif
 
 OUT := rash
@@ -34,7 +46,7 @@ $(BUILD)/$(OUT): $(OBJ)
 
 $(BUILD)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(SANITIZER) -c -o $@ $<
+	$(CC) $(CFLAGS) $(CFLAG_ERRORS) $(SANITIZER) -c -o $@ $<
 
 clean:
 	@rm -r $(BUILD)
