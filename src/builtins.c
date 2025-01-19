@@ -56,13 +56,16 @@ int builtin_export(char **const argv) {
   }
 
   for (size_t i = 1; argv[i] != NULL; i++) {
-    for (size_t j = 0; argv[i][j] != '\0'; j++) {
+    if (!isalpha(argv[i][0])) {
+      fprintf(stderr, "Invalid identifier: `%s`\n", argv[i]);
+    }
+    for (size_t j = 1; argv[i][j] != '\0'; j++) {
       char c = argv[i][j];
       if (c == '=') {
         break;
       }
 
-      if (!isalpha(c)) {
+      if (!isalnum(c)) {
         fprintf(stderr, "Invalid identifier: `%s`\n", argv[i]);
         return EXIT_FAILURE;
       }
