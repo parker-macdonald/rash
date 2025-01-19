@@ -36,9 +36,10 @@ int main(int argc, char **argv) {
   int status = EXIT_SUCCESS;
 
   env_init();
+  env_add("PS1=$ ");
   while (!should_exit) {
     if (interactive) {
-      printf("$ ");
+      printf("%s", env_get("PS1"));
     }
 
     ssize_t getline_status = getline(&line, &line_size, fp);
@@ -55,9 +56,13 @@ int main(int argc, char **argv) {
 
     char **tokens = get_tokens_from_line(line);
 
-    status = execute(tokens);
+    if (tokens != NULL) {
+      status = execute(tokens);
 
-    free(tokens);
+      free(tokens);
+    } else {
+      status = EXIT_FAILURE;
+    }
 
     if (should_exit) {
       break;
