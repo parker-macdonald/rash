@@ -1,7 +1,7 @@
 #include "builtins.h"
 #include "enviroment.h"
-#include <errno.h>
 #include <ctype.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,14 +10,21 @@
 extern bool should_exit;
 
 int builtin_cd(char **const argv) {
+  char *path = argv[1];
   if (argv[1] == NULL) {
-    fprintf(stderr, "Usage: %s [PATH]\n", argv[0]);
-    return EXIT_FAILURE;
+    char *home = getenv("HOME");
+    
+    if (home == NULL) {
+      fprintf(stderr, "HOME is not set\n");
+      return EXIT_FAILURE;
+    }
+
+    path = home;
   }
 
-  if (chdir(argv[1]) == -1) {
+  if (chdir(path) == -1) {
     fprintf(stderr, "%s: ", argv[0]);
-    perror(argv[1]);
+    perror(path);
 
     return EXIT_FAILURE;
   }
