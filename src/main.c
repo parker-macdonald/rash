@@ -1,7 +1,3 @@
-// for getline
-#define _POSIX_C_SOURCE 200809L
-
-#include "enviroment.h"
 #include "execute.h"
 #include "lexer.h"
 #include <stdbool.h>
@@ -35,17 +31,17 @@ int main(int argc, char **argv) {
   size_t line_size = 0;
   int status = EXIT_SUCCESS;
 
-  env_init();
-  env_add("PS1=$ ");
+  setenv("PS1", "$ ", 0);
+
   while (!should_exit) {
     if (interactive) {
-      printf("%s", env_get("PS1"));
+      printf("%s", getenv("PS1"));
     }
 
     ssize_t getline_status = getline(&line, &line_size, fp);
 
     if (getline_status == 0) {
-      break;
+        break;
     } else if (getline_status == -1) {
       if (!feof(fp)) {
         perror("getline");
@@ -69,12 +65,11 @@ int main(int argc, char **argv) {
     }
 
     // ? + = + 3 digit number (exit status is max of 255) + null terminator
-    char status_env[1 + 1 + 3 + 1] = {0};
+    char status_env[3 + 1] = {0};
 
-    sprintf(status_env, "?=%d", status);
-    env_add(status_env);
+    sprintf(status_env, "%d", status);
+    setenv("?", status_env, 1);
   }
-  env_destroy();
 
   free(line);
 

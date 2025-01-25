@@ -1,4 +1,3 @@
-#include "enviroment.h"
 #include "vector.h"
 #include <ctype.h>
 #include <stdio.h>
@@ -14,15 +13,6 @@ char **get_tokens_from_line(char *const line) {
       continue;
     }
     token = line + i;
-
-    if (token[0] == '$') {
-      if (token[1] != '\0') {
-        char *env_var = env_get(token + 1);
-
-        VECTOR_PUSH(tokens, env_var);
-        continue;
-      }
-    }
 
     if (line[i] == '"') {
       i++;
@@ -49,6 +39,16 @@ char **get_tokens_from_line(char *const line) {
       ;
 
     line[i] = '\0';
+
+    if (token[0] == '$') {
+      if (token[1] != '\0') {
+        char *env_var = getenv(token + 1);
+
+        if (env_var != NULL)
+          VECTOR_PUSH(tokens, env_var);
+        continue;
+      }
+    }
 
     VECTOR_PUSH(tokens, token);
   }

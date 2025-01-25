@@ -1,5 +1,4 @@
 #include "builtins.h"
-#include "enviroment.h"
 #include <ctype.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -13,7 +12,7 @@ int builtin_cd(char **const argv) {
   char *path = argv[1];
   if (argv[1] == NULL) {
     char *home = getenv("HOME");
-    
+
     if (home == NULL) {
       fprintf(stderr, "HOME is not set\n");
       return EXIT_FAILURE;
@@ -64,21 +63,30 @@ int builtin_export(char **const argv) {
 
   for (size_t i = 1; argv[i] != NULL; i++) {
     if (!isalpha(argv[i][0])) {
-      fprintf(stderr, "Invalid identifier: `%s`\n", argv[i]);
+      fprintf(stderr, "export: Invalid identifier: `%s`\n", argv[i]);
+      continue;
     }
+    
+    char* env_value = NULL;
+
     for (size_t j = 1; argv[i][j] != '\0'; j++) {
       char c = argv[i][j];
       if (c == '=') {
+        argv[i][j] = '\0';
+        env_value = &argv[i][j] + 1;
         break;
       }
 
       if (!isalnum(c)) {
-        fprintf(stderr, "Invalid identifier: `%s`\n", argv[i]);
-        return EXIT_FAILURE;
+        fprintf(stderr, "export: Invalid identifier: `%s`\n", argv[i]);
+        continue;
       }
     }
 
-    env_add(argv[i]);
+    if (setenv(argv[i], env_value, 1) != 0) {
+      fprintf(stderr, "export: ");
+      perror(argv[i]);
+    }
   }
 
   return EXIT_SUCCESS;

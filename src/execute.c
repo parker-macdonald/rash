@@ -1,6 +1,5 @@
 #include "execute.h"
 #include "builtins.h"
-#include "enviroment.h"
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,8 +13,6 @@ int spawn_process(char **const argv, const char *const in_path,
 
   // child
   if (pid == 0) {
-    char **envp = env_get_array();
-
     if (out_path != NULL) {
       if (freopen(out_path, "w", stdout) == NULL) {
         perror(out_path);
@@ -23,8 +20,7 @@ int spawn_process(char **const argv, const char *const in_path,
       }
     }
 
-    int status = execvpe(argv[0], argv, envp);
-    free(envp);
+    int status = execvp(argv[0], argv);
 
     if (status == -1) {
       fprintf(stderr, "execvp: ");
