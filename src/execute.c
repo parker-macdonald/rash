@@ -7,19 +7,11 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-int spawn_process(char **const argv, const char *const in_path,
-                  const char *const out_path, const char *const err_path) {
+int spawn_process(char **const argv) {
   pid_t pid = fork();
 
   // child
   if (pid == 0) {
-    if (out_path != NULL) {
-      if (freopen(out_path, "w", stdout) == NULL) {
-        perror(out_path);
-        exit(EXIT_FAILURE);
-      }
-    }
-
     int status = execvp(argv[0], argv);
 
     if (status == -1) {
@@ -58,22 +50,5 @@ int execute(char **const argv) {
     }
   }
 
-  char *in_fd = NULL;
-  char *out_fd = NULL;
-  char *err_fd = NULL;
-
-  for (size_t i = 0; argv[i] != NULL; i++) {
-    if (strcmp(argv[i], ">") == 0) {
-      if (argv[i + 1] == NULL) {
-        fprintf(stderr, "Expected filename after '>'\n");
-        return EXIT_FAILURE;
-      }
-
-      out_fd = argv[i + 1];
-
-      argv[i] = NULL;
-    }
-  }
-
-  return spawn_process(argv, in_fd, out_fd, err_fd);
+  return spawn_process(argv);
 }
