@@ -1,5 +1,6 @@
 #include "execute.h"
 #include "builtins.h"
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +16,12 @@ int spawn_process(char **const argv) {
     int status = execvp(argv[0], argv);
 
     if (status == -1) {
-      fprintf(stderr, "execvp: ");
+      fprintf(stderr, "rash: ");
+
+      if (errno != ENOENT) {
+        fprintf(stderr, "execvp: ");
+      }
+
       perror(argv[0]);
     }
 

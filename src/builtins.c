@@ -14,7 +14,7 @@ int builtin_cd(char **const argv) {
     char *home = getenv("HOME");
 
     if (home == NULL) {
-      fprintf(stderr, "HOME is not set\n");
+      fprintf(stderr, "cd: HOME is not set\n");
       return EXIT_FAILURE;
     }
 
@@ -22,7 +22,7 @@ int builtin_cd(char **const argv) {
   }
 
   if (chdir(path) == -1) {
-    fprintf(stderr, "%s: ", argv[0]);
+    fprintf(stderr, "cd: ");
     perror(path);
 
     return EXIT_FAILURE;
