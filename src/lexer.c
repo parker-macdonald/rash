@@ -35,7 +35,7 @@ char **get_tokens_from_line(char *const line) {
       continue;
     }
 
-    for (; !isspace(line[i]); i++)
+    for (; !isspace(line[i]) && line[i] != '\0'; i++)
       ;
 
     line[i] = '\0';
