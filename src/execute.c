@@ -43,6 +43,8 @@ int spawn_process(char **const argv) {
 
     return WEXITSTATUS(status);
   }
+
+  return EXIT_SUCCESS;
 }
 
 int execute(char **const argv) {
