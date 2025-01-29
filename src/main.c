@@ -1,5 +1,6 @@
 #include "execute.h"
 #include "lexer.h"
+#include "line_reader.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,19 +36,19 @@ int main(int argc, char **argv) {
 
   while (!should_exit) {
     if (interactive) {
-      printf("%s", getenv("PS1"));
-    }
+      line = readline(getenv("PS1"));
+    } else {
+      ssize_t getline_status = getline(&line, &line_size, fp);
 
-    ssize_t getline_status = getline(&line, &line_size, fp);
-
-    if (getline_status == 0) {
+      if (getline_status == 0) {
         break;
-    } else if (getline_status == -1) {
-      if (!feof(fp)) {
-        perror("getline");
-      }
+      } else if (getline_status == -1) {
+        if (!feof(fp)) {
+          perror("getline");
+        }
 
-      break;
+        break;
+      }
     }
 
     char **tokens = get_tokens_from_line(line);
@@ -59,6 +60,9 @@ int main(int argc, char **argv) {
     } else {
       status = EXIT_FAILURE;
     }
+
+    free(line);
+    line = NULL;
 
     if (should_exit) {
       break;
