@@ -70,7 +70,12 @@ char *readline(char *data, const char *const prompt) {
   for (;;) {
     c = getch();
 
-    if (c == '\n' || c == EOF) {
+    if (c == '\04') {
+      printf("\n");
+      return NULL;
+    }
+
+    if (c == '\n') {
       break;
     }
 
