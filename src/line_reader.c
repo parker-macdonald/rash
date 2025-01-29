@@ -1,7 +1,6 @@
 #include "vector.h"
 #include <assert.h>
 #include <stdio.h>
-#include <string.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -46,16 +45,23 @@ void line_insert(line_t *const line, const char c,
 void line_remove(line_t *const line, const unsigned int cursor_pos) {
   line->length--;
 
-  for (size_t i = cursor_pos - 2; i < line->length; i++) {
+  for (size_t i = cursor_pos - 1; i < line->length; i++) {
     line->data[i] = line->data[i + 1];
   }
 }
 
-char *readline(const char *const prompt) {
+char *readline(char *data, const char *const prompt) {
   printf("%s", prompt);
 
   line_t line;
-  VECTOR_INIT(line);
+
+  line.capacity = 16;
+  line.length = 0;
+  if (data == NULL) {
+    line.data = malloc(sizeof(*line.data) * 16);
+  } else {
+    line.data = data;
+  }
 
   unsigned int cursor_pos = 0;
 
@@ -89,24 +95,29 @@ char *readline(const char *const prompt) {
       }
 
       continue;
-    } else if (c == '\b') {
+      // backspace
+    } else if (c == 0x7f) {
       if (cursor_pos > 0) {
         line_remove(&line, cursor_pos);
         cursor_pos--;
+        printf("\033[D");
       }
     } else {
       line_insert(&line, c, cursor_pos);
       cursor_pos++;
+      printf("\033[C");
     }
 
-    printf("\033[K");
-    for (size_t i = cursor_pos - 1; i < line.length; i++) {
+    // save cursor pos
+    printf("\033[s");
+
+    // remove line
+    printf("\033[2K\r");
+    printf("%s", prompt);
+    for (size_t i = 0; i < line.length; i++) {
       printf("%c", line.data[i]);
     }
-
-    size_t offset = line.length - cursor_pos;
-    if (offset)
-      printf("\033[%zuD", offset);
+    printf("\033[u");
   }
 
   VECTOR_PUSH(line, '\0');

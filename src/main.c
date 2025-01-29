@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 
   while (!should_exit) {
     if (interactive) {
-      line = readline(getenv("PS1"));
+      line = readline(line, getenv("PS1"));
     } else {
       ssize_t getline_status = getline(&line, &line_size, fp);
 
