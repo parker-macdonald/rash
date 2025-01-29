@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
+#include "ansi.h"
 
 typedef VECTOR(char) line_t;
 
@@ -82,14 +83,14 @@ char *readline(char *data, const char *const prompt) {
       case 'C':
         if (cursor_pos < line.length) {
           cursor_pos++;
-          printf("\033[C");
+          fputs(ANSI_CURSOR_RIGHT, stdout);
         }
         break;
       // left arrow
       case 'D':
         if (cursor_pos > 0) {
           cursor_pos--;
-          printf("\033[D");
+          fputs(ANSI_CURSOR_LEFT, stdout);
         }
         break;
       }
@@ -100,24 +101,26 @@ char *readline(char *data, const char *const prompt) {
       if (cursor_pos > 0) {
         line_remove(&line, cursor_pos);
         cursor_pos--;
-        printf("\033[D");
+        fputs(ANSI_CURSOR_LEFT, stdout);
       }
     } else {
       line_insert(&line, c, cursor_pos);
       cursor_pos++;
-      printf("\033[C");
+      fputs(ANSI_CURSOR_RIGHT, stdout);
     }
 
-    // save cursor pos
-    printf("\033[s");
+    fputs(ANSI_CURSOR_POS_SAVE, stdout);
 
-    // remove line
-    printf("\033[2K\r");
+    fputs(ANSI_REMOVE_FULL_LINE, stdout);
+    // reset cursor to start of line
+    printf("\r");
+    
     printf("%s", prompt);
     for (size_t i = 0; i < line.length; i++) {
       printf("%c", line.data[i]);
     }
-    printf("\033[u");
+
+    fputs(ANSI_CURSOR_POS_RESTORE, stdout);
   }
 
   VECTOR_PUSH(line, '\0');
