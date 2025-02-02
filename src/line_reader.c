@@ -57,7 +57,7 @@ unsigned int backspace(line_t *const line, const unsigned int cursor_pos) {
     return char_size;
   }
 
-  const unsigned int offset = cursor_pos - char_size - 1;
+  const unsigned int offset = cursor_pos - char_size;
   line->length -= char_size;
 
   for (size_t i = offset; i < line->length; i++) {
@@ -65,22 +65,6 @@ unsigned int backspace(line_t *const line, const unsigned int cursor_pos) {
   }
 
   return char_size;
-}
-
-unsigned int get_utf8_char_len_forward(const char c) {
-  if ((c & 0xe0) == 0xc0) {
-    return 2;
-  }
-
-  if ((c & 0xf0) == 0xe0) {
-    return 3;
-  }
-
-  if ((c & 0xf8) == 0xf0) {
-    return 4;
-  }
-
-  return 1;
 }
 
 char *readline(char *data, const char *const prompt) {
@@ -122,7 +106,8 @@ char *readline(char *data, const char *const prompt) {
       // right arrow
       case 'C':
         if (cursor_pos < line.length) {
-          cursor_pos += get_utf8_char_len_forward(c);
+          cursor_pos +=
+              traverse_forward_utf8(line.data, line.length, cursor_pos);
 
           fputs(ANSI_CURSOR_RIGHT, stdout);
         }
@@ -138,8 +123,10 @@ char *readline(char *data, const char *const prompt) {
       }
 
       continue;
-      // backspace
-    } else if (c == 0x7f) {
+    }
+
+    // backspace
+    if (c == 0x7f) {
       if (cursor_pos > 0) {
         const unsigned int bytes_removed = backspace(&line, cursor_pos);
         cursor_pos -= bytes_removed;
