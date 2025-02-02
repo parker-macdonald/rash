@@ -2,6 +2,7 @@
 
 const char ANSI_START_CHAR = '\033';
 const char ASCII_END_OF_TRANSMISSION = '\04';
+const char ASCII_DEL = 0x7f;
 
 const char ANSI_CURSOR_LEFT[] = "\033[D";
 const char ANSI_CURSOR_RIGHT[] = "\033[C";

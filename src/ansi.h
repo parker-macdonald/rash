@@ -5,6 +5,9 @@
 extern const char ANSI_START_CHAR;
 // same as eof when canonical mode is disabled
 extern const char ASCII_END_OF_TRANSMISSION;
+// sent by the terminal when backspace is pressed when canonical mode is
+// disabled
+extern const char ASCII_DEL;
 
 // delete the current line (cursor will not move)
 extern const char ANSI_REMOVE_FULL_LINE[];

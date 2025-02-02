@@ -84,3 +84,7 @@ unsigned int traverse_forward_utf8(const char *const line,
 
   return char_size;
 }
+
+bool is_continuation_byte_utf8(const char c) {
+  return ((c & 0xc0) == 0x80);
+}

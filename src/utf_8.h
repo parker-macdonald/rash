@@ -1,6 +1,7 @@
 #ifndef UTF_8_H
 #define UTF_8_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 /**
@@ -27,5 +28,12 @@ unsigned int traverse_back_utf8(const char *const line,
 unsigned int traverse_forward_utf8(const char *const line,
                                    const size_t line_len,
                                    const unsigned int cursor_pos);
+
+/**
+ * @brief Returns true when the given character is a continuation byte in utf-8.
+ * @param c The byte to check.
+ * @return true: byte is a continuation byte, false: it is not.
+ */
+bool is_continuation_byte_utf8(const char c);
 
 #endif

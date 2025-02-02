@@ -126,7 +126,7 @@ char *readline(char *data, const char *const prompt) {
     }
 
     // backspace
-    if (c == 0x7f) {
+    if (c == ASCII_DEL) {
       if (cursor_pos > 0) {
         const unsigned int bytes_removed = backspace(&line, cursor_pos);
         cursor_pos -= bytes_removed;
@@ -136,7 +136,7 @@ char *readline(char *data, const char *const prompt) {
       line_insert(&line, c, cursor_pos);
       cursor_pos++;
 
-      if (!(c & 0x80) || !(~c & 0xc0)) {
+      if (!is_continuation_byte_utf8(c)) {
         fputs(ANSI_CURSOR_RIGHT, stdout);
       }
     }
