@@ -1,5 +1,6 @@
 #include "vector.h"
 #include <ctype.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 char **get_tokens_from_line(char *const line) {
@@ -35,8 +36,18 @@ char **get_tokens_from_line(char *const line) {
       continue;
     }
 
-    for (; !isspace(line[i]) && line[i] != '\0'; i++)
-      ;
+    bool hit_null_terminator = false;
+
+    for (;; i++) {
+      if (line[i] == '\0') {
+        hit_null_terminator = true;
+        break;
+      }
+
+      if (isspace(line[i])) {
+        break;
+      }
+    }
 
     line[i] = '\0';
 
@@ -51,6 +62,10 @@ char **get_tokens_from_line(char *const line) {
     }
 
     VECTOR_PUSH(tokens, token);
+
+    if (hit_null_terminator) {
+      break;
+    }
   }
 
   VECTOR_PUSH(tokens, NULL);

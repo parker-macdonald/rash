@@ -1,11 +1,10 @@
-#include "vector.h"
+#include "line_reader.h"
+#include "ansi.h"
+#include "utf_8.h"
 #include <assert.h>
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
-#include "ansi.h"
-
-typedef VECTOR(char) line_t;
 
 char getch(void) {
   struct termios oldt, newt;
@@ -43,12 +42,29 @@ void line_insert(line_t *const line, const char c,
   VECTOR_PUSH((*line), old);
 }
 
-void line_remove(line_t *const line, const unsigned int cursor_pos) {
-  line->length--;
+/**
+ * @brief deletes the utf-8 character before cursor position
+ * @param line the line to remove data from
+ * @param cursor_pos the current position of the cursor, this function deletes
+ * the character before the cursor position
+ * @return the number of bytes removed
+ */
+unsigned int backspace(line_t *const line, const unsigned int cursor_pos) {
+  const unsigned int char_size = traverse_back_utf8(line->data, cursor_pos);
 
-  for (size_t i = cursor_pos - 1; i < line->length; i++) {
-    line->data[i] = line->data[i + 1];
+  if (line->length == cursor_pos) {
+    line->length -= char_size;
+    return char_size;
   }
+
+  const unsigned int offset = cursor_pos - char_size;
+  line->length -= char_size;
+
+  for (size_t i = offset; i < line->length; i++) {
+    line->data[i] = line->data[i + char_size];
+  }
+
+  return char_size;
 }
 
 char *readline(char *data, const char *const prompt) {
@@ -70,7 +86,7 @@ char *readline(char *data, const char *const prompt) {
   for (;;) {
     c = getch();
 
-    if (c == '\04') {
+    if (c == ASCII_END_OF_TRANSMISSION) {
       printf("\n");
       return NULL;
     }
@@ -79,39 +95,50 @@ char *readline(char *data, const char *const prompt) {
       break;
     }
 
-    if (c == '\033') {
+    if (c == ANSI_START_CHAR) {
       c = getch();
-      assert(c == '[');
+
+      if (c != '[') {
+        continue;
+      }
 
       switch (getch()) {
-        // right arrow
+      // right arrow
       case 'C':
         if (cursor_pos < line.length) {
-          cursor_pos++;
+          cursor_pos +=
+              traverse_forward_utf8(line.data, line.length, cursor_pos);
+
           fputs(ANSI_CURSOR_RIGHT, stdout);
         }
         break;
       // left arrow
       case 'D':
         if (cursor_pos > 0) {
-          cursor_pos--;
+          cursor_pos -= traverse_back_utf8(line.data, cursor_pos);
+
           fputs(ANSI_CURSOR_LEFT, stdout);
         }
         break;
       }
 
       continue;
-      // backspace
-    } else if (c == 0x7f) {
+    }
+
+    // backspace
+    if (c == ASCII_DEL) {
       if (cursor_pos > 0) {
-        line_remove(&line, cursor_pos);
-        cursor_pos--;
+        const unsigned int bytes_removed = backspace(&line, cursor_pos);
+        cursor_pos -= bytes_removed;
         fputs(ANSI_CURSOR_LEFT, stdout);
       }
     } else {
       line_insert(&line, c, cursor_pos);
       cursor_pos++;
-      fputs(ANSI_CURSOR_RIGHT, stdout);
+
+      if (!is_continuation_byte_utf8(c)) {
+        fputs(ANSI_CURSOR_RIGHT, stdout);
+      }
     }
 
     fputs(ANSI_CURSOR_POS_SAVE, stdout);
@@ -119,7 +146,7 @@ char *readline(char *data, const char *const prompt) {
     fputs(ANSI_REMOVE_FULL_LINE, stdout);
     // reset cursor to start of line
     printf("\r");
-    
+
     printf("%s", prompt);
     for (size_t i = 0; i < line.length; i++) {
       printf("%c", line.data[i]);
