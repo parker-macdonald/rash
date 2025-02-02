@@ -1,0 +1,9 @@
+when:
+  - event: push
+    branch: *
+
+steps:
+  - name: build
+    image: silkeh/clang
+    commands:
+      - make
