@@ -5,7 +5,7 @@ steps:
   - name: build
     image: debian
     commands:
-      - apt update
-      - apt upgrade
-      - apt install clang make
+      - apt-get update
+      - apt-get upgrade -y
+      - apt-get install -y clang make
       - make
