@@ -20,16 +20,4 @@ extern const char ANSI_CURSOR_POS_SAVE[];
 // restore cursor position that was previously saved
 extern const char ANSI_CURSOR_POS_RESTORE[];
 
-/**
- * @brief Move the cursor forward `num` bytes.
- * @param num Bytes to move.
- */
-void ansi_cursor_right(const unsigned int num);
-
-/**
- * @brief Move the cursor backward `num` bytes.
- * @param num Bytes to move.
- */
-void ansi_cursor_left(const unsigned int num);
-
 #endif
