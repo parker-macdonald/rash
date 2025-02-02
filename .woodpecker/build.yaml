@@ -1,9 +1,11 @@
 when:
   - event: push
-    branch: *
 
 steps:
   - name: build
-    image: silkeh/clang
+    image: debian
     commands:
+      - apt update
+      - apt upgrade
+      - apt install clang make
       - make
