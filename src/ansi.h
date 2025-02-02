@@ -1,14 +1,32 @@
 #ifndef ANSI_H
 #define ANSI_H
 
+// start of ansi control sequence
 extern const char ANSI_START_CHAR;
+// same as eof when canonical mode is disabled
+extern const char ASCII_END_OF_TRANSMISSION;
+
+// delete the current line (cursor will not move)
+extern const char ANSI_REMOVE_FULL_LINE[];
 
 extern const char ANSI_CURSOR_LEFT[];
 extern const char ANSI_CURSOR_RIGHT[];
 
-extern const char ANSI_REMOVE_FULL_LINE[];
-
+// save current cursor position to be restored later
 extern const char ANSI_CURSOR_POS_SAVE[];
+// restore cursor position that was previously saved
 extern const char ANSI_CURSOR_POS_RESTORE[];
+
+/**
+ * @brief Move the cursor forward `num` bytes.
+ * @param num Bytes to move.
+ */
+void ansi_cursor_right(const unsigned int num);
+
+/**
+ * @brief Move the cursor backward `num` bytes.
+ * @param num Bytes to move.
+ */
+void ansi_cursor_left(const unsigned int num);
 
 #endif
