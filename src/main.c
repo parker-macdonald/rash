@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define BUFFER_SIZE 256
-
 bool should_exit = false;
 
 volatile sig_atomic_t spawned_pid = 0;
