@@ -8,6 +8,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+extern volatile sig_atomic_t spawned_pid;
+
 int spawn_process(char **const argv) {
   pid_t pid = fork();
 
@@ -36,14 +38,17 @@ int spawn_process(char **const argv) {
   // parent process
   else {
     int status;
+    spawned_pid = pid;
 
     do {
       waitpid(pid, &status, WUNTRACED);
     } while (!WIFEXITED(status) && !WIFSIGNALED(status));
 
+    spawned_pid = 0;
     return WEXITSTATUS(status);
   }
 
+  // will never be reached
   return EXIT_SUCCESS;
 }
 

@@ -1,6 +1,7 @@
 #include "execute.h"
 #include "lexer.h"
 #include "line_reader.h"
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,9 +10,22 @@
 
 bool should_exit = false;
 
+volatile sig_atomic_t spawned_pid = 0;
+
+static void sig_handler(int sig) {
+  if (spawned_pid != 0) {
+    kill((pid_t)spawned_pid, sig);
+  }
+  sigaction(SIGINT, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
+}
+
 int main(int argc, char **argv) {
   FILE *fp = NULL;
   bool interactive = false;
+
+  _Static_assert(sizeof(sig_atomic_t) == sizeof(pid_t),
+                 "size of sig_atomic_t differs from pid_t. what the hell are "
+                 "you compiling this on?");
 
   if (argc == 2) {
     fp = fopen(argv[1], "r");
@@ -25,6 +39,16 @@ int main(int argc, char **argv) {
     fp = stdin;
   } else {
     fprintf(stderr, "Usage: %s [FILE]\n", argv[0]);
+    return EXIT_FAILURE;
+  }
+
+  struct sigaction sa;
+  sa.sa_handler = sig_handler;
+  sa.sa_flags = 0;
+
+  // Set up SIGINT handler using sigaction
+  if (sigaction(SIGINT, &sa, NULL) == -1) {
+    perror("sigaction");
     return EXIT_FAILURE;
   }
 
@@ -64,9 +88,6 @@ int main(int argc, char **argv) {
     } else {
       status = EXIT_FAILURE;
     }
-
-    free(line);
-    line = NULL;
 
     if (should_exit) {
       break;

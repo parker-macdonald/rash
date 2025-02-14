@@ -95,6 +95,14 @@ char *readline(char *data, const char *const prompt) {
       break;
     }
 
+    // for when the user presses ctrl-c to trigger a sigint signal. for some
+    // reason 0xff gets read from stdin, lets use that to our advantage
+    if (c == -1) {
+      printf("^C");
+      line.length = 0;
+      break;
+    }
+
     if (c == ANSI_START_CHAR) {
       c = getch();
 
