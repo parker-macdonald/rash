@@ -16,14 +16,16 @@ static void sig_handler(int sig) {
   if (spawned_pid != 0) {
     kill((pid_t)spawned_pid, sig);
   }
-  signal(SIGINT, sig_handler);
+  sigaction(SIGINT, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
 }
 
 int main(int argc, char **argv) {
   FILE *fp = NULL;
   bool interactive = false;
 
-  _Static_assert(sizeof(sig_atomic_t) == sizeof(pid_t), "size of sig_atomic_t differs from pid_t. what the hell are you compiling this on?");
+  _Static_assert(sizeof(sig_atomic_t) == sizeof(pid_t),
+                 "size of sig_atomic_t differs from pid_t. what the hell are "
+                 "you compiling this on?");
 
   if (argc == 2) {
     fp = fopen(argv[1], "r");
@@ -40,7 +42,15 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  signal(SIGINT, sig_handler);
+  struct sigaction sa;
+  sa.sa_handler = sig_handler;
+  sa.sa_flags = 0;
+
+  // Set up SIGINT handler using sigaction
+  if (sigaction(SIGINT, &sa, NULL) == -1) {
+    perror("sigaction");
+    return EXIT_FAILURE;
+  }
 
   char *line = NULL;
   size_t line_size = 0;
