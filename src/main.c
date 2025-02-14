@@ -16,6 +16,7 @@ static void sig_handler(int sig) {
   if (spawned_pid != 0) {
     kill((pid_t)spawned_pid, sig);
   }
+  signal(SIGINT, sig_handler);
 }
 
 int main(int argc, char **argv) {
@@ -48,7 +49,6 @@ int main(int argc, char **argv) {
   setenv("PS1", "$ ", 0);
 
   while (!should_exit) {
-    start:
     if (interactive) {
       line = readline(line, getenv("PS1"));
 
