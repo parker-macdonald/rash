@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 bool should_exit = false;
 
@@ -13,8 +14,11 @@ volatile sig_atomic_t spawned_pid = 0;
 static void sig_handler(int sig) {
   if (spawned_pid != 0) {
     kill((pid_t)spawned_pid, sig);
+    write(STDOUT_FILENO, "\n", 1);
   }
-  sigaction(SIGINT, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
+  sigaction(SIGINT,
+            &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0},
+            NULL);
 }
 
 int main(int argc, char **argv) {
@@ -40,7 +44,7 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  struct sigaction sa;
+  struct sigaction sa = {0};
   sa.sa_handler = sig_handler;
   sa.sa_flags = 0;
 
