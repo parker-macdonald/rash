@@ -67,6 +67,25 @@ unsigned int backspace(line_t *const line, const unsigned int cursor_pos) {
   return char_size;
 }
 
+unsigned int delete(line_t *const line, const unsigned int cursor_pos) {
+  const unsigned int char_size =
+      traverse_forward_utf8(line->data, line->length, cursor_pos);
+
+  if (line->length == cursor_pos + char_size) {
+    line->length -= char_size;
+    return char_size;
+  }
+
+  const unsigned int offset = cursor_pos;
+  line->length -= char_size;
+
+  for (size_t i = offset; i < line->length; i++) {
+    line->data[i] = line->data[i + char_size];
+  }
+
+  return char_size;
+}
+
 char *readline(char *data, const char *const prompt) {
   printf("%s", prompt);
 
@@ -119,7 +138,7 @@ char *readline(char *data, const char *const prompt) {
 
           fputs(ANSI_CURSOR_RIGHT, stdout);
         }
-        break;
+        continue;
       // left arrow
       case 'D':
         if (cursor_pos > 0) {
@@ -127,10 +146,18 @@ char *readline(char *data, const char *const prompt) {
 
           fputs(ANSI_CURSOR_LEFT, stdout);
         }
+        continue;
+      case '3':
+        // delete key
+        if (getch() == '~') {
+          if (cursor_pos < line.length) {
+            delete (&line, cursor_pos);
+          }
+          // should probably refactor to not use goto, but, i mean, it works...
+          goto draw_line;
+        }
         break;
       }
-
-      continue;
     }
 
     // backspace
@@ -140,14 +167,18 @@ char *readline(char *data, const char *const prompt) {
         cursor_pos -= bytes_removed;
         fputs(ANSI_CURSOR_LEFT, stdout);
       }
-    } else {
-      line_insert(&line, c, cursor_pos);
-      cursor_pos++;
 
-      if (!is_continuation_byte_utf8(c)) {
-        fputs(ANSI_CURSOR_RIGHT, stdout);
-      }
+      goto draw_line;
     }
+
+    line_insert(&line, c, cursor_pos);
+    cursor_pos++;
+
+    if (!is_continuation_byte_utf8(c)) {
+      fputs(ANSI_CURSOR_RIGHT, stdout);
+    }
+
+  draw_line:
 
     fputs(ANSI_CURSOR_POS_SAVE, stdout);
 
