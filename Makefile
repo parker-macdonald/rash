@@ -10,7 +10,7 @@ CC := clang
 DEBUG := 1
 
 ifeq ($(DEBUG),1)
-	CFLAGS += -O0 -g3
+	CFLAGS += -Og -g3
 else
 	CFLAGS += -O3
 	LDFLAGS += -s
