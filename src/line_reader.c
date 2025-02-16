@@ -1,6 +1,7 @@
 #include "line_reader.h"
 #include "ansi.h"
 #include "utf_8.h"
+#include "vector.h"
 #include <assert.h>
 #include <stdio.h>
 #include <termios.h>
@@ -107,6 +108,7 @@ char *readline(char *data, const char *const prompt) {
 
     if (c == ASCII_END_OF_TRANSMISSION) {
       printf("\n");
+      VECTOR_DESTROY(line);
       return NULL;
     }
 
