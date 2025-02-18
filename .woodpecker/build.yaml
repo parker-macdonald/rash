@@ -2,10 +2,13 @@ when:
   - event: push
 
 steps:
-  - name: build
+  - lint:
     image: debian
     commands:
-      - apt-get update
-      - apt-get upgrade -y
-      - apt-get install -y clang make
+      - apt install make clang-tidy
+      - make check
+
+  - name: build
+    image: silkeh/clang
+    commands:
       - make
