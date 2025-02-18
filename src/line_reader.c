@@ -149,6 +149,43 @@ char *readline(char *data, const char *const prompt) {
           fputs(ANSI_CURSOR_LEFT, stdout);
         }
         continue;
+      case '1':
+        if (getch() == ';') {
+          if (getch() == '5') {
+            const char arrow_char = getch();
+            // shift right arrow
+            if (arrow_char == 'C') {
+              if (cursor_pos < line.length) {
+                cursor_pos +=
+                    traverse_forward_utf8(line.data, line.length, cursor_pos);
+                fputs(ANSI_CURSOR_RIGHT, stdout);
+
+                while (cursor_pos <= line.length - 1 &&
+                       line.data[cursor_pos] != ' ') {
+                  cursor_pos +=
+                      traverse_forward_utf8(line.data, line.length, cursor_pos);
+                  fputs(ANSI_CURSOR_RIGHT, stdout);
+                }
+              }
+
+              continue;
+            }
+            // shift left arrow
+            else if (arrow_char == 'D') {
+              if (cursor_pos > 0) {
+                cursor_pos -= traverse_back_utf8(line.data, cursor_pos);
+                fputs(ANSI_CURSOR_LEFT, stdout);
+
+                while (cursor_pos > 0 && line.data[cursor_pos] != ' ') {
+                  cursor_pos -= traverse_back_utf8(line.data, cursor_pos);
+                  fputs(ANSI_CURSOR_LEFT, stdout);
+                }
+              }
+
+              continue;
+            }
+          }
+        }
       case '3':
         // delete key
         if (getch() == '~') {
@@ -159,6 +196,8 @@ char *readline(char *data, const char *const prompt) {
           goto draw_line;
         }
         break;
+      default:
+        continue;
       }
     }
 
