@@ -5,9 +5,9 @@ steps:
   - lint:
     image: debian
     commands:
-      - apt-get update
-      - apt-get upgrade
-      - apt-get install make clang-tidy
+      - apt-get -y update
+      - apt-get -y upgrade
+      - apt-get -y install make clang-tidy
       - make check
 
   - name: build
