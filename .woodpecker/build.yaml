@@ -3,12 +3,9 @@ when:
 
 steps:
   - name: lint
-    image: debian
+    image: silkeh/clang
     commands:
-      - apt-get -y update
-      - apt-get -y upgrade
-      - apt-get -y install make clang-tidy
-      - make check
+      - make lint
 
   - name: build
     image: silkeh/clang

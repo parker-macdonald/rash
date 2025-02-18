@@ -35,12 +35,12 @@ SRC := ${wildcard src/**/*.c} ${wildcard src/*.c}
 OBJ := ${SRC:%.c=$(BUILD)/%.o}
 
 
-.PHONY: all clean build install check
+.PHONY: all clean build install lint
 .DEFAULT: all
 
 all: build
 
-check:
+lint:
 	$(LINTER) $(SRC) -checks=-*,bugprone-*cert-*,clang-analyzer-*,performance-*,portability-*,misc-* -warnings-as-errors=* -- $(INCS) $(CFLAGS)
 
 build: $(BUILD)/$(OUT)
