@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/cdefs.h>
 #include <unistd.h>
 
 bool should_exit = false;
@@ -51,6 +52,7 @@ int main(int argc, char **argv) {
   // Set up SIGINT handler using sigaction
   if (sigaction(SIGINT, &sa, NULL) == -1) {
     perror("sigaction");
+    fclose(fp);
     return EXIT_FAILURE;
   }
 

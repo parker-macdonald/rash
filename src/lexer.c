@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 char **get_tokens_from_line(char *const line) {
   VECTOR(char *) tokens;

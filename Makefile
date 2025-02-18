@@ -6,6 +6,7 @@ CFLAGS := -std=c99 -D_POSIX_C_SOURCE=200809L
 CFLAG_ERRORS := -Werror -Wall -Wvla -Wextra -Wunreachable-code -Wshadow -Wpedantic
 LDFLAGS := $(INCS)
 CC := clang
+LINTER := clang-tidy
 
 DEBUG := 1
 
@@ -34,10 +35,13 @@ SRC := ${wildcard src/**/*.c} ${wildcard src/*.c}
 OBJ := ${SRC:%.c=$(BUILD)/%.o}
 
 
-.PHONY: all clean build
+.PHONY: all clean build install check
 .DEFAULT: all
 
 all: build
+
+check:
+	$(LINTER) $(SRC) -checks=-*,bugprone-*cert-*,clang-analyzer-*,performance-*,portability-*,misc-* -warnings-as-errors=* -- $(INCS) $(CFLAGS)
 
 build: $(BUILD)/$(OUT)
 

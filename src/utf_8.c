@@ -1,4 +1,5 @@
 #include "utf_8.h"
+#include <stddef.h>
 
 unsigned int traverse_back_utf8(const char *const line,
                                 const unsigned int cursor_pos) {

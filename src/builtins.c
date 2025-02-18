@@ -83,7 +83,7 @@ int builtin_export(char **const argv) {
       }
     }
 
-    if (setenv(argv[i], env_value, 1) != 0) {
+    if (setenv(argv[i], env_value ? env_value : "", 1) != 0) {
       fprintf(stderr, "export: ");
       perror(argv[i]);
     }
