@@ -2,7 +2,7 @@ when:
   - event: push
 
 steps:
-  - lint:
+  - name: lint
     image: debian
     commands:
       - apt-get -y update
