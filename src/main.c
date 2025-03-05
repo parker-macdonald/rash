@@ -15,7 +15,7 @@ volatile sig_atomic_t spawned_pid = 0;
 static void sig_handler(int sig) {
   if (spawned_pid != 0) {
     kill((pid_t)spawned_pid, sig);
-    write(STDOUT_FILENO, "\n", 1);
+    (void) write(STDOUT_FILENO, "\n", 1);
   }
   sigaction(SIGINT,
             &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0},
