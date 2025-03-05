@@ -1,7 +1,5 @@
 #include "execute.h"
 #include "builtins.h"
-// make clang-tidy happy
-#include <asm-generic/errno-base.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>

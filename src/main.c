@@ -22,37 +22,37 @@ static void sig_handler(int sig) {
             NULL);
 }
 
-int main(int argc, char **argv) {
-  FILE *fp = NULL;
-  bool interactive = false;
-
-  _Static_assert(sizeof(sig_atomic_t) == sizeof(pid_t),
+_Static_assert(sizeof(sig_atomic_t) == sizeof(pid_t),
                  "size of sig_atomic_t differs from pid_t. what the hell are "
                  "you compiling this on?");
 
-  if (argc == 2) {
-    fp = fopen(argv[1], "r");
+int main(int argc, char **argv) {
+  FILE *file = NULL;
+  bool interactive = false;
 
-    if (fp == NULL) {
+  if (argc == 2) {
+    file = fopen(argv[1], "r");
+
+    if (file == NULL) {
       perror(argv[1]);
       return EXIT_FAILURE;
     }
   } else if (argc == 1) {
     interactive = true;
-    fp = stdin;
+    file = stdin;
   } else {
     fprintf(stderr, "Usage: %s [FILE]\n", argv[0]);
     return EXIT_FAILURE;
   }
 
-  struct sigaction sa = {0};
-  sa.sa_handler = sig_handler;
-  sa.sa_flags = 0;
+  struct sigaction action = {0};
+  action.sa_handler = sig_handler;
+  action.sa_flags = 0;
 
   // Set up SIGINT handler using sigaction
-  if (sigaction(SIGINT, &sa, NULL) == -1) {
+  if (sigaction(SIGINT, &action, NULL) == -1) {
     perror("sigaction");
-    fclose(fp);
+    fclose(file);
     return EXIT_FAILURE;
   }
 
@@ -70,12 +70,13 @@ int main(int argc, char **argv) {
         break;
       }
     } else {
-      ssize_t getline_status = getline(&line, &line_size, fp);
+      ssize_t getline_status = getline(&line, &line_size, file);
 
       if (getline_status == 0) {
         break;
-      } else if (getline_status == -1) {
-        if (!feof(fp)) {
+      }
+      if (getline_status == -1) {
+        if (!feof(file)) {
           perror("getline");
         }
 
@@ -106,7 +107,7 @@ int main(int argc, char **argv) {
 
   free(line);
 
-  fclose(fp);
+  fclose(file);
 
   return status;
 }

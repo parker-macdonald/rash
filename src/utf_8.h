@@ -4,6 +4,18 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#define UTF_8_CONTINUATION_BIT_MASK 0xc0
+#define UTF_8_CONTINUATION_SEQUENCE 0x80
+
+#define UTF_8_FOUR_BYTE_MASK 0xf8
+#define UTF_8_FOUR_BYTE_SEQUENCE 0xf0
+
+#define UTF_8_THREE_BYTE_MASK 0xf0
+#define UTF_8_THREE_BYTE_SEQUENCE 0xe0
+
+#define UTF_8_TWO_BYTE_MASK 0xe0
+#define UTF_8_TWO_BYTE_SEQUENCE 0xc0
+
 /**
  * @brief When given a line, traverse_back_utf8 will backtrack to find the
  * starting byte and then return the length of the character in bytes.

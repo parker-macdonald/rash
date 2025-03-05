@@ -41,7 +41,7 @@ OBJ := ${SRC:%.c=$(BUILD)/%.o}
 all: build
 
 lint:
-	$(LINTER) $(SRC) -checks=-*,bugprone-*cert-*,clang-analyzer-*,performance-*,portability-*,misc-* -warnings-as-errors=* -- $(INCS) $(CFLAGS)
+	$(LINTER) $(SRC) -checks=-*,bugprone-*cert-*,clang-analyzer-*,performance-*,portability-*,misc-*,readability-*,-readability-function-cognitive-complexity -warnings-as-errors=* -- $(INCS) $(CFLAGS)
 
 build: $(BUILD)/$(OUT)
 

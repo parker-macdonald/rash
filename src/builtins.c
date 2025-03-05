@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#define BASE 10
+
 extern bool should_exit;
 
 int builtin_cd(char **const argv) {
@@ -45,7 +47,7 @@ int builtin_exit(char **const argv) {
   }
 
   int old_errno = errno;
-  long status = strtol(argv[1], NULL, 10);
+  long status = strtol(argv[1], NULL, BASE);
 
   if (old_errno != errno) {
     perror("exit");
@@ -70,14 +72,14 @@ int builtin_export(char **const argv) {
     char* env_value = NULL;
 
     for (size_t j = 1; argv[i][j] != '\0'; j++) {
-      char c = argv[i][j];
-      if (c == '=') {
+      char character = argv[i][j];
+      if (character == '=') {
         argv[i][j] = '\0';
         env_value = &argv[i][j] + 1;
         break;
       }
 
-      if (!isalnum(c)) {
+      if (!isalnum(character)) {
         fprintf(stderr, "export: Invalid identifier: `%s`\n", argv[i]);
         continue;
       }

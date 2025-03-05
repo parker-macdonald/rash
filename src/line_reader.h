@@ -5,6 +5,6 @@
 
 typedef VECTOR(char) line_t;
 
-char *readline(char *line, const char *const prompt);
+char *readline(char *data, const char *const prompt);
 
 #endif

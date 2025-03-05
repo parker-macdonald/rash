@@ -9,29 +9,30 @@
 #include <unistd.h>
 
 char getch(void) {
-  struct termios oldt, newt;
-  char ch;
+  struct termios oldt;
+  struct termios newt;
+  char character;
 
   tcgetattr(STDIN_FILENO, &oldt);          // Get the current terminal settings
   newt = oldt;                             // Copy them to a new variable
   newt.c_lflag &= ~(ICANON | ECHO);        // Disable canonical mode and echo
   tcsetattr(STDIN_FILENO, TCSANOW, &newt); // Set the new settings
 
-  ch = getchar(); // Read a single character
+  character = getchar(); // Read a single character
 
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // Restore original settings
-  return ch;
+  return character;
 }
 
-void line_insert(line_t *const line, const char c,
+void line_insert(line_t *const line, const char read_char,
                  const unsigned int cursor_pos) {
   if (cursor_pos == line->length) {
-    VECTOR_PUSH((*line), c);
+    VECTOR_PUSH((*line), read_char);
     return;
   }
 
   char old = line->data[cursor_pos];
-  line->data[cursor_pos] = c;
+  line->data[cursor_pos] = read_char;
 
   for (size_t i = cursor_pos + 1; i < line->length; i++) {
     char old2 = line->data[i];
@@ -93,42 +94,42 @@ char *readline(char *data, const char *const prompt) {
 
   line_t line;
 
-  line.capacity = 16;
+  line.capacity = VECTOR_DEFAULT_SIZE;
   line.length = 0;
   if (data == NULL) {
-    line.data = malloc(sizeof(*line.data) * 16);
+    line.data = malloc(sizeof(*line.data) * VECTOR_DEFAULT_SIZE);
   } else {
     line.data = data;
   }
 
   unsigned int cursor_pos = 0;
 
-  char c;
+  char read_char;
   for (;;) {
-    c = getch();
+    read_char = getch();
 
-    if (c == ASCII_END_OF_TRANSMISSION) {
+    if (read_char == ASCII_END_OF_TRANSMISSION) {
       printf("\n");
       VECTOR_DESTROY(line);
       return NULL;
     }
 
-    if (c == '\n') {
+    if (read_char == '\n') {
       break;
     }
 
     // for when the user presses ctrl-c to trigger a sigint signal. for some
     // reason 0xff gets read from stdin, lets use that to our advantage
-    if (c == -1) {
+    if (read_char == -1) {
       printf("^C");
       line.length = 0;
       break;
     }
 
-    if (c == ANSI_START_CHAR) {
-      c = getch();
+    if (read_char == ANSI_START_CHAR) {
+      read_char = getch();
 
-      if (c != '[') {
+      if (read_char != '[') {
         continue;
       }
 
@@ -172,7 +173,7 @@ char *readline(char *data, const char *const prompt) {
               continue;
             }
             // shift left arrow
-            else if (arrow_char == 'D') {
+            if (arrow_char == 'D') {
               if (cursor_pos > 0) {
                 cursor_pos -= traverse_back_utf8(line.data, cursor_pos);
                 fputs(ANSI_CURSOR_LEFT, stdout);
@@ -203,7 +204,7 @@ char *readline(char *data, const char *const prompt) {
     }
 
     // backspace
-    if (c == ASCII_DEL) {
+    if (read_char == ASCII_DEL) {
       if (cursor_pos > 0) {
         const unsigned int bytes_removed = backspace(&line, cursor_pos);
         cursor_pos -= bytes_removed;
@@ -213,10 +214,10 @@ char *readline(char *data, const char *const prompt) {
       goto draw_line;
     }
 
-    line_insert(&line, c, cursor_pos);
+    line_insert(&line, read_char, cursor_pos);
     cursor_pos++;
 
-    if (!is_continuation_byte_utf8(c)) {
+    if (!is_continuation_byte_utf8(read_char)) {
       fputs(ANSI_CURSOR_RIGHT, stdout);
     }
 
