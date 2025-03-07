@@ -2,9 +2,10 @@
 #define LINE_READER_H
 
 #include "vector.h"
+#include <stdint.h>
 
-typedef VECTOR(char) line_t;
+typedef VECTOR(uint8_t) line_t;
 
-char *readline(char *data, const char *const prompt);
+uint8_t *readline(uint8_t *data, const char *const prompt);
 
 #endif

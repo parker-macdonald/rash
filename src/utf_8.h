@@ -2,19 +2,8 @@
 #define UTF_8_H
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <stddef.h>
-
-#define UTF_8_CONTINUATION_BIT_MASK 0xc0
-#define UTF_8_CONTINUATION_SEQUENCE 0x80
-
-#define UTF_8_FOUR_BYTE_MASK 0xf8
-#define UTF_8_FOUR_BYTE_SEQUENCE 0xf0
-
-#define UTF_8_THREE_BYTE_MASK 0xf0
-#define UTF_8_THREE_BYTE_SEQUENCE 0xe0
-
-#define UTF_8_TWO_BYTE_MASK 0xe0
-#define UTF_8_TWO_BYTE_SEQUENCE 0xc0
 
 /**
  * @brief When given a line, traverse_back_utf8 will backtrack to find the
@@ -25,7 +14,7 @@
  * @return The number of bytes the character takes up, or one if string is not
  * valid utf-8.
  */
-unsigned int traverse_back_utf8(const char *const line,
+unsigned int traverse_back_utf8(const uint8_t *const line,
                                 const unsigned int cursor_pos);
 
 /**
@@ -37,7 +26,7 @@ unsigned int traverse_back_utf8(const char *const line,
  * @return The number of bytes the character takes up, or one if string is not
  * valid utf-8.
  */
-unsigned int traverse_forward_utf8(const char *const line,
+unsigned int traverse_forward_utf8(const uint8_t *const line,
                                    const size_t line_len,
                                    const unsigned int cursor_pos);
 
@@ -46,6 +35,6 @@ unsigned int traverse_forward_utf8(const char *const line,
  * @param c The byte to check.
  * @return true: byte is a continuation byte, false: it is not.
  */
-bool is_continuation_byte_utf8(const char c);
+bool is_continuation_byte_utf8(const uint8_t byte);
 
 #endif

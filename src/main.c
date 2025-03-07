@@ -3,6 +3,7 @@
 #include "line_reader.h"
 #include <signal.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/cdefs.h>
@@ -15,7 +16,7 @@ volatile sig_atomic_t spawned_pid = 0;
 static void sig_handler(int sig) {
   if (spawned_pid != 0) {
     kill((pid_t)spawned_pid, sig);
-    (void) write(STDOUT_FILENO, "\n", 1);
+    (void)write(STDOUT_FILENO, "\n", 1);
   }
   sigaction(SIGINT,
             &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0},
@@ -23,22 +24,17 @@ static void sig_handler(int sig) {
 }
 
 _Static_assert(sizeof(sig_atomic_t) == sizeof(pid_t),
-                 "size of sig_atomic_t differs from pid_t. what the hell are "
-                 "you compiling this on?");
+               "size of sig_atomic_t differs from pid_t. what the hell are "
+               "you compiling this on?");
 
 int main(int argc, char **argv) {
   FILE *file = NULL;
-  bool interactive = false;
 
   if (argc == 2) {
-    file = fopen(argv[1], "r");
-
-    if (file == NULL) {
-      perror(argv[1]);
-      return EXIT_FAILURE;
-    }
-  } else if (argc == 1) {
-    interactive = true;
+    fprintf(stderr, "rash: Non-interactive mode is currently disabled\n");
+    return 1;
+  }
+  if (argc == 1) {
     file = stdin;
   } else {
     fprintf(stderr, "Usage: %s [FILE]\n", argv[0]);
@@ -56,35 +52,19 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  char *line = NULL;
-  size_t line_size = 0;
+  uint8_t *line = NULL;
   int status = EXIT_SUCCESS;
 
   setenv("PS1", "$ ", 0);
 
   while (!should_exit) {
-    if (interactive) {
-      line = readline(line, getenv("PS1"));
+    line = readline(line, getenv("PS1"));
 
-      if (line == NULL) {
-        break;
-      }
-    } else {
-      ssize_t getline_status = getline(&line, &line_size, file);
-
-      if (getline_status == 0) {
-        break;
-      }
-      if (getline_status == -1) {
-        if (!feof(file)) {
-          perror("getline");
-        }
-
-        break;
-      }
+    if (line == NULL) {
+      break;
     }
 
-    char **tokens = get_tokens_from_line(line);
+    char **tokens = get_tokens_from_line((char *)line);
 
     if (tokens != NULL) {
       status = execute(tokens);

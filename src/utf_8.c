@@ -1,13 +1,26 @@
 #include "utf_8.h"
 #include <stddef.h>
+#include <stdint.h>
 
-unsigned int traverse_back_utf8(const char *const line,
+#define LAST_BIT_OF_BYTE_MASK 0x80
+
+unsigned int count_leading_ones(uint8_t byte) {
+  unsigned int count;
+
+  for (count = 0; byte & LAST_BIT_OF_BYTE_MASK; count++) {
+    byte <<= 1;
+  }
+
+  return count;
+}
+
+unsigned int traverse_back_utf8(const uint8_t *const line,
                                 const unsigned int cursor_pos) {
   unsigned int offset = cursor_pos - 1;
   unsigned int char_size = 1;
 
   // true until we've reached the start of the utf-8 char
-  while (~line[offset] & UTF_8_CONTINUATION_BIT_MASK) {
+  while (is_continuation_byte_utf8(line[offset])) {
     // if we've reached the start this is malformed utf-8, just treat the bad
     // character as a byte. also, char size should not be four in this loop, if
     // it is the data is malformed, again just treat the bad character as a byte
@@ -23,49 +36,28 @@ unsigned int traverse_back_utf8(const char *const line,
 
   // checks to make sure the starting utf-8 byte we found is valid, if it isn't,
   // the data is malformed and tread the initial bad character as a byte.
-  switch (char_size) {
-  case 4:
-    if ((line[offset] & UTF_8_FOUR_BYTE_MASK) != UTF_8_FOUR_BYTE_SEQUENCE) {
-      char_size = 1;
-      break;
-    }
-    break;
-  case 3:
-    if ((line[offset] & UTF_8_THREE_BYTE_MASK) != UTF_8_THREE_BYTE_SEQUENCE) {
-      char_size = 1;
-      break;
-    }
-    break;
-  case 2:
-    if ((line[offset] & UTF_8_TWO_BYTE_MASK) != UTF_8_TWO_BYTE_SEQUENCE) {
-      char_size = 1;
-      break;
-    }
-    break;
+  if (count_leading_ones(line[offset]) != char_size) {
+    char_size = 1;
   }
 
   return char_size;
 }
 
-unsigned int traverse_forward_utf8(const char *const line,
+unsigned int traverse_forward_utf8(const uint8_t *const line,
                                    const size_t line_len,
                                    const unsigned int cursor_pos) {
   unsigned int offset = cursor_pos;
-  unsigned int char_size = 1;
+  unsigned int char_size = count_leading_ones(line[offset]);
 
-  // checks for stating sequence of a two byte utf-8 character
-  if ((line[offset] & UTF_8_TWO_BYTE_MASK) == UTF_8_TWO_BYTE_SEQUENCE) {
-    char_size = 2;
-  }
-
-  // checks for stating sequence of a three byte utf-8 character
-  if ((line[offset] & UTF_8_THREE_BYTE_MASK) == UTF_8_THREE_BYTE_SEQUENCE) {
-    char_size = 3;
-  }
-
-  // checks for stating sequence of a four byte utf-8 character
-  if ((line[offset] & UTF_8_FOUR_BYTE_MASK) == UTF_8_FOUR_BYTE_SEQUENCE) {
-    char_size = 4;
+  // if char_size is has a bad number of leading zeros, treat the character as a
+  // byte
+  switch (char_size) {
+  case 2:
+  case 3:
+  case 4:
+    break;
+  default:
+    char_size = 1;
   }
 
   for (unsigned int i = offset; i < char_size; i++) {
@@ -78,7 +70,7 @@ unsigned int traverse_forward_utf8(const char *const line,
     // checks if the continue sequence exists in the next character, if it
     // doesn't this utf-8 is malformed and we're treating the character as a
     // byte
-    if (!(~line[offset] & UTF_8_CONTINUATION_BIT_MASK)) {
+    if (!is_continuation_byte_utf8(line[offset])) {
       return 1;
     }
   }
@@ -86,7 +78,6 @@ unsigned int traverse_forward_utf8(const char *const line,
   return char_size;
 }
 
-bool is_continuation_byte_utf8(const char character) {
-  return ((character & UTF_8_CONTINUATION_BIT_MASK) ==
-          UTF_8_CONTINUATION_SEQUENCE);
+bool is_continuation_byte_utf8(const uint8_t byte) {
+  return (count_leading_ones(byte) == 1);
 }

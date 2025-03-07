@@ -3,6 +3,7 @@
 #include "utf_8.h"
 #include "vector.h"
 #include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
@@ -89,7 +90,25 @@ unsigned int delete(line_t *const line, const unsigned int cursor_pos) {
   return char_size;
 }
 
-char *readline(char *data, const char *const prompt) {
+void draw_line(const char *const prompt, const line_t *const line) {
+  // save cursor pos since we're messing with the line
+  fputs(ANSI_CURSOR_POS_SAVE, stdout);
+
+  // the old line reader used to just redraw what changed, but that had lots of
+  // bugs so now i'm just redrawing the whole line
+  fputs(ANSI_REMOVE_FULL_LINE, stdout);
+  // reset cursor to start of line
+  fputs("\r", stdout);
+
+  fputs(prompt, stdout);
+
+  fwrite(line->data, sizeof(*line->data), line->length, stdout);
+
+  // restore the cursor pos to where it was before
+  fputs(ANSI_CURSOR_POS_RESTORE, stdout);
+}
+
+uint8_t *readline(uint8_t *data, const char *const prompt) {
   printf("%s", prompt);
 
   line_t line;
