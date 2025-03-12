@@ -137,9 +137,8 @@ uint8_t *readline(uint8_t *data, const char *const prompt) {
       break;
     }
 
-    // for when the user presses ctrl-c to trigger a sigint signal. for some
-    // reason 0xff gets read from stdin, lets use that to our advantage
-    if (read_char == -1) {
+    // for when the user presses ctrl-c to trigger a sigint signal.
+    if (read_char == EOF) {
       printf("^C");
       line.length = 0;
       break;
