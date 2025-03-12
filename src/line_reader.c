@@ -138,7 +138,7 @@ uint8_t *readline(uint8_t *data, const char *const prompt) {
     }
 
     // for when the user presses ctrl-c to trigger a sigint signal.
-    if (read_char == EOF) {
+    if (feof(stdin)) {
       printf("^C");
       line.length = 0;
       break;
