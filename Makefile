@@ -11,7 +11,7 @@ LINTER := clang-tidy
 DEBUG := 1
 
 ifeq ($(DEBUG),1)
-	CFLAGS += -Og -g3
+	CFLAGS += -O0 -g3
 else
 	CFLAGS += -O3
 	LDFLAGS += -s

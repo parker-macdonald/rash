@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/cdefs.h>
 #include <unistd.h>
 
@@ -58,13 +59,15 @@ int main(int argc, char **argv) {
   setenv("PS1", "$ ", 0);
 
   while (!should_exit) {
-    line = readline(line, getenv("PS1"));
+    line = readline(getenv("PS1"));
 
     if (line == NULL) {
       break;
     }
 
-    char **tokens = get_tokens_from_line((char *)line);
+    char *line2 = strdup((char *)line);
+
+    char **tokens = get_tokens_from_line(line2);
 
     if (tokens != NULL) {
       status = execute(tokens);
@@ -73,6 +76,8 @@ int main(int argc, char **argv) {
     } else {
       status = EXIT_FAILURE;
     }
+
+    free(line2);
 
     if (should_exit) {
       break;
@@ -85,7 +90,9 @@ int main(int argc, char **argv) {
     setenv("?", status_env, 1);
   }
 
-  free(line);
+  if (line != NULL) {
+    line_reader_destroy();
+  }
 
   fclose(file);
 

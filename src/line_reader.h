@@ -6,6 +6,8 @@
 
 typedef VECTOR(uint8_t) line_t;
 
-uint8_t *readline(uint8_t *data, const char *const prompt);
+uint8_t *readline(const char *const prompt);
+
+void line_reader_destroy(void);
 
 #endif
