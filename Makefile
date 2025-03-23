@@ -31,7 +31,7 @@ endif
 
 OUT := rash
 BUILD := ./build
-SRC := ${wildcard src/**/*.c} ${wildcard src/*.c}
+SRC := ${wildcard src/**/*.c} ${wildcard src/**/**/*.c} ${wildcard src/*.c}
 OBJ := ${SRC:%.c=$(BUILD)/%.o}
 
 

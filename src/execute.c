@@ -1,5 +1,5 @@
 #include "execute.h"
-#include "builtins.h"
+#include "./builtins/find_builtin.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -58,10 +58,10 @@ int execute(char **const argv) {
     return EXIT_SUCCESS;
   }
 
-  for (size_t i = 0; i < NUM_OF_BUILTINS; i++) {
-    if (strcmp(argv[0], builtins[i]) == 0) {
-      return (*builtin_fns[i])(argv);
-    }
+  builtin_t builtin = find_builtin(argv[0]);
+
+  if (builtin != NULL) {
+    return builtin(argv);
   }
 
   return spawn_process(argv);
