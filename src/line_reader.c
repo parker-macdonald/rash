@@ -14,17 +14,11 @@
 _Static_assert(sizeof(char) == sizeof(uint8_t),
                "char is not one byte in size, god save you...");
 
-typedef struct line_node {
-  struct line_node *p_next;
-  struct line_node *p_prev;
-  line_t line;
-} line_node_t;
-
-static line_node_t *last_node = NULL;
-static bool make_new_node = true;
+line_node_t *root_line_node = NULL;
+line_node_t *last_line_node = NULL;
 
 void line_reader_destroy(void) {
-  line_node_t *node = last_node;
+  line_node_t *node = last_line_node;
 
   while (node != NULL) {
     VECTOR_DESTROY(node->line);
@@ -127,32 +121,38 @@ void draw_line(const char *const prompt, const line_t *const line) {
 
   fputs(prompt, stdout);
 
-  fwrite(line->data, sizeof(*line->data), line->length, stdout);
+  PRINT_LINE(*line);
+}
+
+void clear_history(void) {
+  line_node_t *node = root_line_node;
+
+  while (node != NULL) {
+    line_node_t *next_node = node->p_next;
+
+    free(node);
+
+    node = next_node;
+  }
+  root_line_node = NULL;
+  last_line_node = NULL;
+}
+
+void line_copy(const line_t *const src, line_t *dest) {
+  VECTOR_CLEAR(*dest);
+
+  for (size_t i = 0; i < src->length; i++) {
+    VECTOR_PUSH(*dest, src->data[i]);
+  }
 }
 
 uint8_t *readline(const char *const prompt) {
   printf("%s", prompt);
 
-  line_node_t *node;
+  line_node_t *node = NULL;
 
-  if (make_new_node) {
-    node = malloc(sizeof(line_node_t));
-
-    node->p_next = NULL;
-    node->p_prev = last_node;
-
-    if (last_node != NULL) {
-      last_node->p_next = node;
-    }
-
-    last_node = node;
-
-    VECTOR_INIT(node->line);
-  } else {
-    node = last_node;
-  }
-
-  make_new_node = true;
+  line_t line;
+  VECTOR_INIT(line);
 
   unsigned int cursor_pos = 0;
 
@@ -162,24 +162,41 @@ uint8_t *readline(const char *const prompt) {
 
     if (read_char == ASCII_END_OF_TRANSMISSION) {
       printf("\n");
+      VECTOR_DESTROY(line);
       line_reader_destroy();
       return NULL;
     }
 
     if (read_char == '\n') {
-      if (node->line.length == 0) {
-        make_new_node = false;
+      if (line.length != 0) {
+        line_node_t *new_node = malloc(sizeof(line_node_t));
+        new_node->line = line;
+        new_node->p_next = NULL;
+        new_node->p_prev = last_line_node;
+        if (last_line_node != NULL) {
+          last_line_node->p_next = new_node;
+        } else {
+          root_line_node = new_node;
+        }
+        last_line_node = new_node;
+        break;
       }
-      break;
+
+      printf("\n%s", prompt);
+      continue;
     }
 
     // for when the user presses ctrl-c to trigger a sigint signal.
-    if ((uint8_t)read_char == 0xff) {
+    if ((uint8_t)read_char == RECV_SIGINT) {
       printf("^C");
-      make_new_node = false;
-      node->line.length = 0;
-      break;
+      line.length = 0;
+      continue;
     }
+
+    // readonly line to get length or data info from. when the user is going
+    // through history, node contains the line they are viewing whereas line
+    // contains the buffer the user is currently editting
+    const line_t *const line_to_read = node == NULL ? &line : &node->line;
 
     if (read_char == ANSI_START_CHAR) {
       read_char = getch();
@@ -191,27 +208,35 @@ uint8_t *readline(const char *const prompt) {
       switch (getch()) {
       // arrow up
       case 'A':
-        if (node->p_prev != NULL) {
+        if (node == NULL) {
+          if (last_line_node != NULL) {
+            node = last_line_node;
+            cursor_pos = node->line.length;
+            draw_line(prompt, &node->line);
+          }
+        } else if (node->p_prev != NULL) {
           node = node->p_prev;
-          cursor_pos = node->line.length - 1;
-          make_new_node = false;
+          cursor_pos = node->line.length;
           draw_line(prompt, &node->line);
         }
         continue;
       // arrow down
       case 'B':
-        if (node->p_next != NULL) {
+        if (node != NULL && node->p_next != NULL) {
           node = node->p_next;
-          cursor_pos = node->line.length - 1;
-          make_new_node = false;
+          cursor_pos = node->line.length;
           draw_line(prompt, &node->line);
+        } else {
+          node = NULL;
+          cursor_pos = line.length;
+          draw_line(prompt, &line);
         }
         continue;
       // right arrow
       case 'C':
-        if (cursor_pos < node->line.length) {
-          cursor_pos += traverse_forward_utf8(node->line.data,
-                                              node->line.length, cursor_pos);
+        if (cursor_pos < line_to_read->length) {
+          cursor_pos += traverse_forward_utf8(line_to_read->data,
+                                              line_to_read->length, cursor_pos);
 
           fputs(ANSI_CURSOR_RIGHT, stdout);
         }
@@ -219,7 +244,7 @@ uint8_t *readline(const char *const prompt) {
       // left arrow
       case 'D':
         if (cursor_pos > 0) {
-          cursor_pos -= traverse_back_utf8(node->line.data, cursor_pos);
+          cursor_pos -= traverse_back_utf8(line_to_read->data, cursor_pos);
 
           fputs(ANSI_CURSOR_LEFT, stdout);
         }
@@ -230,15 +255,15 @@ uint8_t *readline(const char *const prompt) {
             const char arrow_char = getch();
             // shift right arrow
             if (arrow_char == 'C') {
-              if (cursor_pos < node->line.length) {
+              if (cursor_pos < line_to_read->length) {
                 cursor_pos += traverse_forward_utf8(
-                    node->line.data, node->line.length, cursor_pos);
+                    line_to_read->data, line_to_read->length, cursor_pos);
                 fputs(ANSI_CURSOR_RIGHT, stdout);
 
-                while (cursor_pos <= node->line.length - 1 &&
-                       node->line.data[cursor_pos] != ' ') {
+                while (cursor_pos <= line_to_read->length - 1 &&
+                       line_to_read->data[cursor_pos] != ' ') {
                   cursor_pos += traverse_forward_utf8(
-                      node->line.data, node->line.length, cursor_pos);
+                      line_to_read->data, line_to_read->length, cursor_pos);
                   fputs(ANSI_CURSOR_RIGHT, stdout);
                 }
               }
@@ -248,11 +273,14 @@ uint8_t *readline(const char *const prompt) {
             // shift left arrow
             if (arrow_char == 'D') {
               if (cursor_pos > 0) {
-                cursor_pos -= traverse_back_utf8(node->line.data, cursor_pos);
+                cursor_pos -=
+                    traverse_back_utf8(line_to_read->data, cursor_pos);
                 fputs(ANSI_CURSOR_LEFT, stdout);
 
-                while (cursor_pos > 0 && node->line.data[cursor_pos] != ' ') {
-                  cursor_pos -= traverse_back_utf8(node->line.data, cursor_pos);
+                while (cursor_pos > 0 &&
+                       line_to_read->data[cursor_pos] != ' ') {
+                  cursor_pos -=
+                      traverse_back_utf8(line_to_read->data, cursor_pos);
                   fputs(ANSI_CURSOR_LEFT, stdout);
                 }
               }
@@ -264,8 +292,12 @@ uint8_t *readline(const char *const prompt) {
       case '3':
         // delete key
         if (getch() == '~') {
-          if (cursor_pos < node->line.length) {
-            delete (&node->line, cursor_pos);
+          if (cursor_pos < line_to_read->length) {
+            if (node != NULL) {
+              line_copy(&node->line, &line);
+              node = NULL;
+            }
+            delete (&line, cursor_pos);
           }
           // should probably refactor to not use goto, but, i mean, it works...
           goto draw_line;
@@ -279,15 +311,25 @@ uint8_t *readline(const char *const prompt) {
     // backspace
     if (read_char == ASCII_DEL) {
       if (cursor_pos > 0) {
-        const unsigned int bytes_removed = backspace(&node->line, cursor_pos);
+        if (node != NULL) {
+          line_copy(&node->line, &line);
+          node = NULL;
+        }
+        const unsigned int bytes_removed = backspace(&line, cursor_pos);
         cursor_pos -= bytes_removed;
         fputs(ANSI_CURSOR_LEFT, stdout);
+        goto draw_line;
       }
 
-      goto draw_line;
+      continue;
     }
 
-    line_insert(&node->line, read_char, cursor_pos);
+    if (node != NULL) {
+      line_copy(&node->line, &line);
+      node = NULL;
+    }
+
+    line_insert(&line, read_char, cursor_pos);
     cursor_pos++;
 
     if (!is_continuation_byte_utf8(read_char)) {
@@ -303,15 +345,14 @@ uint8_t *readline(const char *const prompt) {
     printf("\r");
 
     fputs(prompt, stdout);
-    fwrite(node->line.data, sizeof(*node->line.data), node->line.length,
-           stdout);
+    PRINT_LINE(line);
 
     fputs(ANSI_CURSOR_POS_RESTORE, stdout);
   }
 
-  VECTOR_PUSH(node->line, '\0');
+  VECTOR_PUSH(line, '\0');
 
   printf("\n");
 
-  return node->line.data;
+  return line.data;
 }

@@ -1,3 +1,4 @@
+#include "builtins/find_builtin.h"
 #include "execute.h"
 #include "lexer.h"
 #include "line_reader.h"
@@ -56,6 +57,8 @@ int main(int argc, char **argv) {
   uint8_t *line = NULL;
   int status = EXIT_SUCCESS;
 
+  trie_init();
+
   setenv("PS1", "$ ", 0);
 
   while (!should_exit) {
@@ -95,6 +98,8 @@ int main(int argc, char **argv) {
   }
 
   fclose(file);
+
+  trie_destroy();
 
   return status;
 }
