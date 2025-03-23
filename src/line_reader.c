@@ -162,6 +162,7 @@ uint8_t *readline(const char *const prompt) {
 
     if (read_char == ASCII_END_OF_TRANSMISSION) {
       printf("\n");
+      VECTOR_DESTROY(line);
       line_reader_destroy();
       return NULL;
     }
@@ -186,11 +187,16 @@ uint8_t *readline(const char *const prompt) {
     }
 
     // for when the user presses ctrl-c to trigger a sigint signal.
-    if ((uint8_t)read_char == 0xff) {
+    if ((uint8_t)read_char == RECV_SIGINT) {
       printf("^C");
       line.length = 0;
       continue;
     }
+
+    // readonly line to get length or data info from. when the user is going
+    // through history, node contains the line they are viewing whereas line
+    // contains the buffer the user is currently editting
+    const line_t *const line_to_read = node == NULL ? &line : &node->line;
 
     if (read_char == ANSI_START_CHAR) {
       read_char = getch();
@@ -202,10 +208,12 @@ uint8_t *readline(const char *const prompt) {
       switch (getch()) {
       // arrow up
       case 'A':
-        if (node == NULL && last_line_node != NULL) {
-          node = last_line_node;
-          cursor_pos = node->line.length;
-          draw_line(prompt, &node->line);
+        if (node == NULL) {
+          if (last_line_node != NULL) {
+            node = last_line_node;
+            cursor_pos = node->line.length;
+            draw_line(prompt, &node->line);
+          }
         } else if (node->p_prev != NULL) {
           node = node->p_prev;
           cursor_pos = node->line.length;
@@ -226,9 +234,9 @@ uint8_t *readline(const char *const prompt) {
         continue;
       // right arrow
       case 'C':
-        if (cursor_pos < node->line.length) {
-          cursor_pos += traverse_forward_utf8(node->line.data,
-                                              node->line.length, cursor_pos);
+        if (cursor_pos < line_to_read->length) {
+          cursor_pos += traverse_forward_utf8(line_to_read->data,
+                                              line_to_read->length, cursor_pos);
 
           fputs(ANSI_CURSOR_RIGHT, stdout);
         }
@@ -236,7 +244,7 @@ uint8_t *readline(const char *const prompt) {
       // left arrow
       case 'D':
         if (cursor_pos > 0) {
-          cursor_pos -= traverse_back_utf8(node->line.data, cursor_pos);
+          cursor_pos -= traverse_back_utf8(line_to_read->data, cursor_pos);
 
           fputs(ANSI_CURSOR_LEFT, stdout);
         }
@@ -247,15 +255,15 @@ uint8_t *readline(const char *const prompt) {
             const char arrow_char = getch();
             // shift right arrow
             if (arrow_char == 'C') {
-              if (cursor_pos < node->line.length) {
+              if (cursor_pos < line_to_read->length) {
                 cursor_pos += traverse_forward_utf8(
-                    node->line.data, node->line.length, cursor_pos);
+                    line_to_read->data, line_to_read->length, cursor_pos);
                 fputs(ANSI_CURSOR_RIGHT, stdout);
 
-                while (cursor_pos <= node->line.length - 1 &&
-                       node->line.data[cursor_pos] != ' ') {
+                while (cursor_pos <= line_to_read->length - 1 &&
+                       line_to_read->data[cursor_pos] != ' ') {
                   cursor_pos += traverse_forward_utf8(
-                      node->line.data, node->line.length, cursor_pos);
+                      line_to_read->data, line_to_read->length, cursor_pos);
                   fputs(ANSI_CURSOR_RIGHT, stdout);
                 }
               }
@@ -265,11 +273,14 @@ uint8_t *readline(const char *const prompt) {
             // shift left arrow
             if (arrow_char == 'D') {
               if (cursor_pos > 0) {
-                cursor_pos -= traverse_back_utf8(node->line.data, cursor_pos);
+                cursor_pos -=
+                    traverse_back_utf8(line_to_read->data, cursor_pos);
                 fputs(ANSI_CURSOR_LEFT, stdout);
 
-                while (cursor_pos > 0 && node->line.data[cursor_pos] != ' ') {
-                  cursor_pos -= traverse_back_utf8(node->line.data, cursor_pos);
+                while (cursor_pos > 0 &&
+                       line_to_read->data[cursor_pos] != ' ') {
+                  cursor_pos -=
+                      traverse_back_utf8(line_to_read->data, cursor_pos);
                   fputs(ANSI_CURSOR_LEFT, stdout);
                 }
               }
@@ -281,7 +292,7 @@ uint8_t *readline(const char *const prompt) {
       case '3':
         // delete key
         if (getch() == '~') {
-          if (cursor_pos < node->line.length) {
+          if (cursor_pos < line_to_read->length) {
             if (node != NULL) {
               line_copy(&node->line, &line);
               node = NULL;

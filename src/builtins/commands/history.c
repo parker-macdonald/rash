@@ -1,6 +1,7 @@
 #include "../../line_reader.h"
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define BASE 10
@@ -31,8 +32,10 @@ int builtin_history(char **const argv) {
     // traverse to the last line
     unsigned int length;
     for (length = 1;; length++) {
-      if (node->p_next == NULL)
+      if (node->p_next == NULL) {
         break;
+      }
+
       node = node->p_next;
     }
 

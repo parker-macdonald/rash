@@ -1,5 +1,5 @@
-#include "./builtins.h"
 #include "./find_builtin.h"
+#include "./builtins.h"
 #include <assert.h>
 #include <ctype.h>
 #include <stddef.h>
@@ -18,12 +18,12 @@ void trie_insert(const char *const str, const builtin_t function) {
   TrieNode *node = &root;
 
   for (size_t i = 0; str[i] != '\0'; i++) {
-    char c = str[i];
+    char curr_char = str[i];
 
     // all builtins are just letters i believe
-    assert(isalpha((int)c));
-    c -= 'a';
-    size_t index = c;
+    assert(isalpha((int)curr_char));
+    curr_char -= 'a';
+    size_t index = curr_char;
     TrieNode *new_node = node->nodes[index];
 
     if (new_node == NULL) {
@@ -37,7 +37,9 @@ void trie_insert(const char *const str, const builtin_t function) {
   node->function = function;
 }
 
-void trie_free(TrieNode* node) {
+// the trie should never get too big, so i don't see recursion as too big of a
+// problem here.
+void trie_free(TrieNode *node) { // NOLINT(misc-no-recursion)
   for (size_t i = 0; i < ALPHABET_SIZE; i++) {
     if (node->nodes[i] != NULL) {
       trie_free(node->nodes[i]);
@@ -66,15 +68,15 @@ void trie_init(void) {
 builtin_t find_builtin(const char *const str) {
   TrieNode *node = &root;
   for (size_t i = 0; str[i] != '\0'; i++) {
-    char c = str[i];
+    char curr_char = str[i];
 
-    if (!isalpha((int)c)) {
+    if (!isalpha((int)curr_char)) {
       return NULL;
     }
-    
-    c -= 'a';
 
-    size_t index = c;
+    curr_char -= 'a';
+
+    size_t index = curr_char;
     node = node->nodes[index];
 
     if (node == NULL) {
