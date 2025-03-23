@@ -174,7 +174,7 @@ uint8_t *readline(const char *const prompt) {
     }
 
     // for when the user presses ctrl-c to trigger a sigint signal.
-    if (feof(stdin)) {
+    if ((uint8_t)read_char == 0xff) {
       printf("^C");
       make_new_node = false;
       node->line.length = 0;
