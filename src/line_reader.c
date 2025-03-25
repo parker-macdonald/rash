@@ -167,10 +167,27 @@ uint8_t *readline(const char *const prompt) {
       return NULL;
     }
 
+    // for when the user presses ctrl-c to trigger a sigint signal.
+    if ((uint8_t)read_char == RECV_SIGINT) {
+      printf("^C\n%s", prompt);
+      line.length = 0;
+      continue;
+    }
+
+    // readonly line to get length or data info from. when the user is going
+    // through history, node contains the line they are viewing whereas line
+    // contains the buffer the user is currently editting
+    line_t *line_to_read = node == NULL ? &line : &node->line;
+
     if (read_char == '\n') {
-      if (line.length != 0) {
+      if (line_to_read->length != 0) {
         line_node_t *new_node = malloc(sizeof(line_node_t));
+        if (node != NULL) {
+          line_copy(&node->line, &line);
+        }
+
         new_node->line = line;
+
         new_node->p_next = NULL;
         new_node->p_prev = last_line_node;
         if (last_line_node != NULL) {
@@ -185,18 +202,6 @@ uint8_t *readline(const char *const prompt) {
       printf("\n%s", prompt);
       continue;
     }
-
-    // for when the user presses ctrl-c to trigger a sigint signal.
-    if ((uint8_t)read_char == RECV_SIGINT) {
-      printf("^C");
-      line.length = 0;
-      continue;
-    }
-
-    // readonly line to get length or data info from. when the user is going
-    // through history, node contains the line they are viewing whereas line
-    // contains the buffer the user is currently editting
-    const line_t *const line_to_read = node == NULL ? &line : &node->line;
 
     if (read_char == ANSI_START_CHAR) {
       read_char = getch();
