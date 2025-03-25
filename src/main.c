@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
 
   if (argc == 2) {
     fprintf(stderr, "rash: Non-interactive mode is currently disabled\n");
-    return 1;
+    return EXIT_FAILURE;
   }
   if (argc == 1) {
     file = stdin;
@@ -65,6 +65,7 @@ int main(int argc, char **argv) {
     line = readline(getenv("PS1"));
 
     if (line == NULL) {
+      status = EXIT_SUCCESS;
       break;
     }
 
