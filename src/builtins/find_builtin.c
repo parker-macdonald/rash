@@ -63,6 +63,9 @@ void trie_init(void) {
   trie_insert("exit", &builtin_exit);
   trie_insert("export", &builtin_export);
   trie_insert("history", &builtin_history);
+  trie_insert("true", &builtin_true);
+  trie_insert("false", &builtin_false);
+  trie_insert("pwd",&builtin_pwd);
 }
 
 builtin_t find_builtin(const char *const str) {

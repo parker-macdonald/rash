@@ -16,9 +16,9 @@ int builtin_history(char **const argv) {
     }
 
     char *endptr;
-    int old_errno = errno;
+    errno = 0;
     const long num = strtol(argv[1], &endptr, BASE);
-    if (old_errno != errno || *endptr != '\0' || num < 0) {
+    if (errno != 0 || *endptr != '\0' || num < 0) {
       fprintf(stderr, "history: %s: positive number expected\n", argv[1]);
       return EXIT_FAILURE;
     }

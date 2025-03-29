@@ -14,11 +14,12 @@ int builtin_exit(char **const argv) {
     return 0;
   }
 
-  int old_errno = errno;
-  long status = strtol(argv[1], NULL, BASE);
+  char* endptr;
+  errno = 0;
+  long status = strtol(argv[1], &endptr, BASE);
 
-  if (old_errno != errno) {
-    perror("exit");
+  if (errno != 0 || *endptr != '\0') {
+    fprintf(stderr, "exit: %s: number expected\n", argv[1]);
     return 2;
   }
 
