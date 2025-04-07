@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/cdefs.h>
+#include <sys/utsname.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -16,6 +17,40 @@ _Static_assert(sizeof(char) == sizeof(uint8_t),
 
 line_node_t *root_line_node = NULL;
 line_node_t *last_line_node = NULL;
+
+void print_prompt(const char *const prompt) {
+  bool escaped = false;
+  for (size_t i = 0; prompt[i] != '\0'; i++) {
+    if (escaped) {
+      switch (prompt[i]) {
+      case 'a':
+        // ascii bell
+        putchar('\07');
+        break;
+      case 'e':
+        // ansi escape
+        putchar('\033');
+        break;
+      case 'H': {
+        struct utsname name;
+
+        uname(&name);
+
+        fputs(name.nodename, stdout);
+        break;
+      }
+      }
+      escaped = false;
+      continue;
+    }
+    
+    escaped = prompt[i] == '\\';
+
+    if (!escaped) {
+      putchar(prompt[i]);
+    }
+  }
+}
 
 void line_reader_destroy(void) {
   line_node_t *node = last_line_node;
@@ -119,7 +154,7 @@ void draw_line(const char *const prompt, const line_t *const line) {
   // reset cursor to start of line
   fputs("\r", stdout);
 
-  fputs(prompt, stdout);
+  print_prompt(prompt);
 
   PRINT_LINE(*line);
 }
@@ -147,7 +182,7 @@ void line_copy(const line_t *const src, line_t *dest) {
 }
 
 uint8_t *readline(const char *const prompt) {
-  printf("%s", prompt);
+  print_prompt(prompt);
 
   line_node_t *node = NULL;
 
@@ -169,7 +204,8 @@ uint8_t *readline(const char *const prompt) {
 
     // for when the user presses ctrl-c to trigger a sigint signal.
     if ((uint8_t)read_char == RECV_SIGINT) {
-      printf("^C\n%s", prompt);
+      puts("^C");
+      print_prompt(prompt);
       line.length = 0;
       continue;
     }
@@ -199,7 +235,8 @@ uint8_t *readline(const char *const prompt) {
         break;
       }
 
-      printf("\n%s", prompt);
+      fputs("\n", stdout);
+      print_prompt(prompt);
       continue;
     }
 
@@ -349,7 +386,7 @@ uint8_t *readline(const char *const prompt) {
     // reset cursor to start of line
     printf("\r");
 
-    fputs(prompt, stdout);
+    print_prompt(prompt);
     PRINT_LINE(line);
 
     fputs(ANSI_CURSOR_POS_RESTORE, stdout);
