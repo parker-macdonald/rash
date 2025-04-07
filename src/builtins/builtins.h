@@ -23,4 +23,6 @@ int builtin_bg(char **argv);
 
 int builtin_jobs(char **argv);
 
+int builtin_test(char **argv);
+
 #endif
