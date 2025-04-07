@@ -66,6 +66,7 @@ void trie_init(void) {
   trie_insert("true", &builtin_true);
   trie_insert("false", &builtin_false);
   trie_insert("pwd",&builtin_pwd);
+  trie_insert("test", &builtin_test);
 }
 
 builtin_t find_builtin(const char *const str) {
