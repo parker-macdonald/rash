@@ -1,10 +1,9 @@
 PREFIX := /usr/local
-INCS := -Isrc/
 
 SANITIZER := 
 CFLAGS := -std=c99 -D_POSIX_C_SOURCE=200809L
 CFLAG_ERRORS := -Werror -Wall -Wvla -Wextra -Wunreachable-code -Wshadow -Wpedantic
-LDFLAGS := $(INCS)
+LDFLAGS := 
 CC := clang
 LINTER := clang-tidy
 
