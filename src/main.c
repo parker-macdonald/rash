@@ -1,8 +1,8 @@
 #include "builtins/find_builtin.h"
 #include "execute.h"
+#include "jobs.h"
 #include "lexer.h"
 #include "line_reader.h"
-#include "jobs.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -25,7 +25,6 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  uint8_t *line = NULL;
   int status = EXIT_SUCCESS;
 
   trie_init();
@@ -34,7 +33,7 @@ int main(int argc, char **argv) {
   setenv("PS1", "$ ", 0);
 
   while (!should_exit) {
-    line = readline(getenv("PS1"));
+    const uint8_t *line = readline(getenv("PS1"));
     clean_jobs();
 
     if (line == NULL) {
@@ -42,19 +41,16 @@ int main(int argc, char **argv) {
       break;
     }
 
-    char *line2 = strdup((char *)line);
-
-    char **tokens = get_tokens_from_line(line2);
+    char **tokens = get_tokens_from_line(line);
 
     if (tokens != NULL) {
       status = execute(tokens);
 
+      free(tokens[0]);
       free(tokens);
     } else {
       status = EXIT_FAILURE;
     }
-
-    free(line2);
 
     if (should_exit) {
       break;
@@ -67,9 +63,7 @@ int main(int argc, char **argv) {
     setenv("?", status_env, 1);
   }
 
-  if (line != NULL) {
-    line_reader_destroy();
-  }
+  line_reader_destroy();
 
   fclose(file);
 

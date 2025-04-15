@@ -26,9 +26,13 @@ void line_reader_destroy(void) {
     line_node_t *prev_node = node->p_prev;
 
     free(node);
+    node = NULL;
 
     node = prev_node;
   }
+
+  root_line_node = NULL;
+  last_line_node = NULL;
 }
 
 char getch(void) {
@@ -146,7 +150,7 @@ void line_copy(const line_t *const src, line_t *dest) {
   }
 }
 
-uint8_t *readline(const char *const prompt) {
+const uint8_t *readline(const char *const prompt) {
   printf("%s", prompt);
 
   line_node_t *node = NULL;

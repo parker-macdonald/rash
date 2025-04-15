@@ -1,6 +1,8 @@
 #ifndef LEXER_H
 #define LEXER_H
 
-char **get_tokens_from_line(char *const line);
+#include "stdint.h"
+
+char **get_tokens_from_line(const uint8_t *const line);
 
 #endif

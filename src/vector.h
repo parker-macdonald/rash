@@ -30,7 +30,10 @@ struct { \
 }
 
 #define VECTOR_DESTROY(vector) \
-  free((vector).data)
+{ \
+  free((vector).data); \
+  (vector).data = NULL; \
+}
 
 #define VECTOR_CLEAR(vector) \
   (vector).length = 0
