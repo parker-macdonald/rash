@@ -167,9 +167,11 @@ uint8_t *readline(const char *const prompt) {
       return NULL;
     }
 
-    // for when the user presses ctrl-c to trigger a sigint signal.
+    // this happens when the user presses ctrl-c, ctrl-z, sometimes when a child
+    // process exits, not sure why, but just ignore the byte and move to a new
+    // line.
     if ((uint8_t)read_char == RECV_SIGINT) {
-      printf("^C\n%s", prompt);
+      printf("\n%s", prompt);
       line.length = 0;
       continue;
     }

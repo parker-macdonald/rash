@@ -1,15 +1,13 @@
 #include "execute.h"
 #include "./builtins/find_builtin.h"
+#include "jobs.h"
 #include <errno.h>
 #include <fcntl.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
-extern volatile sig_atomic_t spawned_pid;
 
 int spawn_process(char **const argv) {
   pid_t pid = fork();
@@ -38,14 +36,21 @@ int spawn_process(char **const argv) {
   }
   // parent process
   else {
-    int status;
-    spawned_pid = pid;
+    int status = 0;
+    fg_pid = pid;
 
-    do {
-      waitpid(pid, &status, WUNTRACED);
-    } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+    waitpid(pid, &status, WUNTRACED);
 
-    spawned_pid = 0;
+    fg_pid = 0;
+
+    if (recv_sigtstp) {
+      recv_sigtstp = 0;
+
+      register_stopped_job(pid);
+
+      return 0;
+    }
+
     return WEXITSTATUS(status);
   }
 

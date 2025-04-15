@@ -17,4 +17,10 @@ int builtin_false(char **argv);
 
 int builtin_pwd(char **argv);
 
+int builtin_fg(char **argv);
+
+int builtin_bg(char **argv);
+
+int builtin_jobs(char **argv);
+
 #endif
