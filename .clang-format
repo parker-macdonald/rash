@@ -2,6 +2,11 @@ IndentWidth: 2
 PointerAlignment: Right
 ColumnLimit: 80
 LineEnding: LF
+IndentCaseLabels: true
+InsertBraces: true
+IndentPPDirectives: BeforeHash
+ReflowComments: true
+SpaceAfterCStyleCast: false
 
 IncludeBlocks: Regroup
 IncludeCategories:

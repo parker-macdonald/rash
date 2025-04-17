@@ -53,12 +53,12 @@ size_t traverse_forward_utf8(const uint8_t *const line, const size_t line_len,
   // if char_size is has a bad number of leading zeros, treat the character as
   // a byte
   switch (char_size) {
-  case 2:
-  case 3:
-  case 4:
-    break;
-  default:
-    char_size = 1;
+    case 2:
+    case 3:
+    case 4:
+      break;
+    default:
+      char_size = 1;
   }
 
   for (size_t i = offset; i < char_size; i++) {

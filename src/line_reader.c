@@ -226,107 +226,107 @@ const uint8_t *readline(const char *const prompt) {
       }
 
       switch (getch()) {
-      // arrow up
-      case 'A':
-        if (node == NULL) {
-          if (last_line_node != NULL) {
-            node = last_line_node;
+        // arrow up
+        case 'A':
+          if (node == NULL) {
+            if (last_line_node != NULL) {
+              node = last_line_node;
+              cursor_pos = node->line.length;
+              draw_line(prompt, &node->line);
+            }
+          } else if (node->p_prev != NULL) {
+            node = node->p_prev;
             cursor_pos = node->line.length;
             draw_line(prompt, &node->line);
           }
-        } else if (node->p_prev != NULL) {
-          node = node->p_prev;
-          cursor_pos = node->line.length;
-          draw_line(prompt, &node->line);
-        }
-        continue;
-      // arrow down
-      case 'B':
-        if (node != NULL && node->p_next != NULL) {
-          node = node->p_next;
-          cursor_pos = node->line.length;
-          draw_line(prompt, &node->line);
-        } else {
-          node = NULL;
-          cursor_pos = line.length;
-          draw_line(prompt, &line);
-        }
-        continue;
-      // right arrow
-      case 'C':
-        if (cursor_pos < line_to_read->length) {
-          cursor_pos += traverse_forward_utf8(line_to_read->data,
-                                              line_to_read->length, cursor_pos);
+          continue;
+        // arrow down
+        case 'B':
+          if (node != NULL && node->p_next != NULL) {
+            node = node->p_next;
+            cursor_pos = node->line.length;
+            draw_line(prompt, &node->line);
+          } else {
+            node = NULL;
+            cursor_pos = line.length;
+            draw_line(prompt, &line);
+          }
+          continue;
+        // right arrow
+        case 'C':
+          if (cursor_pos < line_to_read->length) {
+            cursor_pos += traverse_forward_utf8(
+                line_to_read->data, line_to_read->length, cursor_pos);
 
-          fputs(ANSI_CURSOR_RIGHT, stdout);
-        }
-        continue;
-      // left arrow
-      case 'D':
-        if (cursor_pos > 0) {
-          cursor_pos -= traverse_back_utf8(line_to_read->data, cursor_pos);
+            fputs(ANSI_CURSOR_RIGHT, stdout);
+          }
+          continue;
+        // left arrow
+        case 'D':
+          if (cursor_pos > 0) {
+            cursor_pos -= traverse_back_utf8(line_to_read->data, cursor_pos);
 
-          fputs(ANSI_CURSOR_LEFT, stdout);
-        }
-        continue;
-      case '1':
-        if (getch() == ';') {
-          if (getch() == '5') {
-            const uint8_t arrow_char = getch();
-            // shift right arrow
-            if (arrow_char == 'C') {
-              if (cursor_pos < line_to_read->length) {
-                cursor_pos += traverse_forward_utf8(
-                    line_to_read->data, line_to_read->length, cursor_pos);
-                fputs(ANSI_CURSOR_RIGHT, stdout);
-
-                while (cursor_pos <= line_to_read->length - 1 &&
-                       line_to_read->data[cursor_pos] != ' ') {
+            fputs(ANSI_CURSOR_LEFT, stdout);
+          }
+          continue;
+        case '1':
+          if (getch() == ';') {
+            if (getch() == '5') {
+              const uint8_t arrow_char = getch();
+              // shift right arrow
+              if (arrow_char == 'C') {
+                if (cursor_pos < line_to_read->length) {
                   cursor_pos += traverse_forward_utf8(
                       line_to_read->data, line_to_read->length, cursor_pos);
                   fputs(ANSI_CURSOR_RIGHT, stdout);
+
+                  while (cursor_pos <= line_to_read->length - 1 &&
+                         line_to_read->data[cursor_pos] != ' ') {
+                    cursor_pos += traverse_forward_utf8(
+                        line_to_read->data, line_to_read->length, cursor_pos);
+                    fputs(ANSI_CURSOR_RIGHT, stdout);
+                  }
                 }
+
+                continue;
               }
-
-              continue;
-            }
-            // shift left arrow
-            if (arrow_char == 'D') {
-              if (cursor_pos > 0) {
-                cursor_pos -=
-                    traverse_back_utf8(line_to_read->data, cursor_pos);
-                fputs(ANSI_CURSOR_LEFT, stdout);
-
-                while (cursor_pos > 0 &&
-                       line_to_read->data[cursor_pos] != ' ') {
+              // shift left arrow
+              if (arrow_char == 'D') {
+                if (cursor_pos > 0) {
                   cursor_pos -=
                       traverse_back_utf8(line_to_read->data, cursor_pos);
                   fputs(ANSI_CURSOR_LEFT, stdout);
-                }
-              }
 
-              continue;
+                  while (cursor_pos > 0 &&
+                         line_to_read->data[cursor_pos] != ' ') {
+                    cursor_pos -=
+                        traverse_back_utf8(line_to_read->data, cursor_pos);
+                    fputs(ANSI_CURSOR_LEFT, stdout);
+                  }
+                }
+
+                continue;
+              }
             }
           }
-        }
-        break;
-      case '3':
-        // delete key
-        if (getch() == '~') {
-          if (cursor_pos < line_to_read->length) {
-            if (node != NULL) {
-              line_copy(&node->line, &line);
-              node = NULL;
+          break;
+        case '3':
+          // delete key
+          if (getch() == '~') {
+            if (cursor_pos < line_to_read->length) {
+              if (node != NULL) {
+                line_copy(&node->line, &line);
+                node = NULL;
+              }
+              delete (&line, cursor_pos);
             }
-            delete (&line, cursor_pos);
+            // should probably refactor to not use goto, but, i mean, it
+            // works...
+            goto draw_line;
           }
-          // should probably refactor to not use goto, but, i mean, it
-          // works...
-          goto draw_line;
-        }
-        break;
-      default:
-        continue;
+          break;
+        default:
+          continue;
       }
     }
 
