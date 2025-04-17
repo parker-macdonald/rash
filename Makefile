@@ -1,7 +1,7 @@
 PREFIX := /usr/local
 
 SANITIZER := 
-CFLAGS := -std=c99 -D_POSIX_C_SOURCE=200809L
+CFLAGS := -std=c17 -D_POSIX_C_SOURCE=200809L
 CFLAG_ERRORS := -Werror -Wall -Wvla -Wextra -Wunreachable-code -Wshadow -Wpedantic
 LDFLAGS := 
 CC := clang
