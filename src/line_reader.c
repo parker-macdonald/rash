@@ -40,19 +40,26 @@ static uint8_t getch(void) {
   struct termios newt;
   uint8_t byte;
 
-  tcgetattr(STDIN_FILENO, &oldt);          // Get the current terminal settings
-  newt = oldt;                             // Copy them to a new variable
-  newt.c_lflag &= ~(unsigned int)(ICANON | ECHO);        // Disable canonical mode and echo
+  tcgetattr(STDIN_FILENO, &oldt); // Get the current terminal settings
+  newt = oldt;                    // Copy them to a new variable
+  newt.c_lflag &=
+      ~(unsigned int)(ICANON | ECHO);      // Disable canonical mode and echo
   tcsetattr(STDIN_FILENO, TCSANOW, &newt); // Set the new settings
 
-  fread(&byte, sizeof(byte), 1, stdin); // Read a single character
+  size_t n_read =
+      fread(&byte, sizeof(byte), 1, stdin); // Read a single character
 
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // Restore original settings
+
+  if (n_read != 1) {
+    return EOF;
+  }
+
   return byte;
 }
 
 static void line_insert(line_t *const line, const uint8_t byte,
-                 const size_t cursor_pos) {
+                        const size_t cursor_pos) {
   if (cursor_pos == line->length) {
     VECTOR_PUSH((*line), byte);
     return;
