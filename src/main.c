@@ -1,14 +1,15 @@
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "builtins/find_builtin.h"
 #include "execute.h"
 #include "jobs.h"
 #include "lexer.h"
 #include "line_reader.h"
 #include "should_exit.h"
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 bool should_exit = false;
 

@@ -1,7 +1,5 @@
 #include "line_reader.h"
-#include "ansi.h"
-#include "utf_8.h"
-#include "vector.h"
+
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -10,6 +8,10 @@
 #include <sys/cdefs.h>
 #include <termios.h>
 #include <unistd.h>
+
+#include "ansi.h"
+#include "utf_8.h"
+#include "vector.h"
 
 _Static_assert(sizeof(char) == sizeof(uint8_t),
                "char is not one byte in size, god save you...");
@@ -178,9 +180,9 @@ const uint8_t *readline(const char *const prompt) {
       return NULL;
     }
 
-    // this happens when the user presses ctrl-c, ctrl-z, sometimes when a child
-    // process exits, not sure why, but just ignore the byte and move to a new
-    // line.
+    // this happens when the user presses ctrl-c, ctrl-z, sometimes when a
+    // child process exits, not sure why, but just ignore the byte and move
+    // to a new line.
     if ((uint8_t)curr_byte == RECV_SIGINT) {
       printf("\n%s", prompt);
       line.length = 0;
@@ -318,7 +320,8 @@ const uint8_t *readline(const char *const prompt) {
             }
             delete (&line, cursor_pos);
           }
-          // should probably refactor to not use goto, but, i mean, it works...
+          // should probably refactor to not use goto, but, i mean, it
+          // works...
           goto draw_line;
         }
         break;

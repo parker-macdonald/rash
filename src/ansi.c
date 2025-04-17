@@ -1,4 +1,5 @@
 #include "ansi.h"
+
 #include <stdint.h>
 
 const char ANSI_START_CHAR = '\033';

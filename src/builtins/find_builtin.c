@@ -1,9 +1,11 @@
 #include "./find_builtin.h"
-#include "./builtins.h"
+
 #include <assert.h>
 #include <ctype.h>
 #include <stddef.h>
 #include <stdlib.h>
+
+#include "./builtins.h"
 
 #define ALPHABET_SIZE 26
 

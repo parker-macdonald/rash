@@ -1,5 +1,5 @@
 #include "lexer.h"
-#include "vector.h"
+
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+
+#include "vector.h"
 
 enum lexer_state {
   DEFAULT,

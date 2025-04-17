@@ -1,0 +1,11 @@
+IndentWidth: 2
+PointerAlignment: Right
+ColumnLimit: 80
+LineEnding: LF
+
+IncludeBlocks: Regroup
+IncludeCategories:
+ - Regex: '^".+'
+   Priority: 2
+ - Regex: '^<.+'
+   Priority: 1

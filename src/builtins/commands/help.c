@@ -1,6 +1,7 @@
-#include "../builtins.h"
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "../builtins.h"
 
 int builtin_help(char **const argv) {
   (void)argv;
