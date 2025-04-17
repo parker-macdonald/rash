@@ -6,7 +6,7 @@
 
 #include "../builtins.h"
 
-#define MAX_CWD_SIZE 1024UL
+#define MAX_CWD_SIZE 1024
 
 int builtin_pwd(char **argv) {
   (void)argv;
