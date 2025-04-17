@@ -14,8 +14,8 @@
  * @return The number of bytes the character takes up, or one if string is not
  * valid utf-8.
  */
-unsigned int traverse_back_utf8(const uint8_t *const line,
-                                const unsigned int cursor_pos);
+size_t traverse_back_utf8(const uint8_t *const line,
+                                const size_t cursor_pos);
 
 /**
  * @brief When given a line, traverse_forward_utf8 will traverse through the
@@ -26,13 +26,13 @@ unsigned int traverse_back_utf8(const uint8_t *const line,
  * @return The number of bytes the character takes up, or one if string is not
  * valid utf-8.
  */
-unsigned int traverse_forward_utf8(const uint8_t *const line,
+size_t traverse_forward_utf8(const uint8_t *const line,
                                    const size_t line_len,
-                                   const unsigned int cursor_pos);
+                                   const size_t cursor_pos);
 
 /**
  * @brief Returns true when the given character is a continuation byte in utf-8.
- * @param c The byte to check.
+ * @param byte The byte to check.
  * @return true: byte is a continuation byte, false: it is not.
  */
 bool is_continuation_byte_utf8(const uint8_t byte);

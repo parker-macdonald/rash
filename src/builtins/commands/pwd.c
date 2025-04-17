@@ -1,8 +1,9 @@
+#include "../builtins.h"
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <limits.h>
 
 #define MAX_CWD_SIZE 1024UL
 
@@ -16,18 +17,19 @@ int builtin_pwd(char **argv) {
 
   while (buf == NULL) {
     if (errno != ERANGE) {
-        perror("pwd");
-        free(cwd);
-        return EXIT_FAILURE;
+      perror("pwd");
+      free(cwd);
+      return EXIT_FAILURE;
     }
 
     cwd_size *= 2;
 
     // lets not realloc forever
     if (cwd_size > PATH_MAX) {
-        free(cwd);
-        fprintf(stderr, "pwd: working directory exceeds %zu bytes.\n", MAX_CWD_SIZE);
-        return EXIT_FAILURE;
+      free(cwd);
+      fprintf(stderr, "pwd: working directory exceeds %zu bytes.\n",
+              MAX_CWD_SIZE);
+      return EXIT_FAILURE;
     }
 
     cwd = realloc(cwd, cwd_size);

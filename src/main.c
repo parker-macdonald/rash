@@ -3,6 +3,7 @@
 #include "jobs.h"
 #include "lexer.h"
 #include "line_reader.h"
+#include "should_exit.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>

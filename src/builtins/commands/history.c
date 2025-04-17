@@ -1,4 +1,5 @@
 #include "../../line_reader.h"
+#include "../builtins.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,7 +50,7 @@ int builtin_history(char **const argv) {
       count = length;
     }
 
-    for (unsigned int i = count - 1; i >= 0 && node != NULL; i--) {
+    for (unsigned int i = count - 1; node != NULL; i--) {
       printf("%5u  ", length - i);
       PRINT_LINE(node->line);
       fputs("\n", stdout);

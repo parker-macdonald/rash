@@ -1,9 +1,9 @@
+#include "../../should_exit.h"
+#include "../builtins.h"
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-extern bool should_exit;
 
 #define BASE 10
 
@@ -14,7 +14,7 @@ int builtin_exit(char **const argv) {
     return 0;
   }
 
-  char* endptr;
+  char *endptr;
   errno = 0;
   long status = strtol(argv[1], &endptr, BASE);
 

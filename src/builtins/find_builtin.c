@@ -14,7 +14,7 @@ typedef struct trie_node_t {
 
 static TrieNode root = {0};
 
-void trie_insert(const char *const str, const builtin_t function) {
+static void trie_insert(const char *const str, const builtin_t function) {
   TrieNode *node = &root;
 
   for (size_t i = 0; str[i] != '\0'; i++) {
@@ -23,7 +23,7 @@ void trie_insert(const char *const str, const builtin_t function) {
     // all builtins are just letters i believe
     assert(isalpha((int)curr_char));
     curr_char -= 'a';
-    size_t index = curr_char;
+    size_t index = (size_t)curr_char;
     TrieNode *new_node = node->nodes[index];
 
     if (new_node == NULL) {
@@ -39,7 +39,7 @@ void trie_insert(const char *const str, const builtin_t function) {
 
 // the trie should never get too big, so i don't see recursion as too big of a
 // problem here.
-void trie_free(TrieNode *node) { // NOLINT(misc-no-recursion)
+static void trie_free(TrieNode *node) { // NOLINT(misc-no-recursion)
   for (size_t i = 0; i < ALPHABET_SIZE; i++) {
     if (node->nodes[i] != NULL) {
       trie_free(node->nodes[i]);
@@ -82,7 +82,7 @@ builtin_t find_builtin(const char *const str) {
 
     curr_char -= 'a';
 
-    size_t index = curr_char;
+    size_t index = (size_t)curr_char;
     node = node->nodes[index];
 
     if (node == NULL) {

@@ -4,7 +4,7 @@
 
 #define LAST_BIT_OF_BYTE_MASK 0x80
 
-unsigned int count_leading_ones(uint8_t byte) {
+static unsigned int count_leading_ones(uint8_t byte) {
   unsigned int count;
 
   for (count = 0; byte & LAST_BIT_OF_BYTE_MASK; count++) {
@@ -14,10 +14,10 @@ unsigned int count_leading_ones(uint8_t byte) {
   return count;
 }
 
-unsigned int traverse_back_utf8(const uint8_t *const line,
-                                const unsigned int cursor_pos) {
-  unsigned int offset = cursor_pos - 1;
-  unsigned int char_size = 1;
+size_t traverse_back_utf8(const uint8_t *const line,
+                                const size_t cursor_pos) {
+  size_t offset = cursor_pos - 1;
+  size_t char_size = 1;
 
   // true until we've reached the start of the utf-8 char
   while (is_continuation_byte_utf8(line[offset])) {
@@ -43,11 +43,11 @@ unsigned int traverse_back_utf8(const uint8_t *const line,
   return char_size;
 }
 
-unsigned int traverse_forward_utf8(const uint8_t *const line,
+size_t traverse_forward_utf8(const uint8_t *const line,
                                    const size_t line_len,
-                                   const unsigned int cursor_pos) {
-  unsigned int offset = cursor_pos;
-  unsigned int char_size = count_leading_ones(line[offset]);
+                                   const size_t cursor_pos) {
+  size_t offset = cursor_pos;
+  size_t char_size = count_leading_ones(line[offset]);
 
   // if char_size is has a bad number of leading zeros, treat the character as a
   // byte
@@ -60,7 +60,7 @@ unsigned int traverse_forward_utf8(const uint8_t *const line,
     char_size = 1;
   }
 
-  for (unsigned int i = offset; i < char_size; i++) {
+  for (size_t i = offset; i < char_size; i++) {
     // if we go outside the buffer, the utf-8 is malformed, just treat the
     // character as a byte
     if (i >= line_len) {

@@ -15,7 +15,7 @@ _Static_assert(sizeof(char) == sizeof(uint8_t),
                "char is not one byte in size, god save you...");
 
 line_node_t *root_line_node = NULL;
-line_node_t *last_line_node = NULL;
+static line_node_t *last_line_node = NULL;
 
 void line_reader_destroy(void) {
   line_node_t *node = last_line_node;
@@ -35,34 +35,34 @@ void line_reader_destroy(void) {
   last_line_node = NULL;
 }
 
-char getch(void) {
+static uint8_t getch(void) {
   struct termios oldt;
   struct termios newt;
-  char character;
+  uint8_t byte;
 
   tcgetattr(STDIN_FILENO, &oldt);          // Get the current terminal settings
   newt = oldt;                             // Copy them to a new variable
-  newt.c_lflag &= ~(ICANON | ECHO);        // Disable canonical mode and echo
+  newt.c_lflag &= ~(unsigned int)(ICANON | ECHO);        // Disable canonical mode and echo
   tcsetattr(STDIN_FILENO, TCSANOW, &newt); // Set the new settings
 
-  character = getchar(); // Read a single character
+  fread(&byte, sizeof(byte), 1, stdin); // Read a single character
 
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // Restore original settings
-  return character;
+  return byte;
 }
 
-void line_insert(line_t *const line, const char read_char,
-                 const unsigned int cursor_pos) {
+static void line_insert(line_t *const line, const uint8_t byte,
+                 const size_t cursor_pos) {
   if (cursor_pos == line->length) {
-    VECTOR_PUSH((*line), read_char);
+    VECTOR_PUSH((*line), byte);
     return;
   }
 
-  char old = line->data[cursor_pos];
-  line->data[cursor_pos] = read_char;
+  uint8_t old = line->data[cursor_pos];
+  line->data[cursor_pos] = byte;
 
   for (size_t i = cursor_pos + 1; i < line->length; i++) {
-    char old2 = line->data[i];
+    const uint8_t old2 = line->data[i];
 
     line->data[i] = old;
 
@@ -79,15 +79,15 @@ void line_insert(line_t *const line, const char read_char,
  * the character before the cursor position
  * @return the number of bytes removed
  */
-unsigned int backspace(line_t *const line, const unsigned int cursor_pos) {
-  const unsigned int char_size = traverse_back_utf8(line->data, cursor_pos);
+static size_t backspace(line_t *const line, const size_t cursor_pos) {
+  const size_t char_size = traverse_back_utf8(line->data, cursor_pos);
 
   if (line->length == cursor_pos) {
     line->length -= char_size;
     return char_size;
   }
 
-  const unsigned int offset = cursor_pos - char_size;
+  const size_t offset = cursor_pos - char_size;
   line->length -= char_size;
 
   for (size_t i = offset; i < line->length; i++) {
@@ -97,8 +97,8 @@ unsigned int backspace(line_t *const line, const unsigned int cursor_pos) {
   return char_size;
 }
 
-unsigned int delete(line_t *const line, const unsigned int cursor_pos) {
-  const unsigned int char_size =
+static size_t delete(line_t *const line, const size_t cursor_pos) {
+  const size_t char_size =
       traverse_forward_utf8(line->data, line->length, cursor_pos);
 
   if (line->length == cursor_pos + char_size) {
@@ -106,7 +106,7 @@ unsigned int delete(line_t *const line, const unsigned int cursor_pos) {
     return char_size;
   }
 
-  const unsigned int offset = cursor_pos;
+  const size_t offset = cursor_pos;
   line->length -= char_size;
 
   for (size_t i = offset; i < line->length; i++) {
@@ -116,7 +116,7 @@ unsigned int delete(line_t *const line, const unsigned int cursor_pos) {
   return char_size;
 }
 
-void draw_line(const char *const prompt, const line_t *const line) {
+static void draw_line(const char *const prompt, const line_t *const line) {
   // the old line reader used to just redraw what changed, but that had lots of
   // bugs so now i'm just redrawing the whole line
   fputs(ANSI_REMOVE_FULL_LINE, stdout);
@@ -142,7 +142,7 @@ void clear_history(void) {
   last_line_node = NULL;
 }
 
-void line_copy(const line_t *const src, line_t *dest) {
+static void line_copy(const line_t *const src, line_t *dest) {
   VECTOR_CLEAR(*dest);
 
   for (size_t i = 0; i < src->length; i++) {
@@ -158,13 +158,13 @@ const uint8_t *readline(const char *const prompt) {
   line_t line;
   VECTOR_INIT(line);
 
-  unsigned int cursor_pos = 0;
+  size_t cursor_pos = 0;
 
-  char read_char;
+  uint8_t curr_byte;
   for (;;) {
-    read_char = getch();
+    curr_byte = getch();
 
-    if (read_char == ASCII_END_OF_TRANSMISSION) {
+    if (curr_byte == ASCII_END_OF_TRANSMISSION) {
       printf("\n");
       VECTOR_DESTROY(line);
       line_reader_destroy();
@@ -174,7 +174,7 @@ const uint8_t *readline(const char *const prompt) {
     // this happens when the user presses ctrl-c, ctrl-z, sometimes when a child
     // process exits, not sure why, but just ignore the byte and move to a new
     // line.
-    if ((uint8_t)read_char == RECV_SIGINT) {
+    if ((uint8_t)curr_byte == RECV_SIGINT) {
       printf("\n%s", prompt);
       line.length = 0;
       continue;
@@ -185,7 +185,7 @@ const uint8_t *readline(const char *const prompt) {
     // contains the buffer the user is currently editting
     line_t *line_to_read = node == NULL ? &line : &node->line;
 
-    if (read_char == '\n') {
+    if (curr_byte == '\n') {
       if (line_to_read->length != 0) {
         line_node_t *new_node = malloc(sizeof(line_node_t));
         if (node != NULL) {
@@ -209,10 +209,10 @@ const uint8_t *readline(const char *const prompt) {
       continue;
     }
 
-    if (read_char == ANSI_START_CHAR) {
-      read_char = getch();
+    if (curr_byte == ANSI_START_CHAR) {
+      curr_byte = getch();
 
-      if (read_char != '[') {
+      if (curr_byte != '[') {
         continue;
       }
 
@@ -263,7 +263,7 @@ const uint8_t *readline(const char *const prompt) {
       case '1':
         if (getch() == ';') {
           if (getch() == '5') {
-            const char arrow_char = getch();
+            const uint8_t arrow_char = getch();
             // shift right arrow
             if (arrow_char == 'C') {
               if (cursor_pos < line_to_read->length) {
@@ -300,6 +300,7 @@ const uint8_t *readline(const char *const prompt) {
             }
           }
         }
+        break;
       case '3':
         // delete key
         if (getch() == '~') {
@@ -320,13 +321,13 @@ const uint8_t *readline(const char *const prompt) {
     }
 
     // backspace
-    if (read_char == ASCII_DEL) {
+    if (curr_byte == ASCII_DEL) {
       if (cursor_pos > 0) {
         if (node != NULL) {
           line_copy(&node->line, &line);
           node = NULL;
         }
-        const unsigned int bytes_removed = backspace(&line, cursor_pos);
+        const size_t bytes_removed = backspace(&line, cursor_pos);
         cursor_pos -= bytes_removed;
         fputs(ANSI_CURSOR_LEFT, stdout);
         goto draw_line;
@@ -340,10 +341,10 @@ const uint8_t *readline(const char *const prompt) {
       node = NULL;
     }
 
-    line_insert(&line, read_char, cursor_pos);
+    line_insert(&line, curr_byte, cursor_pos);
     cursor_pos++;
 
-    if (!is_continuation_byte_utf8(read_char)) {
+    if (!is_continuation_byte_utf8(curr_byte)) {
       fputs(ANSI_CURSOR_RIGHT, stdout);
     }
 

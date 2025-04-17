@@ -9,7 +9,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-int spawn_process(char **const argv) {
+static int spawn_process(char **const argv) {
   pid_t pid = fork();
 
   // child

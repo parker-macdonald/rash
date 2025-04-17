@@ -1,4 +1,5 @@
 #include "../../jobs.h"
+#include "../builtins.h"
 #include <errno.h>
 #include <limits.h>
 #include <signal.h>
@@ -16,14 +17,14 @@ int builtin_fg(char **argv) {
   } else {
     char *endptr;
     errno = 0;
-    unsigned long num = strtoul(argv[1], &endptr, BASE);
+    long num = strtol(argv[1], &endptr, BASE);
 
     if (errno != 0 || *endptr != '\0' || num < 1 || num > INT_MAX) {
       fprintf(stderr, "fg: %s: number 1 or greater expected\n", argv[1]);
       return EXIT_FAILURE;
     }
 
-    job_id = (unsigned int)num;
+    job_id = (int)num;
   }
 
   pid_t pid = get_pid_and_remove(&job_id);
@@ -35,7 +36,7 @@ int builtin_fg(char **argv) {
 
   fg_pid = pid;
   kill(pid, SIGCONT);
-  
+
   printf("[%d] PID: %d Continued in foreground\n", job_id, pid);
 
   int status;

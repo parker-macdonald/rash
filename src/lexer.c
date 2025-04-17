@@ -1,3 +1,4 @@
+#include "lexer.h"
 #include "vector.h"
 #include <ctype.h>
 #include <stdbool.h>
@@ -20,7 +21,7 @@ char **get_tokens_from_line(const uint8_t *const line) {
   VECTOR(uint8_t) buffer;
   VECTOR_INIT(buffer);
 
-  size_t env_start;
+  size_t env_start = 0;
 
   enum lexer_state state = DEFAULT;
 
@@ -99,7 +100,7 @@ char **get_tokens_from_line(const uint8_t *const line) {
     case VAR_EXPANSION:
       if (isdigit((int)curr)) {
         char env_name[2];
-        env_name[0] = curr;
+        env_name[0] = (char)curr;
         env_name[1] = '\0';
 
         const uint8_t *env_value = (uint8_t *)getenv(env_name);
@@ -124,7 +125,7 @@ char **get_tokens_from_line(const uint8_t *const line) {
 
         const size_t env_len = i - env_start - 1;
         char *env_name = malloc(env_len + 1);
-        strncpy(env_name, (char *)&line[env_start + 1], env_len);
+        strncpy(env_name, (const char *)&line[env_start + 1], env_len);
         env_name[env_len] = '\0';
 
         const uint8_t *env_value = (uint8_t *)getenv(env_name);
@@ -163,7 +164,7 @@ char **get_tokens_from_line(const uint8_t *const line) {
   case VAR_EXPANSION: {
     const size_t env_len = i - env_start - 1;
     char *env_name = malloc(env_len + 1);
-    strncpy(env_name, (char *)&line[env_start + 1], env_len);
+    strncpy(env_name, (const char *)&line[env_start + 1], env_len);
     env_name[env_len] = '\0';
 
     const uint8_t *env_value = (uint8_t *)getenv(env_name);

@@ -1,6 +1,7 @@
+#include "../builtins.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
 
 int builtin_export(char **const argv) {
   if (argv[1] == NULL) {
@@ -13,8 +14,8 @@ int builtin_export(char **const argv) {
       fprintf(stderr, "export: Invalid identifier: `%s`\n", argv[i]);
       continue;
     }
-    
-    char* env_value = NULL;
+
+    char *env_value = NULL;
 
     for (size_t j = 1; argv[i][j] != '\0'; j++) {
       char character = argv[i][j];
