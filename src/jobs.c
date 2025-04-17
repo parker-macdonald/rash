@@ -8,8 +8,8 @@
 #include <unistd.h>
 
 static_assert(sizeof(sig_atomic_t) == sizeof(pid_t),
-               "size of sig_atomic_t differs from pid_t. what the hell are "
-               "you compiling this on?");
+              "size of sig_atomic_t differs from pid_t. what the hell are "
+              "you compiling this on?");
 
 const char *const JOB_STATUSES[NUM_JOB_STATUSES] = {"Exited", "Stopped",
                                                     "Running"};
@@ -140,14 +140,14 @@ int register_stopped_job(pid_t pid) {
     root_job = new_job;
   } else {
     new_job->id = last_job->id + 1;
-  
+
     last_job->p_next = new_job;
   }
-  
+
   last_job = new_job;
 
   printf("\n[%d] PID: %d, State: %s\n", new_job->id, new_job->pid,
-    JOB_STATUSES[new_job->state]);
+         JOB_STATUSES[new_job->state]);
 
   return new_job->id;
 }

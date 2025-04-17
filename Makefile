@@ -34,10 +34,13 @@ SRC := ${wildcard src/**/*.c} ${wildcard src/**/**/*.c} ${wildcard src/*.c}
 OBJ := ${SRC:%.c=$(BUILD)/%.o}
 
 
-.PHONY: all clean build install lint
+.PHONY: all clean build install lint format
 .DEFAULT: all
 
 all: build
+
+format:
+	clang-format -i $(SRC)
 
 lint:
 	$(LINTER) $(SRC) -checks=-*,bugprone-*cert-*,clang-analyzer-*,performance-*,portability-*,misc-*,readability-*,-readability-function-cognitive-complexity -warnings-as-errors=* -- $(INCS) $(CFLAGS)

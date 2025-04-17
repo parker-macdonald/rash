@@ -65,7 +65,7 @@ void trie_init(void) {
   trie_insert("history", &builtin_history);
   trie_insert("true", &builtin_true);
   trie_insert("false", &builtin_false);
-  trie_insert("pwd",&builtin_pwd);
+  trie_insert("pwd", &builtin_pwd);
   trie_insert("fg", &builtin_fg);
   trie_insert("bg", &builtin_bg);
   trie_insert("jobs", &builtin_jobs);
