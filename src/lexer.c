@@ -26,36 +26,43 @@ char **get_tokens_from_line(const uint8_t *const line) {
   size_t env_start = 0;
 
   enum lexer_state state = DEFAULT;
+  enum lexer_state prev_state = DEFAULT;
 
-  size_t i;
-  for (i = 0; line[i] != '\0'; i++) {
+  size_t i = -1;
+  do {
+    i++;
     const uint8_t curr = line[i];
 
     switch (state) {
       case DEFAULT:
         if (isspace((int)curr)) {
+          prev_state = state;
           state = WHITESPACE;
           VECTOR_PUSH(buffer, '\0');
           break;
         }
 
         if (curr == '$') {
+          prev_state = state;
           state = VAR_EXPANSION;
           env_start = i;
           break;
         }
 
         if (curr == '"') {
+          prev_state = state;
           state = DOUBLE_QUOTE;
           break;
         }
 
         if (curr == '\'') {
+          prev_state = state;
           state = SINGLE_QUOTE;
           break;
         }
 
         if (curr == '\\') {
+          prev_state = state;
           state = SINGLE_LITERAL;
           break;
         }
@@ -65,6 +72,7 @@ char **get_tokens_from_line(const uint8_t *const line) {
 
       case WHITESPACE:
         if (!isspace((int)curr)) {
+          prev_state = state;
           state = DEFAULT;
           i--;
         }
@@ -72,12 +80,14 @@ char **get_tokens_from_line(const uint8_t *const line) {
 
       case DOUBLE_QUOTE:
         if (curr == '$') {
+          prev_state = state;
           state = VAR_EXPANSION;
           env_start = i;
           break;
         }
 
         if (curr == '"') {
+          prev_state = state;
           state = DEFAULT;
           break;
         }
@@ -87,6 +97,7 @@ char **get_tokens_from_line(const uint8_t *const line) {
 
       case SINGLE_QUOTE:
         if (curr == '\'') {
+          prev_state = state;
           state = DEFAULT;
           break;
         }
@@ -96,11 +107,12 @@ char **get_tokens_from_line(const uint8_t *const line) {
 
       case SINGLE_LITERAL:
         VECTOR_PUSH(buffer, curr);
+        prev_state = state;
         state = DEFAULT;
         break;
 
       case VAR_EXPANSION:
-        if (isdigit((int)curr)) {
+        if (isdigit((int)curr) || curr == '?') {
           char env_name[2];
           env_name[0] = (char)curr;
           env_name[1] = '\0';
@@ -113,7 +125,8 @@ char **get_tokens_from_line(const uint8_t *const line) {
             }
           }
 
-          state = DEFAULT;
+          state = prev_state;
+          prev_state = VAR_EXPANSION;
           break;
         }
 
@@ -139,17 +152,19 @@ char **get_tokens_from_line(const uint8_t *const line) {
           }
 
           i--;
-          state = DEFAULT;
+          state = prev_state;
+          prev_state = VAR_EXPANSION;
           break;
         }
 
         break;
     }
-  }
+  } while (line[i] != '\0');
 
   switch (state) {
     case DEFAULT:
     case WHITESPACE:
+    case VAR_EXPANSION:
       break;
     case SINGLE_LITERAL:
       fprintf(stderr, "Expected character after ‘\\’.\n");
@@ -163,24 +178,7 @@ char **get_tokens_from_line(const uint8_t *const line) {
       fprintf(stderr, "Expected closing ‘\"’ character.\n");
       VECTOR_DESTROY(buffer);
       return NULL;
-    case VAR_EXPANSION: {
-      const size_t env_len = i - env_start - 1;
-      char *env_name = malloc(env_len + 1);
-      strncpy(env_name, (const char *)&line[env_start + 1], env_len);
-      env_name[env_len] = '\0';
-
-      const uint8_t *env_value = (uint8_t *)getenv(env_name);
-
-      if (env_value != NULL) {
-        for (size_t j = 0; env_value[j] != '\0'; j++) {
-          VECTOR_PUSH(buffer, env_value[j]);
-        }
-      }
-      break;
-    }
   }
-
-  VECTOR_PUSH(buffer, '\0');
 
   VECTOR(char *) tokens;
   VECTOR_INIT(tokens);
