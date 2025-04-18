@@ -6,7 +6,7 @@
 
 #include "../builtins.h"
 
-#define MAX_CWD_SIZE 1024
+#define MAX_CWD_SIZE ((size_t)1024)
 
 int builtin_pwd(char **argv) {
   (void)argv;
@@ -29,7 +29,7 @@ int builtin_pwd(char **argv) {
     if (cwd_size > PATH_MAX) {
       free(cwd);
       fprintf(stderr, "pwd: working directory exceeds %zu bytes.\n",
-              (size_t) MAX_CWD_SIZE);
+              MAX_CWD_SIZE);
       return EXIT_FAILURE;
     }
 
