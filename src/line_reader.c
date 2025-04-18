@@ -12,8 +12,8 @@
 #include "utf_8.h"
 #include "vector.h"
 
-_Static_assert(sizeof(char) == sizeof(uint8_t),
-               "char is not one byte in size, god save you...");
+static_assert(sizeof(char) == sizeof(uint8_t),
+              "char is not one byte in size, god save you...");
 
 line_node_t *root_line_node = NULL;
 static line_node_t *last_line_node = NULL;
@@ -134,6 +134,8 @@ static void draw_line(const char *const prompt, const line_t *const line) {
   fputs(prompt, stdout);
 
   PRINT_LINE(*line);
+
+  fflush(stdout);
 }
 
 void clear_history(void) {
@@ -160,6 +162,7 @@ static void line_copy(const line_t *const src, line_t *dest) {
 
 const uint8_t *readline(const char *const prompt) {
   printf("%s", prompt);
+  fflush(stdout);
 
   line_node_t *node = NULL;
 
@@ -184,6 +187,7 @@ const uint8_t *readline(const char *const prompt) {
     // to a new line.
     if ((uint8_t)curr_byte == RECV_SIGINT) {
       printf("\n%s", prompt);
+      fflush(stdout);
       line.length = 0;
       continue;
     }
@@ -214,6 +218,7 @@ const uint8_t *readline(const char *const prompt) {
       }
 
       printf("\n%s", prompt);
+      fflush(stdout);
       continue;
     }
 
@@ -258,6 +263,7 @@ const uint8_t *readline(const char *const prompt) {
                 line_to_read->data, line_to_read->length, cursor_pos);
 
             fputs(ANSI_CURSOR_RIGHT, stdout);
+            fflush(stdout);
           }
           continue;
         // left arrow
@@ -266,6 +272,7 @@ const uint8_t *readline(const char *const prompt) {
             cursor_pos -= traverse_back_utf8(line_to_read->data, cursor_pos);
 
             fputs(ANSI_CURSOR_LEFT, stdout);
+            fflush(stdout);
           }
           continue;
         case '1':
@@ -285,6 +292,8 @@ const uint8_t *readline(const char *const prompt) {
                         line_to_read->data, line_to_read->length, cursor_pos);
                     fputs(ANSI_CURSOR_RIGHT, stdout);
                   }
+
+                  fflush(stdout);
                 }
 
                 continue;
@@ -302,6 +311,8 @@ const uint8_t *readline(const char *const prompt) {
                         traverse_back_utf8(line_to_read->data, cursor_pos);
                     fputs(ANSI_CURSOR_LEFT, stdout);
                   }
+
+                  fflush(stdout);
                 }
 
                 continue;
@@ -369,6 +380,8 @@ const uint8_t *readline(const char *const prompt) {
     PRINT_LINE(line);
 
     fputs(ANSI_CURSOR_POS_RESTORE, stdout);
+
+    fflush(stdout);
   }
 
   VECTOR_PUSH(line, '\0');
