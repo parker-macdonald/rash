@@ -10,47 +10,28 @@
                 packages = with pkgs; [
                     clang
                     clang-tools
+                    gdb
+                    lldb
+                    gnumake
                 ];
+
+                hardeningDisable = [ "all" ];
             };
 
-            packages.default = self.packages.${system}.rash;
-            packages.rash = pkgs.stdenv.mkDerivation rec {
-                pname = "rash";
-                version = "1";
+            packages = {
+                # Expose .#rash as the default
+                default = self.packages.${system}.rash;
 
-                src = nixpkgs.lib.fileset.toSource {
-                    root = ./.;
-                    fileset = nixpkgs.lib.fileset.unions [ ./src ./Makefile ];
-                };
+                # Compile rash with a clang-based stdenv
+                rash = pkgs.callPackage ./package.nix { stdenv = pkgs.clangStdenv; };
+                rash-musl = pkgs.pkgsMusl.callPackage ./package.nix { };
 
-                outputs = [ "out" "dev" ];
-
-                nativeBuildInputs = with pkgs; [
-                    clang
-                ];
-
-                dontConfigure = true;
-
-                makeFlags = [
-                    "DEBUG=0"
-                ];
-
-                installPhase = ''
-                    runHook preInstall
-
-                    mkdir -p $out/bin
-                    cp ./build/${pname} $out/bin/
-
-                    runHook postInstall
-                '';
-
-                meta = let lib = nixpkgs.lib; in {
-                    mainProgram = "rash";
-
-                    description = "rash, a rudimentary shell written in C";
-                    homepage = "https://git.myriation.xyz/parker_macdonald/rash";
-                    license = lib.licenses.mit;
-                    platforms = lib.platforms.linux;
+                # Allow compiling rash statically for armv7 linux (for a kindle paperwhite 6 specifically)
+                rash-armv7-static = let
+                    pkgsCross = pkgs.pkgsCross.armv7l-hf-multiplatform;
+                in pkgsCross.callPackage ./package.nix {
+                    stdenv = pkgsCross.clangStdenv;
+                    compileStatically = true;
                 };
             };
         });

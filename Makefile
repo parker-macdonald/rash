@@ -1,13 +1,18 @@
 PREFIX := /usr/local
 
-SANITIZER := 
+SANITIZER :=
 CFLAGS := -std=c17 -D_POSIX_C_SOURCE=200809L
 CFLAG_ERRORS := -Werror -Wall -Wvla -Wextra -Wunreachable-code -Wshadow -Wpedantic
-LDFLAGS := 
+LDFLAGS :=
 CC := clang
 LINTER := clang-tidy
 
 DEBUG := 1
+STATIC := 0
+
+ifeq ($(STATIC),1)
+	LDFLAGS += -static
+endif
 
 ifeq ($(DEBUG),1)
 	CFLAGS += -O0 -g3
@@ -48,7 +53,7 @@ lint:
 build: $(BUILD)/$(OUT)
 
 $(BUILD)/$(OUT): $(OBJ)
-	$(CC) -o $(BUILD)/$(OUT) $(SANITIZER) $(LDFLAGS) $^  
+	$(CC) -o $(BUILD)/$(OUT) $(SANITIZER) $(LDFLAGS) $^
 
 $(BUILD)/%.o: %.c
 	@mkdir -p $(dir $@)

@@ -6,7 +6,7 @@
 
 int builtin_export(char **const argv) {
   if (argv[1] == NULL) {
-    fprintf(stderr, "Usage: %s [VAR NAME]=[VAR VALUE]", argv[1]);
+    fprintf(stderr, "Usage: %s [VAR NAME]=[VAR VALUE]", argv[0]);
     return EXIT_FAILURE;
   }
 
