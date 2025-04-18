@@ -21,10 +21,14 @@ stdenv.mkDerivation rec {
 
     dontConfigure = true;
 
-    makeFlags = [
-        "DEBUG=0"
-        "CC=${stdenv.cc.targetPrefix}cc"
-    ] ++ lib.optional compileStatically [ "STATIC=1" ];
+    hardeningDisable = [ "all" ];
+
+    makeFlags =
+        [
+            "DEBUG=0"
+            "CC=${stdenv.cc.targetPrefix}cc"
+        ]
+        ++ lib.optional compileStatically "STATIC=1";
 
     installPhase = ''
         runHook preInstall

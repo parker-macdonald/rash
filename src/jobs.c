@@ -53,7 +53,6 @@ static void sigtstp_handler(int sig) {
 // should probably fix this...
 static void sigchld_handler(int sig) {
   (void)sig;
-  job_t *current = root_job;
 
   int status;
   pid_t pid = waitpid(-1, &status, WNOHANG);
@@ -62,7 +61,7 @@ static void sigchld_handler(int sig) {
     return;
   }
 
-  while (current != NULL) {
+  for (job_t *current = root_job; current != NULL; current = current->p_next) {
     if (pid == current->pid) {
       current->state = JOB_EXITED;
       break;
@@ -109,7 +108,7 @@ void clean_jobs(void) {
       }
 
       if (current->p_next == NULL) {
-        last_job = NULL;
+        last_job = prev;
       }
 
       job_t *temp = current;
@@ -207,8 +206,17 @@ pid_t get_pid_and_remove(int *id) {
   for (current = root_job; current != NULL; current = current->p_next) {
     if (current->id == *id) {
       pid_t pid = current->pid;
-      *id = current->id;
-      prev->p_next = current->p_next;
+
+      if (prev != NULL) {
+        prev->p_next = current->p_next;
+      } else {
+        root_job = current->p_next;
+      }
+
+      if (current->p_next == NULL) {
+        last_job = prev;
+      }
+
       free(current);
       return pid;
     }

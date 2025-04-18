@@ -29,7 +29,7 @@ int builtin_pwd(char **argv) {
     if (cwd_size > PATH_MAX) {
       free(cwd);
       fprintf(stderr, "pwd: working directory exceeds %zu bytes.\n",
-              MAX_CWD_SIZE);
+              (size_t) MAX_CWD_SIZE);
       return EXIT_FAILURE;
     }
 

@@ -10,7 +10,12 @@
                 packages = with pkgs; [
                     clang
                     clang-tools
+                    gdb
+                    lldb
+                    gnumake
                 ];
+
+                hardeningDisable = [ "all" ];
             };
 
             packages = {
@@ -19,6 +24,7 @@
 
                 # Compile rash with a clang-based stdenv
                 rash = pkgs.callPackage ./package.nix { stdenv = pkgs.clangStdenv; };
+                rash-musl = pkgs.pkgsMusl.callPackage ./package.nix { };
 
                 # Allow compiling rash statically for armv7 linux (for a kindle paperwhite 6 specifically)
                 rash-armv7-static = let
