@@ -21,7 +21,7 @@
                 rash = pkgs.callPackage ./package.nix { stdenv = pkgs.clangStdenv; };
 
                 # Allow compiling rash statically for armv7 linux (for a kindle paperwhite 6 specifically)
-                rash-kindle = let
+                rash-armv7-static = let
                     pkgsCross = pkgs.pkgsCross.armv7l-hf-multiplatform;
                 in pkgsCross.callPackage ./package.nix {
                     stdenv = pkgsCross.clangStdenv;
