@@ -28,7 +28,7 @@ char **get_tokens_from_line(const uint8_t *const line) {
   enum lexer_state state = DEFAULT;
   enum lexer_state prev_state = DEFAULT;
 
-  size_t i = -1;
+  size_t i = ~((size_t)(0));
   do {
     i++;
     const uint8_t curr = line[i];

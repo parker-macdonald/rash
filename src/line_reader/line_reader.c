@@ -157,8 +157,8 @@ void print_history(int count) {
     count = length;
   }
 
-  for (unsigned int i = count - 1; node != NULL; i--) {
-    printf("%5u  ", length - i);
+  for (int i = count - 1; node != NULL; i--) {
+    printf("%5d  ", length - i);
     PRINT_LINE(node->line);
     fputs("\n", stdout);
     node = node->p_next;
