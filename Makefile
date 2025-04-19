@@ -7,11 +7,17 @@ LDFLAGS :=
 CC := clang
 LINTER := clang-tidy
 
+ERROR_HELL := 0
 DEBUG := 1
 STATIC := 0
 
 ifeq ($(STATIC),1)
 	LDFLAGS += -static
+endif
+
+ifeq ($(ERROR_HELL),1)
+	CC = clang
+	CFLAG_ERRORS = -Werror -Weverything -Wno-unsafe-buffer-usage -Wno-declaration-after-statement -Wno-switch-default -Wno-disabled-macro-expansion -Wno-padded -Wno-pre-c11-compat
 endif
 
 ifeq ($(DEBUG),1)
