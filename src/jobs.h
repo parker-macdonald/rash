@@ -13,7 +13,7 @@ extern const char *const JOB_STATUSES[NUM_JOB_STATUSES];
 typedef struct job {
   pid_t pid;
   int id;
-  volatile sig_atomic_t state;
+  int state;
   struct job *p_next;
 } job_t;
 
