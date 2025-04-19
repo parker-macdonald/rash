@@ -28,6 +28,9 @@ volatile sig_atomic_t fg_pid = 0;
 // whether a sigtstp was recieved.
 volatile sig_atomic_t recv_sigtstp = 0;
 
+// this is used for the line reader to print a ^C on sigint
+volatile sig_atomic_t recv_sigint = 0;
+
 // the sigchild handler can modify the state section of the jobs linked list, so
 // whenever the linked list is modified or the state section is read, this lock
 // must be turned on.
@@ -37,6 +40,9 @@ static void sigint_handler(int sig) {
   if (fg_pid != 0) {
     kill((pid_t)fg_pid, sig);
     fg_pid = 0;
+  } else {
+    // tell the line reader we recieved a sigint
+    recv_sigint = 1;
   }
 
   // re-register sigint handler

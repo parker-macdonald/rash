@@ -23,6 +23,9 @@ extern volatile sig_atomic_t fg_pid;
 // whether a sigtstp was recieved.
 extern volatile sig_atomic_t recv_sigtstp;
 
+// this is used for the line reader to print a ^C on sigint
+extern volatile sig_atomic_t recv_sigint;
+
 /**
  * @brief initializes all signal handlers used by rash
  */

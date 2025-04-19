@@ -8,7 +8,7 @@
 #include "execute.h"
 #include "jobs.h"
 #include "lexer.h"
-#include "line_reader.h"
+#include "line_reader/line_reader.h"
 #include "should_exit.h"
 
 bool should_exit = false;
@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
   setenv("PS1", "$ ", 0);
 
   while (!should_exit) {
-    const uint8_t *line = readline(getenv("PS1"));
+    const uint8_t *line = readline();
     clean_jobs();
 
     if (line == NULL) {

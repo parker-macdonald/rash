@@ -1,6 +1,7 @@
 #include "line_reader.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -8,14 +9,25 @@
 #include <termios.h>
 #include <unistd.h>
 
-#include "ansi.h"
-#include "utf_8.h"
-#include "vector.h"
+#include "../ansi.h"
+#include "../jobs.h"
+#include "../utf_8.h"
+#include "../vector.h"
+#include "modify_line.h"
 
 static_assert(sizeof(char) == sizeof(uint8_t),
               "char is not one byte in size, god save you...");
 
-line_node_t *root_line_node = NULL;
+typedef struct line_node {
+  struct line_node *p_next;
+  struct line_node *p_prev;
+  line_t line;
+} line_node_t;
+
+#define PRINT_LINE(line)                                                       \
+  fwrite((line).data, sizeof(*(line).data), (line).length, stdout)
+
+static line_node_t *root_line_node = NULL;
 static line_node_t *last_line_node = NULL;
 
 void line_reader_destroy(void) {
@@ -40,6 +52,7 @@ static uint8_t getch(void) {
   struct termios oldt;
   struct termios newt;
   uint8_t byte;
+  ssize_t nread;
 
   tcgetattr(STDIN_FILENO, &oldt); // Get the current terminal settings
   newt = oldt;                    // Copy them to a new variable
@@ -47,81 +60,33 @@ static uint8_t getch(void) {
       ~(unsigned int)(ICANON | ECHO);      // Disable canonical mode and echo
   tcsetattr(STDIN_FILENO, TCSANOW, &newt); // Set the new settings
 
-  size_t n_read =
-      fread(&byte, sizeof(byte), 1, stdin); // Read a single character
+  for (;;) {
+    errno = 0;
+    nread = read(STDIN_FILENO, &byte, sizeof(byte));
+
+    if (errno != EINTR) {
+      break;
+    }
+    if (recv_sigint == 1) {
+      recv_sigint = 0;
+      byte = RECV_SIGINT;
+      nread = 1;
+      break;
+    }
+  }
 
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // Restore original settings
 
-  if (n_read != 1) {
-    return EOF;
+  if (nread == 0) {
+    return ASCII_END_OF_TRANSMISSION;
+  }
+
+  if (nread == -1) {
+    perror("read");
+    return ASCII_END_OF_TRANSMISSION;
   }
 
   return byte;
-}
-
-static void line_insert(line_t *const line, const uint8_t byte,
-                        const size_t cursor_pos) {
-  if (cursor_pos == line->length) {
-    VECTOR_PUSH((*line), byte);
-    return;
-  }
-
-  uint8_t old = line->data[cursor_pos];
-  line->data[cursor_pos] = byte;
-
-  for (size_t i = cursor_pos + 1; i < line->length; i++) {
-    const uint8_t old2 = line->data[i];
-
-    line->data[i] = old;
-
-    old = old2;
-  }
-
-  VECTOR_PUSH((*line), old);
-}
-
-/**
- * @brief deletes the utf-8 character before cursor position
- * @param line the line to remove data from
- * @param cursor_pos the current position of the cursor, this function deletes
- * the character before the cursor position
- * @return the number of bytes removed
- */
-static size_t backspace(line_t *const line, const size_t cursor_pos) {
-  const size_t char_size = traverse_back_utf8(line->data, cursor_pos);
-
-  if (line->length == cursor_pos) {
-    line->length -= char_size;
-    return char_size;
-  }
-
-  const size_t offset = cursor_pos - char_size;
-  line->length -= char_size;
-
-  for (size_t i = offset; i < line->length; i++) {
-    line->data[i] = line->data[i + char_size];
-  }
-
-  return char_size;
-}
-
-static size_t delete(line_t *const line, const size_t cursor_pos) {
-  const size_t char_size =
-      traverse_forward_utf8(line->data, line->length, cursor_pos);
-
-  if (line->length == cursor_pos + char_size) {
-    line->length -= char_size;
-    return char_size;
-  }
-
-  const size_t offset = cursor_pos;
-  line->length -= char_size;
-
-  for (size_t i = offset; i < line->length; i++) {
-    line->data[i] = line->data[i + char_size];
-  }
-
-  return char_size;
 }
 
 static void draw_line(const char *const prompt, const line_t *const line) {
@@ -152,15 +117,60 @@ void clear_history(void) {
   last_line_node = NULL;
 }
 
-static void line_copy(const line_t *const src, line_t *dest) {
-  VECTOR_CLEAR(*dest);
+void print_history(int count) {
+  assert(count >= -1);
 
-  for (size_t i = 0; i < src->length; i++) {
-    VECTOR_PUSH(*dest, src->data[i]);
+  if (count == 0) {
+    return;
+  }
+
+  line_node_t *node = root_line_node;
+
+  if (count == -1) {
+    for (unsigned int i = 1; node != NULL; i++) {
+      printf("%5u  ", i);
+      PRINT_LINE(node->line);
+      fputs("\n", stdout);
+      node = node->p_next;
+    }
+
+    return;
+  }
+
+  // traverse to the last line
+  int length;
+  for (length = 1;; length++) {
+    if (node->p_next == NULL) {
+      break;
+    }
+
+    node = node->p_next;
+  }
+
+  if (count < length) {
+    // backtrack the number of lines to print
+    for (int i = 1; i < count; i++) {
+      node = node->p_prev;
+    }
+  } else {
+    node = root_line_node;
+    count = length;
+  }
+
+  for (unsigned int i = count - 1; node != NULL; i--) {
+    printf("%5u  ", length - i);
+    PRINT_LINE(node->line);
+    fputs("\n", stdout);
+    node = node->p_next;
   }
 }
 
-const uint8_t *readline(const char *const prompt) {
+const uint8_t *readline(void) {
+  char *prompt = getenv("PS1");
+  if (prompt == NULL) {
+    prompt = "$ ";
+  }
+
   printf("%s", prompt);
   fflush(stdout);
 
@@ -182,10 +192,9 @@ const uint8_t *readline(const char *const prompt) {
       return NULL;
     }
 
-    // this happens when the user presses ctrl-c, ctrl-z, sometimes when a
-    // child process exits, not sure why, but just ignore the byte and move
-    // to a new line.
-    if ((uint8_t)curr_byte == RECV_SIGINT) {
+    // this is sent by the sigint handler to let the line reader know the user
+    // pressed ctrl-c to trigger a SIGINT.
+    if (curr_byte == RECV_SIGINT) {
       printf("\n%s", prompt);
       fflush(stdout);
       line.length = 0;
@@ -328,7 +337,7 @@ const uint8_t *readline(const char *const prompt) {
                 line_copy(&node->line, &line);
                 node = NULL;
               }
-              delete (&line, cursor_pos);
+              line_delete(&line, cursor_pos);
             }
             // should probably refactor to not use goto, but, i mean, it
             // works...
@@ -347,7 +356,7 @@ const uint8_t *readline(const char *const prompt) {
           line_copy(&node->line, &line);
           node = NULL;
         }
-        const size_t bytes_removed = backspace(&line, cursor_pos);
+        const size_t bytes_removed = line_backspace(&line, cursor_pos);
         cursor_pos -= bytes_removed;
         fputs(ANSI_CURSOR_LEFT, stdout);
         goto draw_line;
