@@ -11,4 +11,4 @@ steps:
   - name: build
     image: silkeh/clang
     commands:
-      - make
+      - make ERROR_HELL=1
