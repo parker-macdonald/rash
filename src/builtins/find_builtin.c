@@ -78,7 +78,7 @@ builtin_t find_builtin(const char *const str) {
   for (size_t i = 0; str[i] != '\0'; i++) {
     char curr_char = str[i];
 
-    if (!isalpha((int)curr_char)) {
+    if (curr_char < 'a' || curr_char > 'z') {
       return NULL;
     }
 
