@@ -210,7 +210,7 @@ const uint8_t *readline(void) {
       if (line_to_read->length != 0) {
         line_node_t *new_node = malloc(sizeof(line_node_t));
         if (node != NULL) {
-          line_copy(&node->line, &line);
+          line_copy(&line, &node->line);
         }
 
         new_node->line = line;
@@ -334,7 +334,7 @@ const uint8_t *readline(void) {
           if (getch() == '~') {
             if (cursor_pos < line_to_read->length) {
               if (node != NULL) {
-                line_copy(&node->line, &line);
+                line_copy(&line, &node->line);
                 node = NULL;
               }
               line_delete(&line, cursor_pos);
@@ -353,7 +353,7 @@ const uint8_t *readline(void) {
     if (curr_byte == ASCII_DEL) {
       if (cursor_pos > 0) {
         if (node != NULL) {
-          line_copy(&node->line, &line);
+          line_copy(&line, &node->line);
           node = NULL;
         }
         const size_t bytes_removed = line_backspace(&line, cursor_pos);
@@ -366,7 +366,7 @@ const uint8_t *readline(void) {
     }
 
     if (node != NULL) {
-      line_copy(&node->line, &line);
+      line_copy(&line, &node->line);
       node = NULL;
     }
 
