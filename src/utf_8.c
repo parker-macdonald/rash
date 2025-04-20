@@ -26,9 +26,7 @@ size_t traverse_back_utf8(const uint8_t *const line, const size_t cursor_pos) {
     // if it is the data is malformed, again just treat the bad character as
     // a byte
     if (offset == 0 || char_size == 4) {
-      char_size = 1;
-      offset = cursor_pos - 1;
-      break;
+      return 1;
     }
 
     offset--;
@@ -58,13 +56,13 @@ size_t traverse_forward_utf8(const uint8_t *const line, const size_t line_len,
     case 4:
       break;
     default:
-      char_size = 1;
+      return 1;
   }
 
-  for (size_t i = offset; i < char_size; i++) {
+  for (offset++; offset - cursor_pos < char_size; offset++) {
     // if we go outside the buffer, the utf-8 is malformed, just treat the
     // character as a byte
-    if (i >= line_len) {
+    if (offset >= line_len) {
       return 1;
     }
 
