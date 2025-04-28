@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
     // 3 digit number (exit status is max of 255) + null terminator
     char status_env[3 + 1] = {0};
 
-    sprintf(status_env, "%d", status);
+    snprintf(status_env, sizeof(status_env), "%d", status);
     setenv("?", status_env, 1);
   }
 

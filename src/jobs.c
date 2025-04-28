@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/wait.h>
-#include <unistd.h>
 
 static_assert(sizeof(sig_atomic_t) == sizeof(pid_t),
               "size of sig_atomic_t differs from pid_t. what the hell are "
