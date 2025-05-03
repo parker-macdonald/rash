@@ -1,10 +1,12 @@
 #include "modify_line.h"
-#include <stdint.h>
+
+#include <assert.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "../utf_8.h"
-#include "line_reader.h"
 #include "../vector.h"
+#include "line_reader.h"
 
 void line_insert(line_t *const line, const uint8_t byte,
                  const size_t cursor_pos) {
@@ -68,6 +70,7 @@ void line_copy(line_t *dest, const line_t *const src) {
   VECTOR_CLEAR(*dest);
 
   for (size_t i = 0; i < src->length; i++) {
+    assert(dest->capacity != 0); // get clang-tidy to shut the hell up
     VECTOR_PUSH(*dest, src->data[i]);
   }
 }

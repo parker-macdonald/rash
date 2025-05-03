@@ -12,7 +12,7 @@ int builtin_pwd(char **argv) {
   size_t cwd_size = 16;
   char *cwd = malloc(sizeof(char) * cwd_size);
 
-  char* buf = getcwd(cwd, cwd_size);
+  char *buf = getcwd(cwd, cwd_size);
 
   while (buf == NULL) {
     if (errno != ERANGE) {
@@ -23,10 +23,11 @@ int builtin_pwd(char **argv) {
 
     cwd_size *= 2;
 
-    char* temp_cwd = realloc(cwd, cwd_size);
+    char *temp_cwd = realloc(cwd, cwd_size);
 
     if (temp_cwd == NULL) {
-      fprintf(stderr, "pwd: out of memory, current working directory too long.\n");
+      fprintf(stderr,
+              "pwd: out of memory, current working directory too long.\n");
       free(cwd);
       return EXIT_FAILURE;
     } else {

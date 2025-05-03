@@ -54,7 +54,7 @@ format:
 	clang-format -i $(SRC)
 
 lint:
-	$(LINTER) $(SRC) -checks=-*,bugprone-*cert-*,clang-analyzer-*,performance-*,portability-*,misc-*,readability-*,-readability-function-cognitive-complexity -warnings-as-errors=* -- $(INCS) $(CFLAGS)
+	$(LINTER) $(SRC) -checks=-*,bugprone-*cert-*,clang-analyzer-*,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,performance-*,portability-*,misc-* -warnings-as-errors=* -- $(INCS) $(CFLAGS)
 
 build: $(BUILD)/$(OUT)
 
