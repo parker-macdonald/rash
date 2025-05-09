@@ -1,11 +1,14 @@
 #include "line_reader.h"
 
 #include <assert.h>
+#include <ctype.h>
+#include <dirent.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -172,6 +175,45 @@ void print_history(int count) {
   }
 }
 
+char *splitpath(uint8_t *path, const size_t length, char **pathname) {
+  if (length == 0) {
+    char *dirname = malloc(2);
+    strcpy(dirname, ".");
+    *pathname = (char *)path;
+    return dirname;
+  }
+
+  VECTOR(char) dirname;
+  VECTOR_INIT(dirname);
+
+  size_t last_slash = 0;
+
+  for (size_t i = 0; i < length; i++) {
+    if (path[i] == '/') {
+      last_slash = i;
+    }
+  }
+
+  bool just_slashed = false;
+
+  for (size_t i = 0; i < last_slash; i++) {
+    if (path[i] == '/') {
+      if (!just_slashed) {
+        VECTOR_PUSH(dirname, '/');
+      }
+
+      just_slashed = true;
+      continue;
+    }
+
+    just_slashed = false;
+    VECTOR_PUSH(dirname, path[i]);
+  }
+
+  *pathname = (char *)path + last_slash + 1;
+  return dirname.data;
+}
+
 const uint8_t *readline(void) {
   char *prompt = getenv("PS1");
   if (prompt == NULL) {
@@ -187,6 +229,7 @@ const uint8_t *readline(void) {
   VECTOR_INIT(line);
 
   size_t cursor_pos = 0;
+  bool double_tab = false;
 
   uint8_t curr_byte;
   for (;;) {
@@ -224,6 +267,59 @@ const uint8_t *readline(void) {
       printf("\n%s", prompt);
       fflush(stdout);
       continue;
+    }
+
+    if (curr_byte == '\t') {
+      size_t path_start;
+
+      for (path_start = line_to_read->length - 1; path_start > 0;
+           path_start--) {
+        if (isspace((int)line_to_read->data[path_start])) {
+          path_start++;
+          break;
+        }
+      }
+
+      char *pathname;
+      char *dirname = splitpath(line_to_read->data + path_start,
+                                line_to_read->length - path_start, &pathname);
+
+      DIR *dir = opendir(dirname);
+      free(dirname);
+
+      if (dir == NULL) {
+        continue;
+      }
+
+      struct dirent *ent;
+
+      size_t pathname_len =
+          line_to_read->length + (size_t)line_to_read->data - (size_t)pathname;
+      while ((ent = readdir(dir)) != NULL) {
+        if (strncmp(pathname, ent->d_name, pathname_len) == 0) {
+          if (node != NULL) {
+            line_copy(&line, &node->line);
+            node = NULL;
+          }
+          for (size_t i = pathname_len; ent->d_name[i] != '\0'; i++) {
+            VECTOR_PUSH(line, ent->d_name[i]);
+            cursor_pos++;
+
+            if (!is_continuation_byte_utf8((uint8_t)ent->d_name[i])) {
+              fputs(ANSI_CURSOR_RIGHT, stdout);
+            }
+          }
+
+          VECTOR_PUSH(line, ent->d_type == DT_DIR ? '/' : ' ');
+          cursor_pos++;
+          fputs(ANSI_CURSOR_RIGHT, stdout);
+
+          break;
+        }
+      }
+
+      closedir(dir);
+      goto draw_line;
     }
 
     if (curr_byte == ANSI_START_CHAR) {
