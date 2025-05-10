@@ -5,7 +5,6 @@
 const uint8_t ANSI_START_CHAR = '\033';
 const uint8_t ASCII_END_OF_TRANSMISSION = '\04';
 const uint8_t ASCII_DEL = '\177';
-const uint8_t RECV_SIGINT = 0xff;
 
 const char ANSI_CURSOR_LEFT[] = "\033[D";
 const char ANSI_CURSOR_RIGHT[] = "\033[C";

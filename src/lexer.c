@@ -145,6 +145,8 @@ char **get_tokens_from_line(const uint8_t *const line) {
           const uint8_t *env_value = (uint8_t *)getenv(env_name);
           free(env_name);
 
+          free(env_name);
+
           if (env_value != NULL) {
             for (size_t j = 0; env_value[j] != '\0'; j++) {
               VECTOR_PUSH(buffer, env_value[j]);

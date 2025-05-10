@@ -56,10 +56,9 @@ size_t line_delete(line_t *const line, const size_t cursor_pos) {
     return char_size;
   }
 
-  const size_t offset = cursor_pos;
   line->length -= char_size;
 
-  for (size_t i = offset; i < line->length; i++) {
+  for (size_t i = cursor_pos; i < line->length; i++) {
     line->data[i] = line->data[i + char_size];
   }
 

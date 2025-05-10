@@ -27,6 +27,8 @@ typedef struct line_node {
 #define PRINT_LINE(line)                                                       \
   fwrite((line).data, sizeof(*(line).data), (line).length, stdout)
 
+#define RECV_SIGINT -1
+
 static line_node_t *root_line_node = NULL;
 static line_node_t *last_line_node = NULL;
 
@@ -48,7 +50,8 @@ void line_reader_destroy(void) {
   last_line_node = NULL;
 }
 
-static uint8_t getch(void) {
+// returns a uint8_t casted to an int or RECV_SIGINT, when a sigint is recieved.
+static int getch(void) {
   struct termios oldt;
   struct termios newt;
   uint8_t byte;
@@ -64,14 +67,18 @@ static uint8_t getch(void) {
     errno = 0;
     nread = read(STDIN_FILENO, &byte, sizeof(byte));
 
+    // adding a null terminator to the line buffer will fuck up the lexer
+    if (nread == 1 && byte == '\0') {
+      continue;
+    }
     if (errno != EINTR) {
       break;
     }
     if (recv_sigint == 1) {
       recv_sigint = 0;
-      byte = RECV_SIGINT;
-      nread = 1;
-      break;
+      tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // Restore original settings
+
+      return RECV_SIGINT;
     }
   }
 
@@ -86,7 +93,7 @@ static uint8_t getch(void) {
     return ASCII_END_OF_TRANSMISSION;
   }
 
-  return byte;
+  return (int)byte;
 }
 
 static void draw_line(const char *const prompt, const line_t *const line) {
@@ -183,22 +190,25 @@ const uint8_t *readline(void) {
 
   uint8_t curr_byte;
   for (;;) {
-    curr_byte = getch();
+    int ch = getch();
+
+    // this is sent by the sigint handler to let the line reader know the user
+    // pressed ctrl-c to trigger a SIGINT.
+    if (ch == RECV_SIGINT) {
+      printf("\n%s", prompt);
+      fflush(stdout);
+      line.length = 0;
+      cursor_pos = 0;
+      continue;
+    }
+
+    curr_byte = (uint8_t)ch;
 
     if (curr_byte == ASCII_END_OF_TRANSMISSION) {
       printf("\n");
       VECTOR_DESTROY(line);
       line_reader_destroy();
       return NULL;
-    }
-
-    // this is sent by the sigint handler to let the line reader know the user
-    // pressed ctrl-c to trigger a SIGINT.
-    if (curr_byte == RECV_SIGINT) {
-      printf("\n%s", prompt);
-      fflush(stdout);
-      line.length = 0;
-      continue;
     }
 
     // readonly line to get length or data info from. when the user is going
@@ -208,21 +218,6 @@ const uint8_t *readline(void) {
 
     if (curr_byte == '\n') {
       if (line_to_read->length != 0) {
-        line_node_t *new_node = malloc(sizeof(line_node_t));
-        if (node != NULL) {
-          line_copy(&line, &node->line);
-        }
-
-        new_node->line = line;
-
-        new_node->p_next = NULL;
-        new_node->p_prev = last_line_node;
-        if (last_line_node != NULL) {
-          last_line_node->p_next = new_node;
-        } else {
-          root_line_node = new_node;
-        }
-        last_line_node = new_node;
         break;
       }
 
@@ -232,7 +227,7 @@ const uint8_t *readline(void) {
     }
 
     if (curr_byte == ANSI_START_CHAR) {
-      curr_byte = getch();
+      curr_byte = (uint8_t)getch();
 
       if (curr_byte != '[') {
         continue;
@@ -287,7 +282,7 @@ const uint8_t *readline(void) {
         case '1':
           if (getch() == ';') {
             if (getch() == '5') {
-              const uint8_t arrow_char = getch();
+              const uint8_t arrow_char = (uint8_t)getch();
               // shift right arrow
               if (arrow_char == 'C') {
                 if (cursor_pos < line_to_read->length) {
@@ -394,6 +389,22 @@ const uint8_t *readline(void) {
   }
 
   VECTOR_PUSH(line, '\0');
+
+  line_node_t *new_node = malloc(sizeof(line_node_t));
+  if (node != NULL) {
+    line_copy(&line, &node->line);
+  }
+
+  new_node->line = line;
+
+  new_node->p_next = NULL;
+  new_node->p_prev = last_line_node;
+  if (last_line_node != NULL) {
+    last_line_node->p_next = new_node;
+  } else {
+    root_line_node = new_node;
+  }
+  last_line_node = new_node;
 
   printf("\n");
 
