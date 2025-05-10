@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -183,9 +184,6 @@ char *splitpath(uint8_t *path, const size_t length, char **pathname) {
     return dirname;
   }
 
-  VECTOR(char) dirname;
-  VECTOR_INIT(dirname);
-
   size_t last_slash = 0;
 
   for (size_t i = 0; i < length; i++) {
@@ -193,6 +191,16 @@ char *splitpath(uint8_t *path, const size_t length, char **pathname) {
       last_slash = i;
     }
   }
+
+  if (last_slash == 0) {
+    char *dirname = malloc(2);
+    strcpy(dirname, ".");
+    *pathname = (char *)path;
+    return dirname;
+  }
+
+  VECTOR(char) dirname;
+  VECTOR_INIT(dirname);
 
   bool just_slashed = false;
 
@@ -209,6 +217,8 @@ char *splitpath(uint8_t *path, const size_t length, char **pathname) {
     just_slashed = false;
     VECTOR_PUSH(dirname, path[i]);
   }
+
+  VECTOR_PUSH(dirname, '\0');
 
   *pathname = (char *)path + last_slash + 1;
   return dirname.data;
@@ -229,7 +239,6 @@ const uint8_t *readline(void) {
   VECTOR_INIT(line);
 
   size_t cursor_pos = 0;
-  bool double_tab = false;
 
   uint8_t curr_byte;
   for (;;) {
@@ -246,6 +255,7 @@ const uint8_t *readline(void) {
     }
 
     curr_byte = (uint8_t)ch;
+    fputs(ANSI_REMOVE_BELOW_CURSOR, stdout);
 
     if (curr_byte == ASCII_END_OF_TRANSMISSION) {
       printf("\n");
@@ -278,6 +288,123 @@ const uint8_t *readline(void) {
           path_start++;
           break;
         }
+      }
+
+      if (path_start == 0) {
+        const char *const path = getenv("PATH");
+
+        if (path == NULL) {
+          continue;
+        }
+
+        char *path2 = strdup(path);
+
+        char *path_part = strtok(path2, ":");
+        VECTOR(char *) matches;
+        VECTOR_INIT(matches);
+
+        do {
+          DIR *dir = opendir(path_part);
+          if (dir == NULL) {
+            continue;
+          }
+          struct dirent *ent;
+
+          while ((ent = readdir(dir)) != NULL) {
+            if (strncmp((char *)line_to_read->data, ent->d_name,
+                        line_to_read->length) == 0) {
+              bool already_contained = false;
+              for (size_t i = 0; i < matches.length; i++) {
+                if (strcmp(matches.data[i], ent->d_name) == 0) {
+                  already_contained = true;
+                  break;
+                }
+              }
+
+              if (!already_contained) {
+                VECTOR_PUSH(matches, strdup(ent->d_name));
+              }
+            }
+          }
+
+          closedir(dir);
+        } while ((path_part = strtok(NULL, ":")) != NULL);
+
+        free(path2);
+
+        if (matches.length == 1) {
+          if (node != NULL) {
+            line_copy(&line, &node->line);
+            node = NULL;
+          }
+          for (size_t i = line_to_read->length; matches.data[0][i] != '\0';
+               i++) {
+            VECTOR_PUSH(line, matches.data[0][i]);
+            cursor_pos++;
+
+            if (!is_continuation_byte_utf8((uint8_t)matches.data[0][i])) {
+              fputs(ANSI_CURSOR_RIGHT, stdout);
+            }
+          }
+
+          for (size_t i = 0; i < matches.length; i++) {
+            free(matches.data[i]);
+          }
+
+          VECTOR_DESTROY(matches);
+
+          VECTOR_PUSH(line, ' ');
+          cursor_pos++;
+
+          fputs(ANSI_CURSOR_RIGHT, stdout);
+          goto draw_line;
+        }
+
+        if (matches.length == 0) {
+          VECTOR_DESTROY(matches);
+          continue;
+        }
+
+        int max_len = 0;
+        for (size_t i = 0; i < matches.length; i++) {
+          const int new_len = (int)strlen(matches.data[i]);
+
+          if (new_len > max_len) {
+            max_len = new_len;
+          }
+        }
+
+        // add some padding
+        max_len += 2;
+
+        int width;
+
+        struct winsize win;
+        if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &win) != -1) {
+          width = win.ws_col;
+        } else {
+          // assume 80 columns if we cant get the terminal size
+          width = 80;
+        }
+        const int col = width / max_len;
+
+        printf("%s\n", ANSI_CURSOR_POS_SAVE);
+
+
+        for (size_t i = 0; i < matches.length; i++) {
+          printf("%-*s", max_len, matches.data[i]);
+          free(matches.data[i]);
+
+          if ((i + 1) % col == 0) {
+            printf("\n");
+          }
+        }
+
+        printf("\n%s", ANSI_CURSOR_POS_RESTORE);
+
+        VECTOR_DESTROY(matches);
+
+        goto draw_line;
       }
 
       char *pathname;
