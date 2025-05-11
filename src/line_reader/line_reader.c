@@ -176,7 +176,7 @@ void print_history(int count) {
   }
 }
 
-char *splitpath(uint8_t *path, const size_t length, char **pathname) {
+static char *splitpath(uint8_t *path, const size_t length, char **pathname) {
   if (length == 0) {
     char *dirname = malloc(2);
     strcpy(dirname, ".");
@@ -215,7 +215,7 @@ char *splitpath(uint8_t *path, const size_t length, char **pathname) {
     }
 
     just_slashed = false;
-    VECTOR_PUSH(dirname, path[i]);
+    VECTOR_PUSH(dirname, (char)path[i]);
   }
 
   VECTOR_PUSH(dirname, '\0');
@@ -339,7 +339,7 @@ const uint8_t *readline(void) {
           }
           for (size_t i = line_to_read->length; matches.data[0][i] != '\0';
                i++) {
-            VECTOR_PUSH(line, matches.data[0][i]);
+            VECTOR_PUSH(line, (uint8_t)matches.data[0][i]);
             cursor_pos++;
 
             if (!is_continuation_byte_utf8((uint8_t)matches.data[0][i])) {
@@ -365,9 +365,9 @@ const uint8_t *readline(void) {
           continue;
         }
 
-        int max_len = 0;
+        unsigned int max_len = 0;
         for (size_t i = 0; i < matches.length; i++) {
-          const int new_len = (int)strlen(matches.data[i]);
+          const unsigned int new_len = (unsigned int)strlen(matches.data[i]);
 
           if (new_len > max_len) {
             max_len = new_len;
@@ -377,7 +377,7 @@ const uint8_t *readline(void) {
         // add some padding
         max_len += 2;
 
-        int width;
+        unsigned int width;
 
         struct winsize win;
         if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &win) != -1) {
@@ -386,11 +386,11 @@ const uint8_t *readline(void) {
           // assume 80 columns if we cant get the terminal size
           width = 80;
         }
-        const int col = width / max_len;
+        const unsigned int col = width / max_len;
 
         printf("%s\n", ANSI_CURSOR_POS_SAVE);
 
-        for (size_t i = 0; i < matches.length; i++) {
+        for (unsigned int i = 0; i < matches.length; i++) {
           printf("%-*s", max_len, matches.data[i]);
           free(matches.data[i]);
 
@@ -428,7 +428,7 @@ const uint8_t *readline(void) {
             node = NULL;
           }
           for (size_t i = pathname_len; ent->d_name[i] != '\0'; i++) {
-            VECTOR_PUSH(line, ent->d_name[i]);
+            VECTOR_PUSH(line, (uint8_t)ent->d_name[i]);
             cursor_pos++;
 
             if (!is_continuation_byte_utf8((uint8_t)ent->d_name[i])) {
