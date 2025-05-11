@@ -3,18 +3,16 @@
 #include <assert.h>
 #include <ctype.h>
 #include <dirent.h>
-#include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ioctl.h>
-#include <termios.h>
 #include <unistd.h>
 
 #include "../ansi.h"
-#include "../jobs.h"
+#include "utils.h"
+
 #include "../utf_8.h"
 #include "../vector.h"
 #include "modify_line.h"
@@ -27,11 +25,6 @@ typedef struct line_node {
   struct line_node *p_prev;
   line_t line;
 } line_node_t;
-
-#define PRINT_LINE(line)                                                       \
-  fwrite((line).data, sizeof(*(line).data), (line).length, stdout)
-
-#define RECV_SIGINT -1
 
 static line_node_t *root_line_node = NULL;
 static line_node_t *last_line_node = NULL;
@@ -52,66 +45,6 @@ void line_reader_destroy(void) {
 
   root_line_node = NULL;
   last_line_node = NULL;
-}
-
-// returns a uint8_t casted to an int or RECV_SIGINT, when a sigint is recieved.
-static int getch(void) {
-  struct termios oldt;
-  struct termios newt;
-  uint8_t byte;
-  ssize_t nread;
-
-  tcgetattr(STDIN_FILENO, &oldt); // Get the current terminal settings
-  newt = oldt;                    // Copy them to a new variable
-  newt.c_lflag &=
-      ~(unsigned int)(ICANON | ECHO);      // Disable canonical mode and echo
-  tcsetattr(STDIN_FILENO, TCSANOW, &newt); // Set the new settings
-
-  for (;;) {
-    errno = 0;
-    nread = read(STDIN_FILENO, &byte, sizeof(byte));
-
-    // adding a null terminator to the line buffer will fuck up the lexer
-    if (nread == 1 && byte == '\0') {
-      continue;
-    }
-    if (errno != EINTR) {
-      break;
-    }
-    if (recv_sigint == 1) {
-      recv_sigint = 0;
-      tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // Restore original settings
-
-      return RECV_SIGINT;
-    }
-  }
-
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // Restore original settings
-
-  if (nread == 0) {
-    return ASCII_END_OF_TRANSMISSION;
-  }
-
-  if (nread == -1) {
-    perror("read");
-    return ASCII_END_OF_TRANSMISSION;
-  }
-
-  return (int)byte;
-}
-
-static void draw_line(const char *const prompt, const line_t *const line) {
-  // the old line reader used to just redraw what changed, but that had lots of
-  // bugs so now i'm just redrawing the whole line
-  fputs(ANSI_REMOVE_FULL_LINE, stdout);
-  // reset cursor to start of line
-  fputs("\r", stdout);
-
-  fputs(prompt, stdout);
-
-  PRINT_LINE(*line);
-
-  fflush(stdout);
 }
 
 void clear_history(void) {
@@ -246,7 +179,7 @@ const uint8_t *readline(void) {
 
     // this is sent by the sigint handler to let the line reader know the user
     // pressed ctrl-c to trigger a SIGINT.
-    if (ch == RECV_SIGINT) {
+    if (ch == SIGINT_ON_READ) {
       printf("\n%s", prompt);
       fflush(stdout);
       line.length = 0;
@@ -365,41 +298,13 @@ const uint8_t *readline(void) {
           continue;
         }
 
-        unsigned int max_len = 0;
-        for (size_t i = 0; i < matches.length; i++) {
-          const unsigned int new_len = (unsigned int)strlen(matches.data[i]);
-
-          if (new_len > max_len) {
-            max_len = new_len;
-          }
-        }
-
-        // add some padding
-        max_len += 2;
-
-        unsigned int width;
-
-        struct winsize win;
-        if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &win) != -1) {
-          width = win.ws_col;
-        } else {
-          // assume 80 columns if we cant get the terminal size
-          width = 80;
-        }
-        const unsigned int col = width / max_len;
-
-        printf("%s\n", ANSI_CURSOR_POS_SAVE);
+        fputs(ANSI_CURSOR_POS_SAVE, stdout);
+        pretty_print_strings(matches.data, matches.length);
+        fputs(ANSI_CURSOR_POS_RESTORE, stdout);
 
         for (unsigned int i = 0; i < matches.length; i++) {
-          printf("%-*s", max_len, matches.data[i]);
           free(matches.data[i]);
-
-          if ((i + 1) % col == 0) {
-            printf("\n");
-          }
         }
-
-        printf("\n%s", ANSI_CURSOR_POS_RESTORE);
 
         VECTOR_DESTROY(matches);
 
