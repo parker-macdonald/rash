@@ -1,6 +1,8 @@
 #include "utils.h"
 
+#include <dirent.h>
 #include <errno.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -107,4 +109,32 @@ void draw_line(const char *const prompt, const line_t *const line) {
   PRINT_LINE(*line);
 
   fflush(stdout);
+}
+
+void add_path_matches(matches_t *matches, const char *const path,
+                      const char *const prefix, const size_t prefix_len) {
+  DIR *dir = opendir(path);
+  if (dir == NULL) {
+    return;
+  }
+  struct dirent *ent;
+
+  while ((ent = readdir(dir)) != NULL) {
+    if (strncmp(prefix, ent->d_name, prefix_len) == 0) {
+      bool already_contained = false;
+
+      for (size_t i = 0; i < matches->length; i++) {
+        if (strcmp(matches->data[i], ent->d_name) == 0) {
+          already_contained = true;
+          break;
+        }
+      }
+
+      if (!already_contained) {
+        VECTOR_PUSH(*matches, strdup(ent->d_name));
+      }
+    }
+  }
+
+  closedir(dir);
 }

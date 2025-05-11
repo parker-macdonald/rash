@@ -2,20 +2,17 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <dirent.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+#include <sys/stat.h>
 
 #include "../ansi.h"
-#include "utils.h"
-
 #include "../utf_8.h"
 #include "../vector.h"
 #include "modify_line.h"
+#include "utils.h"
 
 static_assert(sizeof(char) == sizeof(uint8_t),
               "char is not one byte in size, god save you...");
@@ -223,6 +220,10 @@ const uint8_t *readline(void) {
         }
       }
 
+      size_t pathname_len;
+      matches_t matches;
+      VECTOR_INIT(matches);
+
       if (path_start == 0) {
         const char *const path = getenv("PATH");
 
@@ -233,123 +234,78 @@ const uint8_t *readline(void) {
         char *path2 = strdup(path);
 
         char *path_part = strtok(path2, ":");
-        VECTOR(char *) matches;
-        VECTOR_INIT(matches);
+        pathname_len = line_to_read->length;
 
         do {
-          DIR *dir = opendir(path_part);
-          if (dir == NULL) {
-            continue;
-          }
-          struct dirent *ent;
-
-          while ((ent = readdir(dir)) != NULL) {
-            if (strncmp((char *)line_to_read->data, ent->d_name,
-                        line_to_read->length) == 0) {
-              bool already_contained = false;
-              for (size_t i = 0; i < matches.length; i++) {
-                if (strcmp(matches.data[i], ent->d_name) == 0) {
-                  already_contained = true;
-                  break;
-                }
-              }
-
-              if (!already_contained) {
-                VECTOR_PUSH(matches, strdup(ent->d_name));
-              }
-            }
-          }
-
-          closedir(dir);
+          add_path_matches(&matches, path_part, (char *)line_to_read->data,
+                           line_to_read->length);
         } while ((path_part = strtok(NULL, ":")) != NULL);
 
         free(path2);
+      } else {
+        char *pathname;
+        char *dirname = splitpath(line_to_read->data + path_start,
+                                  line_to_read->length - path_start, &pathname);
 
-        if (matches.length == 1) {
-          if (node != NULL) {
-            line_copy(&line, &node->line);
-            node = NULL;
-          }
-          for (size_t i = line_to_read->length; matches.data[0][i] != '\0';
-               i++) {
-            VECTOR_PUSH(line, (uint8_t)matches.data[0][i]);
-            cursor_pos++;
+        pathname_len = line_to_read->length +
+                                    (size_t)line_to_read->data -
+                                    (size_t)pathname;
 
-            if (!is_continuation_byte_utf8((uint8_t)matches.data[0][i])) {
-              fputs(ANSI_CURSOR_RIGHT, stdout);
-            }
-          }
+        add_path_matches(&matches, dirname, pathname, pathname_len);
 
-          for (size_t i = 0; i < matches.length; i++) {
-            free(matches.data[i]);
-          }
+        free(dirname);
+      }
 
-          VECTOR_DESTROY(matches);
-
-          VECTOR_PUSH(line, ' ');
+      if (matches.length == 1) {
+        if (node != NULL) {
+          line_copy(&line, &node->line);
+          node = NULL;
+        }
+        for (size_t i = pathname_len; matches.data[0][i] != '\0'; i++) {
+          VECTOR_PUSH(line, (uint8_t)matches.data[0][i]);
           cursor_pos++;
 
-          fputs(ANSI_CURSOR_RIGHT, stdout);
-          goto draw_line;
+          if (!is_continuation_byte_utf8((uint8_t)matches.data[0][i])) {
+            fputs(ANSI_CURSOR_RIGHT, stdout);
+          }
         }
 
-        if (matches.length == 0) {
-          VECTOR_DESTROY(matches);
-          continue;
+        uint8_t terminator = ' ';
+        struct stat status;
+
+        // add a slash instead of a space if the file is a directory
+        if (stat(matches.data[0], &status) == 0) {
+          if (S_ISDIR(status.st_mode)) {
+            terminator = '/';
+          }
         }
 
-        fputs(ANSI_CURSOR_POS_SAVE, stdout);
-        pretty_print_strings(matches.data, matches.length);
-        fputs(ANSI_CURSOR_POS_RESTORE, stdout);
-
-        for (unsigned int i = 0; i < matches.length; i++) {
-          free(matches.data[i]);
-        }
+        free(matches.data[0]);
 
         VECTOR_DESTROY(matches);
 
+        VECTOR_PUSH(line, terminator);
+        cursor_pos++;
+
+        fputs(ANSI_CURSOR_RIGHT, stdout);
         goto draw_line;
       }
 
-      char *pathname;
-      char *dirname = splitpath(line_to_read->data + path_start,
-                                line_to_read->length - path_start, &pathname);
-
-      DIR *dir = opendir(dirname);
-      free(dirname);
-
-      if (dir == NULL) {
+      if (matches.length == 0) {
+        VECTOR_DESTROY(matches);
         continue;
       }
 
-      struct dirent *ent;
+      fputs(ANSI_CURSOR_POS_SAVE, stdout);
+      pretty_print_strings(matches.data, matches.length);
+      fputs(ANSI_CURSOR_POS_RESTORE, stdout);
 
-      size_t pathname_len =
-          line_to_read->length + (size_t)line_to_read->data - (size_t)pathname;
-      while ((ent = readdir(dir)) != NULL) {
-        if (strncmp(pathname, ent->d_name, pathname_len) == 0) {
-          if (node != NULL) {
-            line_copy(&line, &node->line);
-            node = NULL;
-          }
-          for (size_t i = pathname_len; ent->d_name[i] != '\0'; i++) {
-            VECTOR_PUSH(line, (uint8_t)ent->d_name[i]);
-            cursor_pos++;
-
-            if (!is_continuation_byte_utf8((uint8_t)ent->d_name[i])) {
-              fputs(ANSI_CURSOR_RIGHT, stdout);
-            }
-          }
-
-          VECTOR_PUSH(line, ent->d_type == DT_DIR ? '/' : ' ');
-          cursor_pos++;
-          fputs(ANSI_CURSOR_RIGHT, stdout);
-
-          break;
-        }
+      for (unsigned int i = 0; i < matches.length; i++) {
+        free(matches.data[i]);
       }
 
-      closedir(dir);
+      VECTOR_DESTROY(matches);
+
       goto draw_line;
     }
 
