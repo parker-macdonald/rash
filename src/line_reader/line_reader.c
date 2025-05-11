@@ -390,7 +390,6 @@ const uint8_t *readline(void) {
 
         printf("%s\n", ANSI_CURSOR_POS_SAVE);
 
-
         for (size_t i = 0; i < matches.length; i++) {
           printf("%-*s", max_len, matches.data[i]);
           free(matches.data[i]);
