@@ -13,6 +13,7 @@ extern const uint8_t ASCII_DEL;
 
 // delete the current line (cursor will not move)
 extern const char ANSI_REMOVE_FULL_LINE[];
+extern const char ANSI_REMOVE_BELOW_CURSOR[];
 
 extern const char ANSI_CURSOR_LEFT[];
 extern const char ANSI_CURSOR_RIGHT[];

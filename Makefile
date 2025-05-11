@@ -1,7 +1,7 @@
 PREFIX := /usr/local
 
 SANITIZER :=
-CFLAGS := -std=c17 -D_POSIX_C_SOURCE=200809L
+CFLAGS := -std=c17 -D_DEFAULT_SOURCE
 CFLAG_ERRORS := -Werror -Wall -Wvla -Wextra -Wunreachable-code -Wshadow -Wpedantic
 LDFLAGS :=
 CC := clang
@@ -66,7 +66,7 @@ $(BUILD)/%.o: %.c
 	$(CC) $(CFLAGS) $(CFLAG_ERRORS) $(SANITIZER) -c -o $@ $<
 
 clean:
-	@rm -r $(BUILD)
+	@rm -rf $(BUILD)
 
 install:
 	mkdir -p ${DESTDIR}${PREFIX}/bin
