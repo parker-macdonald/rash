@@ -247,9 +247,8 @@ const uint8_t *readline(void) {
         char *dirname = splitpath(line_to_read->data + path_start,
                                   line_to_read->length - path_start, &pathname);
 
-        pathname_len = line_to_read->length +
-                                    (size_t)line_to_read->data -
-                                    (size_t)pathname;
+        pathname_len = line_to_read->length + (size_t)line_to_read->data -
+                       (size_t)pathname;
 
         add_path_matches(&matches, dirname, pathname, pathname_len);
 
