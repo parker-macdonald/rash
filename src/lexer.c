@@ -22,14 +22,16 @@ char **get_tokens_from_line(const uint8_t *const line) {
   VECTOR(uint8_t) buffer;
   VECTOR_INIT(buffer);
 
+  VECTOR(size_t) tokens;
+  VECTOR_INIT(tokens);
+
   size_t env_start = 0;
+  size_t token_start = 0;
 
-  enum lexer_state state = DEFAULT;
-  enum lexer_state prev_state = DEFAULT;
+  enum lexer_state state = WHITESPACE;
+  enum lexer_state prev_state = WHITESPACE;
 
-  size_t i = ~((size_t)(0));
-  do {
-    i++;
+  for (size_t i = 0; line[i] != '\0'; i++) {
     const uint8_t curr = line[i];
 
     switch (state) {
@@ -37,7 +39,10 @@ char **get_tokens_from_line(const uint8_t *const line) {
         if (isspace((int)curr)) {
           prev_state = state;
           state = WHITESPACE;
-          VECTOR_PUSH(buffer, '\0');
+
+          if (token_start != i) {
+            VECTOR_PUSH(buffer, '\0');
+          }
           break;
         }
 
@@ -73,7 +78,8 @@ char **get_tokens_from_line(const uint8_t *const line) {
         if (!isspace((int)curr)) {
           prev_state = state;
           state = DEFAULT;
-          i--;
+          token_start = i--;
+          VECTOR_PUSH(tokens, buffer.length);
         }
         break;
 
@@ -161,7 +167,7 @@ char **get_tokens_from_line(const uint8_t *const line) {
 
         break;
     }
-  } while (line[i] != '\0');
+  }
 
   switch (state) {
     case DEFAULT:
@@ -170,30 +176,28 @@ char **get_tokens_from_line(const uint8_t *const line) {
       break;
     case SINGLE_LITERAL:
       fprintf(stderr, "Expected character after ‘\\’.\n");
+      VECTOR_DESTROY(tokens);
       VECTOR_DESTROY(buffer);
       return NULL;
     case SINGLE_QUOTE:
       fprintf(stderr, "Expected closing ‘'’ character.\n");
+      VECTOR_DESTROY(tokens);
       VECTOR_DESTROY(buffer);
       return NULL;
     case DOUBLE_QUOTE:
       fprintf(stderr, "Expected closing ‘\"’ character.\n");
+      VECTOR_DESTROY(tokens);
       VECTOR_DESTROY(buffer);
       return NULL;
   }
 
-  VECTOR(char *) tokens;
-  VECTOR_INIT(tokens);
+  VECTOR_PUSH(buffer, '\0');
 
-  uint8_t *token_start = buffer.data;
-  for (size_t j = 0; j < buffer.length; j++) {
-    if (buffer.data[j] == '\0') {
-      VECTOR_PUSH(tokens, (char *)token_start);
-      token_start = &buffer.data[j + 1];
-    }
+  for (size_t i = 0; i < tokens.length; i++) {
+    tokens.data[i] += (size_t)buffer.data;
   }
 
-  VECTOR_PUSH(tokens, NULL);
+  VECTOR_PUSH(tokens, 0x0);
 
-  return tokens.data;
+  return (char **)tokens.data;
 }
