@@ -22,7 +22,7 @@ char **get_tokens_from_line(const uint8_t *const line) {
   VECTOR(uint8_t) buffer;
   VECTOR_INIT(buffer);
 
-  VECTOR(size_t) tokens;
+  VECTOR(uintptr_t) tokens;
   VECTOR_INIT(tokens);
 
   size_t env_start = 0;
