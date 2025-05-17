@@ -14,8 +14,10 @@
 #include "modify_line.h"
 #include "utils.h"
 
+#ifdef static_assert
 static_assert(sizeof(char) == sizeof(uint8_t),
               "char is not one byte in size, god save you...");
+#endif
 
 typedef struct line_node {
   struct line_node *p_next;

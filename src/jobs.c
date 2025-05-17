@@ -7,9 +7,11 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 
+#ifdef static_assert
 static_assert(sizeof(sig_atomic_t) == sizeof(pid_t),
               "size of sig_atomic_t differs from pid_t. what the hell are "
               "you compiling this on?");
+#endif
 
 const char *const JOB_STATUSES[NUM_JOB_STATUSES] = {"Exited", "Stopped",
                                                     "Running"};
