@@ -31,7 +31,8 @@ char **get_tokens_from_line(const uint8_t *const line) {
   enum lexer_state state = WHITESPACE;
   enum lexer_state prev_state = WHITESPACE;
 
-  for (size_t i = 0; line[i] != '\0'; i++) {
+  size_t i;
+  for (i = 0; line[i] != '\0'; i++) {
     const uint8_t curr = line[i];
 
     switch (state) {
@@ -117,7 +118,7 @@ char **get_tokens_from_line(const uint8_t *const line) {
         break;
 
       case VAR_EXPANSION:
-        if (isdigit((int)curr) || curr == '?') {
+        if ((i == env_start + 1 && isdigit((int)curr)) || curr == '?') {
           char env_name[2];
           env_name[0] = (char)curr;
           env_name[1] = '\0';
@@ -171,8 +172,25 @@ char **get_tokens_from_line(const uint8_t *const line) {
   switch (state) {
     case DEFAULT:
     case WHITESPACE:
-    case VAR_EXPANSION:
       break;
+    case VAR_EXPANSION: {
+      const size_t env_len = i - env_start - 1;
+      char *env_name = malloc(env_len + 1);
+      strncpy(env_name, (const char *)&line[env_start + 1], env_len);
+      env_name[env_len] = '\0';
+
+      const uint8_t *env_value = (uint8_t *)getenv(env_name);
+
+      free(env_name);
+
+      if (env_value != NULL) {
+        for (size_t j = 0; env_value[j] != '\0'; j++) {
+          VECTOR_PUSH(buffer, env_value[j]);
+        }
+      }
+
+      break;
+    }
     case SINGLE_LITERAL:
       fprintf(stderr, "Expected character after ‘\\’.\n");
       VECTOR_DESTROY(tokens);
@@ -192,8 +210,8 @@ char **get_tokens_from_line(const uint8_t *const line) {
 
   VECTOR_PUSH(buffer, '\0');
 
-  for (size_t i = 0; i < tokens.length; i++) {
-    tokens.data[i] += (size_t)buffer.data;
+  for (size_t j = 0; j < tokens.length; j++) {
+    tokens.data[j] += (size_t)buffer.data;
   }
 
   VECTOR_PUSH(tokens, 0x0);
