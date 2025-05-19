@@ -149,7 +149,6 @@ char **get_tokens_from_line(const uint8_t *const line) {
           env_name[env_len] = '\0';
 
           const uint8_t *env_value = (uint8_t *)getenv(env_name);
-          free(env_name);
 
           free(env_name);
 
