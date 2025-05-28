@@ -131,7 +131,7 @@ printf("%s", string.data);
     (vector).data = malloc(sizeof(*(vector).data) * capacity);                 \
   } while (0)
 
-#define VECTOR_INIT(...) __VECTOR_INIT(__VA_ARGS__, VECTOR_DEFAULT_SIZE)
+#define VECTOR_INIT(...) __VECTOR_INIT(__VA_ARGS__, VECTOR_DEFAULT_SIZE, unused)
 
 #define VECTOR_PUSH(vector, value)                                             \
   do {                                                                         \
