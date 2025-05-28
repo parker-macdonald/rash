@@ -8,10 +8,10 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include "../ansi.h"
-#include "../utf_8.h"
+#include "../line_reader_new/ansi.h"
+#include "../line_reader_new/utf_8.h"
 #include "../vector.h"
-#include "modify_line.h"
+#include "../line_reader_new/modify_line.h"
 #include "utils.h"
 
 #ifdef static_assert
@@ -156,7 +156,7 @@ static char *splitpath(uint8_t *path, const size_t length, char **pathname) {
   return dirname.data;
 }
 
-const uint8_t *readline(void) {
+const uint8_t *readline1(void) {
   char *prompt = getenv("PS1");
   if (prompt == NULL) {
     prompt = "$ ";

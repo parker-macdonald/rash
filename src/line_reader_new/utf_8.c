@@ -16,6 +16,10 @@ static unsigned int count_leading_ones(uint8_t byte) {
 }
 
 size_t traverse_back_utf8(const uint8_t *const line, const size_t cursor_pos) {
+  if (cursor_pos == 0) {
+    return 0;
+  }
+  
   size_t offset = cursor_pos - 1;
   size_t char_size = 1;
 
@@ -45,6 +49,10 @@ size_t traverse_back_utf8(const uint8_t *const line, const size_t cursor_pos) {
 
 size_t traverse_forward_utf8(const uint8_t *const line, const size_t line_len,
                              const size_t cursor_pos) {
+  if (line_len == cursor_pos) {
+    return 0;
+  }
+
   size_t offset = cursor_pos;
   size_t char_size = count_leading_ones(line[offset]);
 

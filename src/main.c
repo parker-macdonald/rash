@@ -8,7 +8,7 @@
 #include "execute.h"
 #include "jobs.h"
 #include "lexer.h"
-#include "line_reader/line_reader.h"
+#include "line_reader_new/line_reader.h"
 #include "should_exit.h"
 
 bool should_exit = false;

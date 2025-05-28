@@ -11,7 +11,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-#include "../ansi.h"
+#include "../line_reader_new/ansi.h"
 #include "../jobs.h"
 #include "line_reader.h"
 
