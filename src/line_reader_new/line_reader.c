@@ -27,9 +27,7 @@ enum reader_state {
   ANSI_CTRL_ARROW,
   // this state happens when the character after the `[` was found to be the
   // number 3
-  ANSI_SEQ_CONT_3,
-  // when the user presses the delete character
-  ANSI_DELETE
+  ANSI_SEQ_CONT_3
 };
 
 const uint8_t *readline(void) {
@@ -69,6 +67,8 @@ const uint8_t *readline(void) {
       break;
     }
 
+    // in this switch statement, continuing will not draw the line, breaking
+    // will.
     switch (state) {
       case DEFAULT:
         if (character == ANSI_START_CHAR) {
@@ -79,79 +79,86 @@ const uint8_t *readline(void) {
         if (character == ASCII_DEL) {
           if (cursor_pos -= line_backspace(&line, cursor_pos)) {
             fputs(ANSI_CURSOR_LEFT, stdout);
-            fflush(stdout);
           }
 
           break;
         }
 
         line_insert(&line, (uint8_t)character, cursor_pos);
+        fputs(ANSI_CURSOR_RIGHT, stdout);
         cursor_pos++;
-        printf("%c", (char)character);
-        fflush(stdout);
         break;
 
       case BEGIN_ANSI_SEQ:
         state = character == '[' ? ANSI_SEQ_CONT : DEFAULT;
-        break;
+        continue;
 
       case ANSI_SEQ_CONT:
         if (character == 'A') {
           // TODO: arrow up
           state = DEFAULT;
-          break;
+          continue;
         }
 
         if (character == 'B') {
           // TODO: arrow down
           state = DEFAULT;
-          break;
+          continue;
         }
 
         // right arrow
         if (character == 'C') {
-          if (cursor_pos +=
-              traverse_forward_utf8(line.data, line.length, cursor_pos)) {
+          const size_t count =
+              traverse_forward_utf8(line.data, line.length, cursor_pos);
+          if (count) {
+            cursor_pos += count;
             fputs(ANSI_CURSOR_RIGHT, stdout);
             fflush(stdout);
           }
 
           state = DEFAULT;
-          break;
+          continue;
         }
 
         // left arrow
         if (character == 'D') {
-          if (cursor_pos -= traverse_back_utf8(line.data, cursor_pos)) {
+          const size_t count = traverse_back_utf8(line.data, cursor_pos);
+          if (count) {
+            cursor_pos -= count;
             fputs(ANSI_CURSOR_LEFT, stdout);
             fflush(stdout);
           }
 
           state = DEFAULT;
-          break;
+          continue;
         }
 
         if (character == '1') {
           state = ANSI_SEQ_CONT_1;
-          break;
+          continue;
         }
 
         if (character == '3') {
           state = ANSI_SEQ_CONT_3;
-          break;
+          continue;
         }
 
       case ANSI_SEQ_CONT_1:
         state = character == ';' ? ANSI_SEQ_CONT_1_SEMI : DEFAULT;
-        break;
+        continue;
 
       case ANSI_SEQ_CONT_1_SEMI:
         state = character == '5' ? ANSI_CTRL_ARROW : DEFAULT;
-        break;
+        continue;
 
       case ANSI_SEQ_CONT_3:
-        state = character == '~' ? ANSI_DELETE : DEFAULT;
-        break;
+        state = DEFAULT;
+        if (character == '~') {
+          line_delete(&line, cursor_pos);
+          break;
+        }
+
+        continue;
 
       case ANSI_CTRL_ARROW:
         // right arrow
@@ -168,7 +175,7 @@ const uint8_t *readline(void) {
           fflush(stdout);
 
           state = DEFAULT;
-          break;
+          continue;
         }
 
         // left arrow
@@ -185,14 +192,22 @@ const uint8_t *readline(void) {
           fflush(stdout);
 
           state = DEFAULT;
-          break;
+          continue;
         }
-
-      case ANSI_DELETE:
-        line_delete(&line, cursor_pos);
-        state = DEFAULT;
-        break;
     }
+
+    fputs(ANSI_CURSOR_POS_SAVE, stdout);
+
+    fputs(ANSI_REMOVE_FULL_LINE, stdout);
+    // reset cursor to start of line
+    printf("\r");
+
+    fputs(prompt, stdout);
+    PRINT_LINE(line);
+
+    fputs(ANSI_CURSOR_POS_RESTORE, stdout);
+
+    fflush(stdout);
   }
 
   printf("\n");
