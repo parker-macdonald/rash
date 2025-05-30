@@ -11,7 +11,7 @@
                     clang
                     clang-tools
                     gdb
-                    lldb
+                    valgrind
                     gnumake
                 ];
 

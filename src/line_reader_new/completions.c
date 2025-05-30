@@ -113,16 +113,16 @@ const char **completions_matches(const char *prefix, const size_t prefix_len) {
     }
   }
 
-  VECTOR(TrieNode*) stack;
+  VECTOR(TrieNode *) stack;
   VECTOR_INIT(stack);
 
   VECTOR_PUSH(stack, node);
 
-  VECTOR(const char*) matches;
+  VECTOR(const char *) matches;
   VECTOR_INIT(matches, 32);
 
   while (stack.length != 0) {
-    TrieNode* top = VECTOR_POP(stack);
+    TrieNode *top = VECTOR_POP(stack);
 
     for (size_t i = 0; i < ALPHABET_SIZE; i++) {
       if (top->nodes[i] != NULL) {
@@ -130,7 +130,7 @@ const char **completions_matches(const char *prefix, const size_t prefix_len) {
       }
     }
 
-    //VECTOR_PUSH(matches, top->)
+    // VECTOR_PUSH(matches, top->)
   }
 
   return matches.data;

@@ -11,8 +11,8 @@
 #include <termios.h>
 #include <unistd.h>
 
-#include "../line_reader_new/ansi.h"
 #include "../jobs.h"
+#include "../line_reader_new/ansi.h"
 #include "line_reader.h"
 
 void pretty_print_strings(char *const strings[], const size_t length) {

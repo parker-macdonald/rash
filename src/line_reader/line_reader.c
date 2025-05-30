@@ -9,9 +9,9 @@
 #include <sys/stat.h>
 
 #include "../line_reader_new/ansi.h"
+#include "../line_reader_new/modify_line.h"
 #include "../line_reader_new/utf_8.h"
 #include "../vector.h"
-#include "../line_reader_new/modify_line.h"
 #include "utils.h"
 
 #ifdef static_assert

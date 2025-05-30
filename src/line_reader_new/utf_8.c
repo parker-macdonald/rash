@@ -19,7 +19,7 @@ size_t traverse_back_utf8(const uint8_t *const line, const size_t cursor_pos) {
   if (cursor_pos == 0) {
     return 0;
   }
-  
+
   size_t offset = cursor_pos - 1;
   size_t char_size = 1;
 

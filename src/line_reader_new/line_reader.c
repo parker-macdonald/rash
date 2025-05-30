@@ -1,5 +1,6 @@
 #include "line_reader.h"
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,7 +11,27 @@
 #include "modify_line.h"
 #include "utf_8.h"
 
-size_t handle_ansi_seq(line_t *const line);
+#ifdef static_assert
+static_assert(sizeof(char) == sizeof(uint8_t),
+              "char is not one byte in size, god save you...");
+#endif
+
+#define MODIFY_LINE(code)                                                      \
+  if (history_node != NULL) {                                                  \
+    line_copy(&current_line, line_ptr);                                        \
+    history_node = NULL;                                                       \
+  }                                                                            \
+  do                                                                           \
+  code while (0)
+
+typedef struct line_node {
+  struct line_node *p_next;
+  struct line_node *p_prev;
+  line_t line;
+} line_node_t;
+
+static line_node_t *root_line_node = NULL;
+static line_node_t *last_line_node = NULL;
 
 enum reader_state {
   DEFAULT,
@@ -33,9 +54,11 @@ enum reader_state {
 const uint8_t *readline(void) {
   const char *prompt = getenv("PS1");
 
-  line_t line;
-  VECTOR_INIT(line);
+  line_t current_line;
+  VECTOR_INIT(current_line);
   size_t cursor_pos = 0;
+
+  line_node_t *history_node = NULL;
 
   enum reader_state state = DEFAULT;
 
@@ -51,7 +74,8 @@ const uint8_t *readline(void) {
     character = getch();
 
     if (character == SIGINT_ON_READ) {
-      VECTOR_CLEAR(line);
+      history_node = NULL;
+      VECTOR_CLEAR(current_line);
       cursor_pos = 0;
       printf("\n%s", prompt);
       fflush(stdout);
@@ -59,13 +83,16 @@ const uint8_t *readline(void) {
     }
 
     if (character == ASCII_END_OF_TRANSMISSION) {
-      VECTOR_DESTROY(line);
+      VECTOR_DESTROY(current_line);
       return NULL;
     }
 
     if (character == '\n') {
       break;
     }
+
+    line_t *line_ptr =
+        history_node == NULL ? &current_line : &history_node->line;
 
     // in this switch statement, continuing will not draw the line, breaking
     // will.
@@ -77,14 +104,16 @@ const uint8_t *readline(void) {
         }
 
         if (character == ASCII_DEL) {
-          if (cursor_pos -= line_backspace(&line, cursor_pos)) {
+          const size_t count = line_backspace(line_ptr, cursor_pos);
+          if (count) {
             fputs(ANSI_CURSOR_LEFT, stdout);
+            cursor_pos -= count;
           }
 
           break;
         }
 
-        line_insert(&line, (uint8_t)character, cursor_pos);
+        MODIFY_LINE({ line_insert(line_ptr, (uint8_t)character, cursor_pos); });
         fputs(ANSI_CURSOR_RIGHT, stdout);
         cursor_pos++;
         break;
@@ -94,8 +123,19 @@ const uint8_t *readline(void) {
         continue;
 
       case ANSI_SEQ_CONT:
+        // arrow up
         if (character == 'A') {
-          // TODO: arrow up
+          if (history_node != NULL) {
+            if (history_node->p_prev != NULL) {
+              history_node = history_node->p_prev;
+            }
+          } else {
+            history_node = last_line_node;
+          }
+
+          if (history_node != NULL) {
+            draw_line(prompt, &history_node->line);
+          }
           state = DEFAULT;
           continue;
         }
@@ -108,8 +148,8 @@ const uint8_t *readline(void) {
 
         // right arrow
         if (character == 'C') {
-          const size_t count =
-              traverse_forward_utf8(line.data, line.length, cursor_pos);
+          const size_t count = traverse_forward_utf8(
+              line_ptr->data, line_ptr->length, cursor_pos);
           if (count) {
             cursor_pos += count;
             fputs(ANSI_CURSOR_RIGHT, stdout);
@@ -122,7 +162,7 @@ const uint8_t *readline(void) {
 
         // left arrow
         if (character == 'D') {
-          const size_t count = traverse_back_utf8(line.data, cursor_pos);
+          const size_t count = traverse_back_utf8(line_ptr->data, cursor_pos);
           if (count) {
             cursor_pos -= count;
             fputs(ANSI_CURSOR_LEFT, stdout);
@@ -154,7 +194,7 @@ const uint8_t *readline(void) {
       case ANSI_SEQ_CONT_3:
         state = DEFAULT;
         if (character == '~') {
-          line_delete(&line, cursor_pos);
+          MODIFY_LINE({ line_delete(&current_line, cursor_pos); });
           break;
         }
 
@@ -163,11 +203,11 @@ const uint8_t *readline(void) {
       case ANSI_CTRL_ARROW:
         // right arrow
         if (character == 'C') {
-          while (cursor_pos < line.length) {
+          while (cursor_pos < line_ptr->length) {
             cursor_pos++;
             fputs(ANSI_CURSOR_RIGHT, stdout);
 
-            if (line.data[cursor_pos] == ' ') {
+            if (line_ptr->data[cursor_pos] == ' ') {
               break;
             }
           }
@@ -184,7 +224,7 @@ const uint8_t *readline(void) {
             cursor_pos--;
             fputs(ANSI_CURSOR_LEFT, stdout);
 
-            if (line.data[cursor_pos] == ' ') {
+            if (line_ptr->data[cursor_pos] == ' ') {
               break;
             }
           }
@@ -203,14 +243,31 @@ const uint8_t *readline(void) {
     printf("\r");
 
     fputs(prompt, stdout);
-    PRINT_LINE(line);
+    PRINT_LINE(*line_ptr);
 
     fputs(ANSI_CURSOR_POS_RESTORE, stdout);
 
     fflush(stdout);
   }
 
+  line_node_t *new_node = malloc(sizeof(line_node_t));
+  if (history_node != NULL) {
+    line_copy(&current_line, &history_node->line);
+  } else {
+    VECTOR_PUSH(current_line, '\0');
+  }
+
+  new_node->line = current_line;
+
+  new_node->p_next = NULL;
+  new_node->p_prev = last_line_node;
+  if (last_line_node != NULL) {
+    last_line_node->p_next = new_node;
+  } else {
+    root_line_node = new_node;
+  }
+  last_line_node = new_node;
+
   printf("\n");
-  VECTOR_PUSH(line, '\0');
-  return line.data;
+  return current_line.data;
 }
