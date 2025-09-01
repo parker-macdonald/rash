@@ -113,6 +113,7 @@ printf("%s", string.data);
 ```
 */
 
+#include <assert.h>
 #include <stdlib.h>
 
 #define VECTOR_DEFAULT_SIZE 16
@@ -124,18 +125,20 @@ printf("%s", string.data);
     type *data;                                                                \
   }
 
-#define __VECTOR_INIT(vector, capacity, ...)                                   \
+#define USE_VECTOR_INIT_INSTEAD_OF_THIS(vector, capacity, ...)                 \
   do {                                                                         \
     (vector)._capacity = capacity;                                             \
     (vector).length = 0;                                                       \
     (vector).data = malloc(sizeof(*(vector).data) * capacity);                 \
   } while (0)
 
-#define VECTOR_INIT(...) __VECTOR_INIT(__VA_ARGS__, VECTOR_DEFAULT_SIZE, unused)
+#define VECTOR_INIT(...)                                                       \
+  USE_VECTOR_INIT_INSTEAD_OF_THIS(__VA_ARGS__, VECTOR_DEFAULT_SIZE, unused)
 
 #define VECTOR_PUSH(vector, value)                                             \
   do {                                                                         \
     if ((vector)._capacity <= (vector).length) {                               \
+      assert((vector)._capacity != 0);                                         \
       (vector)._capacity *= 2;                                                 \
       (vector).data =                                                          \
           realloc((vector).data, sizeof(*(vector).data) * (vector)._capacity); \

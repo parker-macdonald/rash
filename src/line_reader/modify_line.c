@@ -69,7 +69,6 @@ void line_copy(line_t *dest, const line_t *const src) {
   VECTOR_CLEAR(*dest);
 
   for (size_t i = 0; i < src->length; i++) {
-    assert(dest->capacity != 0); // get clang-tidy to shut the hell up
     VECTOR_PUSH(*dest, src->data[i]);
   }
 }
