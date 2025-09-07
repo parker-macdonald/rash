@@ -23,9 +23,10 @@ static int spawn_process(char **const argv) {
 
       if (errno != ENOENT) {
         fprintf(stderr, "execvp: ");
+        perror(argv[0]);
+      } else {
+        fprintf(stderr, "%s: command not found\n", argv[0]);
       }
-
-      perror(argv[0]);
     }
 
     exit(EXIT_FAILURE);
