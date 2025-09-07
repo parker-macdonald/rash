@@ -322,11 +322,12 @@ const uint8_t *readline(void) {
     fflush(stdout);
   }
 
-  VECTOR_PUSH(line, '\0');
-
   line_node_t *new_node = malloc(sizeof(line_node_t));
   if (node != NULL) {
     line_copy(&line, &node->line);
+  } else {
+    VECTOR_PUSH(line, '\0');
+    line.length--;
   }
 
   new_node->line = line;
