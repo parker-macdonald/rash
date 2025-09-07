@@ -244,7 +244,7 @@ const uint8_t *readline(void) {
                   fputs(ANSI_CURSOR_LEFT, stdout);
 
                   while (cursor_pos > 0 &&
-                         line_to_read->data[cursor_pos] != ' ') {
+                         line_to_read->data[cursor_pos - 1] != ' ') {
                     cursor_pos -=
                         traverse_back_utf8(line_to_read->data, cursor_pos);
                     fputs(ANSI_CURSOR_LEFT, stdout);
