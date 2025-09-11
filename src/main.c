@@ -43,16 +43,9 @@ int main(int argc, char **argv) {
       break;
     }
 
-    char **tokens = get_tokens_from_line(line);
+    execution_context context = get_tokens_from_line(line);
 
-    if (tokens != NULL) {
-      status = execute(tokens);
-
-      free(tokens[0]);
-      free(tokens);
-    } else {
-      status = EXIT_FAILURE;
-    }
+    status = execute(context);
 
     if (should_exit) {
       break;

@@ -3,6 +3,8 @@
 
 #include "stdint.h"
 
-char **get_tokens_from_line(const uint8_t *const line);
+#include "execute.h"
+
+execution_context get_tokens_from_line(const uint8_t *const line);
 
 #endif

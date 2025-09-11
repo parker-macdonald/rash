@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "execute.h"
 #include "vector.h"
 
 enum lexer_state {
@@ -15,21 +16,32 @@ enum lexer_state {
   SINGLE_QUOTE,
   DOUBLE_QUOTE,
   VAR_EXPANSION,
-  SINGLE_LITERAL
+  SINGLE_LITERAL,
+  OUTPUT_REDIRECT,
+  INPUT_REDIRECT
 };
 
-char **get_tokens_from_line(const uint8_t *const line) {
+execution_context get_tokens_from_line(const uint8_t *const line) {
   VECTOR(uint8_t) buffer;
   VECTOR_INIT(buffer);
 
   VECTOR(uintptr_t) tokens;
   VECTOR_INIT(tokens);
 
+  VECTOR(char) stdout_path;
+  VECTOR_INIT(stdout_path);
+
+  VECTOR(char) stdin_path;
+  VECTOR_INIT(stdin_path);
+
   size_t env_start = 0;
   size_t token_start = 0;
 
   enum lexer_state state = WHITESPACE;
   enum lexer_state prev_state = WHITESPACE;
+
+  execution_context context = {
+      .flags = 0, .stderr = NULL, .stdin = NULL, .stdout = NULL};
 
   size_t i;
   for (i = 0; line[i] != '\0'; i++) {
@@ -69,6 +81,22 @@ char **get_tokens_from_line(const uint8_t *const line) {
         if (curr == '\\') {
           prev_state = state;
           state = SINGLE_LITERAL;
+          break;
+        }
+
+        if (curr == '>') {
+          prev_state = state;
+          state = OUTPUT_REDIRECT;
+
+          context.stdout = malloc(sizeof(char) * 16);
+          break;
+        }
+
+        if (curr == '<') {
+          prev_state = state;
+          state = INPUT_REDIRECT;
+
+          context.stdin = malloc(sizeof(char) * 16);
           break;
         }
 
@@ -166,6 +194,24 @@ char **get_tokens_from_line(const uint8_t *const line) {
         }
 
         break;
+      case OUTPUT_REDIRECT:
+        if (isspace((int)curr)) {
+          VECTOR_PUSH(stdout_path, '\0');
+          context.stdout = stdout_path.data;
+          break;
+        }
+
+        VECTOR_PUSH(stdout_path, (char)curr);
+        break;
+      case INPUT_REDIRECT:
+        if (isspace((int)curr)) {
+          VECTOR_PUSH(stdin_path, '\0');
+          context.stdout = stdin_path.data;
+          break;
+        }
+
+        VECTOR_PUSH(stdin_path, (char)curr);
+        break;
     }
   }
 
@@ -195,17 +241,25 @@ char **get_tokens_from_line(const uint8_t *const line) {
       fprintf(stderr, "Expected character after ‘\\’.\n");
       VECTOR_DESTROY(tokens);
       VECTOR_DESTROY(buffer);
-      return NULL;
+      // return NULL;
     case SINGLE_QUOTE:
       fprintf(stderr, "Expected closing ‘'’ character.\n");
       VECTOR_DESTROY(tokens);
       VECTOR_DESTROY(buffer);
-      return NULL;
+      // return NULL;
     case DOUBLE_QUOTE:
       fprintf(stderr, "Expected closing ‘\"’ character.\n");
       VECTOR_DESTROY(tokens);
       VECTOR_DESTROY(buffer);
-      return NULL;
+      // return NULL;
+    case OUTPUT_REDIRECT:
+      VECTOR_PUSH(stdout_path, '\0');
+      context.stdout = stdout_path.data;
+      break;
+    case INPUT_REDIRECT:
+      VECTOR_PUSH(stdin_path, '\0');
+      context.stdin = stdin_path.data;
+      break;
   }
 
   VECTOR_PUSH(buffer, '\0');
@@ -216,5 +270,6 @@ char **get_tokens_from_line(const uint8_t *const line) {
 
   VECTOR_PUSH(tokens, 0x0);
 
-  return (char **)tokens.data;
+  context.argv = (char **)tokens.data;
+  return context;
 }

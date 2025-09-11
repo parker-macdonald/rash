@@ -1,6 +1,8 @@
 #include "execute.h"
 
+#include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/wait.h>
@@ -9,25 +11,84 @@
 #include "./builtins/find_builtin.h"
 #include "jobs.h"
 
-static int spawn_process(char **const argv) {
+int execute(const execution_context context) {
+  if (context.argv == NULL) {
+    return EXIT_SUCCESS;
+  }
+
   pid_t pid = fork();
 
   // child
   if (pid == 0) {
-    int status = execvp(argv[0], argv);
+    if (context.stdout) {
+      int fd = open(context.stdout, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+
+      if (fd == -1) {
+        fputs("rash: ", stderr);
+        perror(context.stdout);
+        _exit(EXIT_FAILURE);
+      }
+
+      close(STDOUT_FILENO);
+
+      int new_fd = dup(fd);
+
+      assert(new_fd == STDOUT_FILENO);
+    }
+
+    if (context.stderr) {
+      int fd = open(context.stderr, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+
+      if (fd == -1) {
+        fputs("rash: ", stderr);
+        perror(context.stderr);
+        _exit(EXIT_FAILURE);
+      }
+
+      close(STDERR_FILENO);
+
+      int new_fd = dup(fd);
+
+      assert(new_fd == STDERR_FILENO);
+    }
+
+    if (context.stdin) {
+      int fd = open(context.stdin, O_RDONLY);
+
+      if (fd == -1) {
+        fputs("rash: ", stderr);
+        perror(context.stdin);
+        _exit(EXIT_FAILURE);
+      }
+
+      close(STDIN_FILENO);
+
+      int new_fd = dup(fd);
+
+      assert(new_fd == STDIN_FILENO);
+    }
+
+    builtin_t builtin = find_builtin(context.argv[0]);
+
+    if (builtin != NULL) {
+      _exit(builtin(context.argv));
+    }
+
+    int status = execvp(context.argv[0], context.argv);
 
     if (status == -1) {
       fprintf(stderr, "rash: ");
 
       if (errno != ENOENT) {
         fprintf(stderr, "execvp: ");
-        perror(argv[0]);
+        perror(context.argv[0]);
       } else {
-        fprintf(stderr, "%s: command not found\n", argv[0]);
+        fprintf(stderr, "%s: command not found\n", context.argv[0]);
       }
     }
 
-    // apparently you're supposed to use _exit() inside of a child process instead of exit()
+    // apparently you're supposed to use _exit() inside of a child process
+    // instead of exit()
     _exit(EXIT_FAILURE);
   }
   // error forking
@@ -58,18 +119,4 @@ static int spawn_process(char **const argv) {
 
   // will never be reached
   return EXIT_SUCCESS;
-}
-
-int execute(char **const argv) {
-  if (argv[0] == NULL) {
-    return EXIT_SUCCESS;
-  }
-
-  builtin_t builtin = find_builtin(argv[0]);
-
-  if (builtin != NULL) {
-    return builtin(argv);
-  }
-
-  return spawn_process(argv);
 }
