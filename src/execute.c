@@ -1,10 +1,8 @@
 #include "execute.h"
 
 #include <errno.h>
-#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -29,7 +27,8 @@ static int spawn_process(char **const argv) {
       }
     }
 
-    exit(EXIT_FAILURE);
+    // apparently you're supposed to use _exit() inside of a child process instead of exit()
+    _exit(EXIT_FAILURE);
   }
   // error forking
   else if (pid == -1) {
