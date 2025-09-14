@@ -324,7 +324,10 @@ const uint8_t *readline(void) {
 
   line_node_t *new_node = malloc(sizeof(line_node_t));
   if (node != NULL) {
+    node->line.length++;
     line_copy(&line, &node->line);
+    node->line.length--;
+    line.length--;
   } else {
     VECTOR_PUSH(line, '\0');
     line.length--;
