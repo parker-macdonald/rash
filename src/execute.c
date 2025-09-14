@@ -20,50 +20,26 @@ int execute(const execution_context context) {
 
   // child
   if (pid == 0) {
-    if (context.stdout) {
-      int fd = open(context.stdout, O_CREAT | O_WRONLY | O_TRUNC, 0644);
-
-      if (fd == -1) {
-        fputs("rash: ", stderr);
-        perror(context.stdout);
-        _exit(EXIT_FAILURE);
-      }
-
+    if (context.stdout_fd != -1) {
       close(STDOUT_FILENO);
 
-      int new_fd = dup(fd);
+      int new_fd = dup(context.stdout_fd);
 
       assert(new_fd == STDOUT_FILENO);
     }
 
-    if (context.stderr) {
-      int fd = open(context.stderr, O_CREAT | O_WRONLY | O_TRUNC, 0644);
-
-      if (fd == -1) {
-        fputs("rash: ", stderr);
-        perror(context.stderr);
-        _exit(EXIT_FAILURE);
-      }
-
+    if (context.stderr_fd != -1) {
       close(STDERR_FILENO);
 
-      int new_fd = dup(fd);
+      int new_fd = dup(context.stderr_fd);
 
       assert(new_fd == STDERR_FILENO);
     }
 
-    if (context.stdin) {
-      int fd = open(context.stdin, O_RDONLY);
-
-      if (fd == -1) {
-        fputs("rash: ", stderr);
-        perror(context.stdin);
-        _exit(EXIT_FAILURE);
-      }
-
+    if (context.stdin_fd != -1) {
       close(STDIN_FILENO);
 
-      int new_fd = dup(fd);
+      int new_fd = dup(context.stdin_fd);
 
       assert(new_fd == STDIN_FILENO);
     }
@@ -103,6 +79,16 @@ int execute(const execution_context context) {
     fg_pid = pid;
 
     waitpid(pid, &status, WUNTRACED);
+
+    if (context.stderr_fd != -1) {
+      close(context.stderr_fd);
+    }
+    if (context.stdin_fd != -1) {
+      close(context.stdin_fd);
+    }
+    if (context.stdout_fd != -1) {
+      close(context.stdout_fd);
+    }
 
     fg_pid = 0;
 

@@ -43,9 +43,16 @@ int main(int argc, char **argv) {
       break;
     }
 
-    execution_context context = get_tokens_from_line(line);
+    optional_exec_context context = get_tokens_from_line(line);
 
-    status = execute(context);
+    if (context.has_value) {
+      status = execute(context.value);
+
+      free(context.value.argv[0]);
+      free(context.value.argv);
+    } else {
+      status = EXIT_FAILURE;
+    }
 
     if (should_exit) {
       break;

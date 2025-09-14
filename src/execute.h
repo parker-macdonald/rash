@@ -9,12 +9,12 @@
 typedef struct {
   // arguments for command
   char **argv;
-  // path to redirect stdout, or null
-  char *stdout;
-  // path to redirect stdin, or null
-  char *stdin;
-  // path to redirect stderr, or null
-  char *stderr;
+  // fd to redirect stdout, or -1
+  int stdout_fd;
+  // fd to redirect stdin, or -1
+  int stdin_fd;
+  // fd to redirect stderr, or -1
+  int stderr_fd;
   int flags;
 } execution_context;
 

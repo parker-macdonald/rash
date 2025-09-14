@@ -4,7 +4,10 @@
 #include "stdint.h"
 
 #include "execute.h"
+#include "optional.h"
 
-execution_context get_tokens_from_line(const uint8_t *const line);
+typedef OPTIONAL(execution_context) optional_exec_context;
+
+optional_exec_context get_tokens_from_line(const uint8_t *const line);
 
 #endif

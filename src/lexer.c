@@ -1,6 +1,7 @@
 #include "lexer.h"
 
 #include <ctype.h>
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -18,10 +19,11 @@ enum lexer_state {
   VAR_EXPANSION,
   SINGLE_LITERAL,
   OUTPUT_REDIRECT,
+  OUTPUT_REDIRECT_APPEND,
   INPUT_REDIRECT
 };
 
-execution_context get_tokens_from_line(const uint8_t *const line) {
+optional_exec_context get_tokens_from_line(const uint8_t *const line) {
   VECTOR(uint8_t) buffer;
   VECTOR_INIT(buffer);
 
@@ -39,9 +41,10 @@ execution_context get_tokens_from_line(const uint8_t *const line) {
 
   enum lexer_state state = WHITESPACE;
   enum lexer_state prev_state = WHITESPACE;
+  enum lexer_state next_state = DEFAULT;
 
   execution_context context = {
-      .flags = 0, .stderr = NULL, .stdin = NULL, .stdout = NULL};
+      .flags = 0, .stderr_fd = -1, .stdin_fd = -1, .stdout_fd = -1};
 
   size_t i;
   for (i = 0; line[i] != '\0'; i++) {
@@ -52,6 +55,7 @@ execution_context get_tokens_from_line(const uint8_t *const line) {
         if (isspace((int)curr)) {
           prev_state = state;
           state = WHITESPACE;
+          next_state = DEFAULT;
 
           if (token_start != i) {
             VECTOR_PUSH(buffer, '\0');
@@ -86,17 +90,23 @@ execution_context get_tokens_from_line(const uint8_t *const line) {
 
         if (curr == '>') {
           prev_state = state;
-          state = OUTPUT_REDIRECT;
+          state = WHITESPACE;
 
-          context.stdout = malloc(sizeof(char) * 16);
+          if (line[i + 1] == '>') {
+            i++;
+            next_state = OUTPUT_REDIRECT_APPEND;
+          } else {
+            next_state = OUTPUT_REDIRECT;
+          }
+
           break;
         }
 
         if (curr == '<') {
           prev_state = state;
-          state = INPUT_REDIRECT;
+          state = WHITESPACE;
+          next_state = INPUT_REDIRECT;
 
-          context.stdin = malloc(sizeof(char) * 16);
           break;
         }
 
@@ -106,9 +116,12 @@ execution_context get_tokens_from_line(const uint8_t *const line) {
       case WHITESPACE:
         if (!isspace((int)curr)) {
           prev_state = state;
-          state = DEFAULT;
-          token_start = i--;
-          VECTOR_PUSH(tokens, buffer.length);
+          state = next_state;
+          i--;
+          if (state == DEFAULT) {
+            token_start = i;
+            VECTOR_PUSH(tokens, buffer.length);
+          }
         }
         break;
 
@@ -197,7 +210,26 @@ execution_context get_tokens_from_line(const uint8_t *const line) {
       case OUTPUT_REDIRECT:
         if (isspace((int)curr)) {
           VECTOR_PUSH(stdout_path, '\0');
-          context.stdout = stdout_path.data;
+          int fd = open(stdout_path.data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+          if (fd == -1) {
+            perror(stdout_path.data);
+            goto error;
+          }
+          context.stdout_fd = fd;
+          break;
+        }
+
+        VECTOR_PUSH(stdout_path, (char)curr);
+        break;
+      case OUTPUT_REDIRECT_APPEND:
+        if (isspace((int)curr)) {
+          VECTOR_PUSH(stdout_path, '\0');
+          int fd = open(stdout_path.data, O_WRONLY | O_CREAT | O_APPEND, 0644);
+          if (fd == -1) {
+            perror(stdout_path.data);
+            goto error;
+          }
+          context.stdout_fd = fd;
           break;
         }
 
@@ -206,7 +238,12 @@ execution_context get_tokens_from_line(const uint8_t *const line) {
       case INPUT_REDIRECT:
         if (isspace((int)curr)) {
           VECTOR_PUSH(stdin_path, '\0');
-          context.stdout = stdin_path.data;
+          int fd = open(stdin_path.data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+          if (fd == -1) {
+            perror(stdin_path.data);
+            goto error;
+          }
+          context.stdin_fd = fd;
           break;
         }
 
@@ -218,6 +255,19 @@ execution_context get_tokens_from_line(const uint8_t *const line) {
   switch (state) {
     case DEFAULT:
     case WHITESPACE:
+      switch (next_state) {
+        case OUTPUT_REDIRECT:
+          fprintf(stderr, "Expected file name after ‘>’.\n");
+          goto error;
+        case OUTPUT_REDIRECT_APPEND:
+          fprintf(stderr, "Expected file name after ‘>>’.\n");
+          goto error;
+        case INPUT_REDIRECT:
+          fprintf(stderr, "Expected file name after ‘<’.\n");
+          goto error;
+        default:
+          break;
+      }
       break;
     case VAR_EXPANSION: {
       const size_t env_len = i - env_start - 1;
@@ -239,28 +289,47 @@ execution_context get_tokens_from_line(const uint8_t *const line) {
     }
     case SINGLE_LITERAL:
       fprintf(stderr, "Expected character after ‘\\’.\n");
-      VECTOR_DESTROY(tokens);
-      VECTOR_DESTROY(buffer);
-      // return NULL;
+      goto error;
     case SINGLE_QUOTE:
       fprintf(stderr, "Expected closing ‘'’ character.\n");
-      VECTOR_DESTROY(tokens);
-      VECTOR_DESTROY(buffer);
-      // return NULL;
+      goto error;
     case DOUBLE_QUOTE:
       fprintf(stderr, "Expected closing ‘\"’ character.\n");
-      VECTOR_DESTROY(tokens);
-      VECTOR_DESTROY(buffer);
-      // return NULL;
-    case OUTPUT_REDIRECT:
+      goto error;
+    case OUTPUT_REDIRECT: {
       VECTOR_PUSH(stdout_path, '\0');
-      context.stdout = stdout_path.data;
+      int fd = open(stdout_path.data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+      if (fd == -1) {
+        perror(stdout_path.data);
+        goto error;
+      }
+      context.stdout_fd = fd;
       break;
-    case INPUT_REDIRECT:
+    }
+    case OUTPUT_REDIRECT_APPEND: {
+      VECTOR_PUSH(stdout_path, '\0');
+      int fd = open(stdout_path.data, O_WRONLY | O_CREAT | O_APPEND, 0644);
+      if (fd == -1) {
+        perror(stdout_path.data);
+        goto error;
+      }
+      context.stdout_fd = fd;
+      break;
+    }
+    case INPUT_REDIRECT: {
       VECTOR_PUSH(stdin_path, '\0');
-      context.stdin = stdin_path.data;
+      int fd = open(stdin_path.data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+      if (fd == -1) {
+        perror(stdin_path.data);
+        goto error;
+      }
+      context.stdin_fd = fd;
       break;
+    }
   }
+
+  VECTOR_DESTROY(stdout_path);
+  VECTOR_DESTROY(stdin_path);
 
   VECTOR_PUSH(buffer, '\0');
 
@@ -271,5 +340,13 @@ execution_context get_tokens_from_line(const uint8_t *const line) {
   VECTOR_PUSH(tokens, 0x0);
 
   context.argv = (char **)tokens.data;
-  return context;
+  return (optional_exec_context){.has_value = true, .value = context};
+
+error:
+  VECTOR_DESTROY(tokens);
+  VECTOR_DESTROY(buffer);
+  VECTOR_DESTROY(stdout_path);
+  VECTOR_DESTROY(stdin_path);
+
+  return (optional_exec_context){.has_value = false};
 }
