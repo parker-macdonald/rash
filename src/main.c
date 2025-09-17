@@ -43,13 +43,13 @@ int main(int argc, char **argv) {
       break;
     }
 
-    char **tokens = get_tokens_from_line(line);
+    optional_exec_context context = get_tokens_from_line(line);
 
-    if (tokens != NULL) {
-      status = execute(tokens);
+    if (context.has_value) {
+      status = execute(context.value);
 
-      free(tokens[0]);
-      free(tokens);
+      free(context.value.argv[0]);
+      free(context.value.argv);
     } else {
       status = EXIT_FAILURE;
     }
