@@ -39,6 +39,8 @@ optional_exec_context get_tokens_from_line(const uint8_t *const line) {
   size_t env_start = 0;
   size_t token_start = 0;
 
+  bool flag_to_fix_stupid_edge_case = false;
+
   enum lexer_state state = WHITESPACE;
   enum lexer_state prev_state = WHITESPACE;
   enum lexer_state next_state = DEFAULT;
@@ -52,6 +54,34 @@ optional_exec_context get_tokens_from_line(const uint8_t *const line) {
 
     switch (state) {
       case DEFAULT:
+        if (curr == '>') {
+          prev_state = state;
+          state = WHITESPACE;
+
+          if (line[i + 1] == '>') {
+            i++;
+            next_state = OUTPUT_REDIRECT_APPEND;
+          } else {
+            next_state = OUTPUT_REDIRECT;
+          }
+
+          break;
+        }
+
+        if (curr == '<') {
+          prev_state = state;
+          state = WHITESPACE;
+          next_state = INPUT_REDIRECT;
+
+          break;
+        }
+
+        if (flag_to_fix_stupid_edge_case) {
+          flag_to_fix_stupid_edge_case = false;
+          token_start = i;
+          VECTOR_PUSH(tokens, buffer.length);
+        }
+
         if (isspace((int)curr)) {
           prev_state = state;
           state = WHITESPACE;
@@ -88,28 +118,6 @@ optional_exec_context get_tokens_from_line(const uint8_t *const line) {
           break;
         }
 
-        if (curr == '>') {
-          prev_state = state;
-          state = WHITESPACE;
-
-          if (line[i + 1] == '>') {
-            i++;
-            next_state = OUTPUT_REDIRECT_APPEND;
-          } else {
-            next_state = OUTPUT_REDIRECT;
-          }
-
-          break;
-        }
-
-        if (curr == '<') {
-          prev_state = state;
-          state = WHITESPACE;
-          next_state = INPUT_REDIRECT;
-
-          break;
-        }
-
         VECTOR_PUSH(buffer, curr);
         break;
 
@@ -117,11 +125,8 @@ optional_exec_context get_tokens_from_line(const uint8_t *const line) {
         if (!isspace((int)curr)) {
           prev_state = state;
           state = next_state;
+          flag_to_fix_stupid_edge_case = state == DEFAULT;
           i--;
-          if (state == DEFAULT) {
-            token_start = i;
-            VECTOR_PUSH(tokens, buffer.length);
-          }
         }
         break;
 
@@ -238,7 +243,7 @@ optional_exec_context get_tokens_from_line(const uint8_t *const line) {
       case INPUT_REDIRECT:
         if (isspace((int)curr)) {
           VECTOR_PUSH(stdin_path, '\0');
-          int fd = open(stdin_path.data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+          int fd = open(stdin_path.data, O_RDONLY);
           if (fd == -1) {
             perror(stdin_path.data);
             goto error;
@@ -318,7 +323,7 @@ optional_exec_context get_tokens_from_line(const uint8_t *const line) {
     }
     case INPUT_REDIRECT: {
       VECTOR_PUSH(stdin_path, '\0');
-      int fd = open(stdin_path.data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+      int fd = open(stdin_path.data, O_RDONLY);
       if (fd == -1) {
         perror(stdin_path.data);
         goto error;
