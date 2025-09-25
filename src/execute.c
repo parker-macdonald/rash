@@ -16,6 +16,12 @@ int execute(const execution_context context) {
     return EXIT_SUCCESS;
   }
 
+  builtin_t builtin = find_builtin(context.argv[0]);
+
+  if (builtin != NULL) {
+    return builtin(context.argv);
+  }
+
   pid_t pid = fork();
 
   // child
@@ -42,12 +48,6 @@ int execute(const execution_context context) {
       int new_fd = dup(context.stdin_fd);
 
       assert(new_fd == STDIN_FILENO);
-    }
-
-    builtin_t builtin = find_builtin(context.argv[0]);
-
-    if (builtin != NULL) {
-      _exit(builtin(context.argv));
     }
 
     int status = execvp(context.argv[0], context.argv);
