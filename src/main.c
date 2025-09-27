@@ -5,9 +5,8 @@
 #include <string.h>
 
 #include "builtins/find_builtin.h"
-#include "execute.h"
+#include "interpreter/lex.h"
 #include "jobs.h"
-#include "lexer.h"
 #include "line_reader/line_reader.h"
 #include "should_exit.h"
 
@@ -43,26 +42,14 @@ int main(int argc, char **argv) {
       break;
     }
 
-    optional_exec_context context = get_tokens_from_line(line);
+    token_t *tokens = lex(line);
 
-    if (context.has_value) {
-      status = execute(context.value);
-
-      free(context.value.argv[0]);
-      free(context.value.argv);
-    } else {
-      status = EXIT_FAILURE;
+    for (size_t i = 0; tokens[i].type != END; i++) {
+      printf("Token:\n  Type: %s\n", TOKEN_NAMES[tokens[i].type]);
+      if (tokens[i].type == STRING) {
+        printf("  Data: \"%s\"\n", (char *)tokens[i].data);
+      }
     }
-
-    if (should_exit) {
-      break;
-    }
-
-    // 3 digit number (exit status is max of 255) + null terminator
-    char status_env[3 + 1] = {0};
-
-    snprintf(status_env, sizeof(status_env), "%d", status);
-    setenv("?", status_env, 1);
   }
 
   line_reader_destroy();
