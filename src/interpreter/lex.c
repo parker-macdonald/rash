@@ -7,25 +7,22 @@
 
 #include "../vector.h"
 
-const char *const TOKEN_NAMES[] = {"STRING",
-                                   "STDIN_REDIR",
-                                   "STDIN_REDIR_STRING",
-                                   "STDOUT_REDIR",
-                                   "STDOUT_REDIR_APPEND",
-                                   "STDERR_REDIR",
-                                   "STDERR_REDIR_APPEND",
-                                   "PIPE",
-                                   "WILDCARD",
-                                   "QUESTION_MARK",
-                                   "BRACKET_OPEN",
-                                   "BRACKET_CLOSE",
-                                   "BRACE_OPEN",
-                                   "BRACE_CLOSE",
-                                   "DOUBLE_DOT",
-                                   "SEMI",
-                                   "LOGICAL_AND",
-                                   "LOGICAL_OR",
-                                   "END"};
+const char *const TOKEN_NAMES[] = {
+  "STRING",
+  "STDIN_REDIR",
+  "STDIN_REDIR_STRING",
+  "STDOUT_REDIR",
+  "STDOUT_REDIR_APPEND",
+  "STDERR_REDIR",
+  "STDERR_REDIR_APPEND",
+  "PIPE",
+  "GLOB",
+  "SEMI",
+  "LOGICAL_AND",
+  "LOGICAL_OR",
+  "AMP",
+  "END"
+};
 
 enum lexer_state {
   DEFAULT,
@@ -78,7 +75,8 @@ token_t *lex(const uint8_t *const source) {
           state = WHITESPACE;
           if (buffer.length != 0) {
             VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(tokens, ((token_t){.type = STRING, .data = buffer.data}));
+            VECTOR_PUSH(tokens,
+                        ((token_t){.type = STRING, .data = buffer.data}));
             VECTOR_INIT(buffer);
           }
 
@@ -89,50 +87,63 @@ token_t *lex(const uint8_t *const source) {
         if (curr == '<') {
           if (source[i + 1] == '<') {
             if (source[i + 2] == '<') {
-              // the token <<<
               ADD_NONSTR_TOKEN(STDIN_REDIR_STRING);
               i += 2;
-              continue;
+              break;
             }
           } else {
-            // the token <<
             ADD_NONSTR_TOKEN(STDIN_REDIR);
             i++;
-            continue;
+            break;
           }
         }
 
         // stdout redirection
         if (curr == '>') {
           if (source[i + 1] == '>') {
-            // the token >>
             ADD_NONSTR_TOKEN(STDOUT_REDIR_APPEND);
             i++;
-            continue;
-          } else {
-            // the token >
-            ADD_NONSTR_TOKEN(STDOUT_REDIR);
-            continue;
+            break;
           }
+          ADD_NONSTR_TOKEN(STDOUT_REDIR);
+          break;
         }
 
         if (curr == '2') {
           if (source[i + 1] == '>') {
             if (source[i + 2] == '>') {
-              // the token 2>>
               ADD_NONSTR_TOKEN(STDERR_REDIR_APPEND);
               i += 2;
-              continue;
-            } else {
-              ADD_NONSTR_TOKEN(STDERR_REDIR);
-              i++;
-              continue;
+              break;
             }
+            ADD_NONSTR_TOKEN(STDERR_REDIR);
+            i++;
+            continue;
           }
         }
 
         if (curr == '|') {
+          if (source[i + 1] == '|') {
+            ADD_NONSTR_TOKEN(LOGICAL_OR);
+            i++;
+            break;
+          }
           ADD_NONSTR_TOKEN(PIPE);
+          break;
+        }
+
+        if (curr == ';') {
+          ADD_NONSTR_TOKEN(SEMI);
+          break;
+        }
+
+        if (curr == '&') {
+          if (source[i + 1] == '&') {
+            ADD_NONSTR_TOKEN(LOGICAL_AND);
+            i++;
+            break;
+          }
+          ADD_NONSTR_TOKEN(AMP);
           break;
         }
 

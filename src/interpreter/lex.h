@@ -5,24 +5,19 @@
 
 typedef enum {
   STRING = 0,
-  STDIN_REDIR,
-  STDIN_REDIR_STRING,
-  STDOUT_REDIR,
-  STDOUT_REDIR_APPEND,
-  STDERR_REDIR,
-  STDERR_REDIR_APPEND,
-  PIPE,
-  WILDCARD,
-  QUESTION_MARK,
-  BRACKET_OPEN,
-  BRACKET_CLOSE,
-  BRACE_OPEN,
-  BRACE_CLOSE,
-  DOUBLE_DOT,
-  SEMI,
-  LOGICAL_AND,
-  LOGICAL_OR,
-  END
+  STDIN_REDIR, // '<' used to redirect stdin from a file
+  STDIN_REDIR_STRING, // '<<<' used to redirect stdin from a string
+  STDOUT_REDIR, // '>' used to redirect stdout to a file, replace file contents
+  STDOUT_REDIR_APPEND, // '>>' used to redirect stdout to a file, append to file contents
+  STDERR_REDIR, // '2>' used to redirect stderr to a file, replace file contents
+  STDERR_REDIR_APPEND, // '2>>' used to redirect stderr to a file, append to file contents
+  PIPE, // '|' used to link one programs stdout to anothers stdin
+  GLOB, // any string with a glob (i.e. *, ?, [^x], [!x])
+  SEMI, // ';' used to run two commands sequentially
+  LOGICAL_AND, // '&&' used to run two commands sequencially, but only run the second if the first is successful
+  LOGICAL_OR, // '||' used to run two commands sequencially, resulting status code is the logical or of the two commands status 
+  AMP, // '&' run a program in the background
+  END // end a sequence of tokens
 } token_type_t;
 
 extern const char *const TOKEN_NAMES[];
