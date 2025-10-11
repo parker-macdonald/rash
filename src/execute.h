@@ -1,10 +1,7 @@
 #ifndef EXECUTE_H
 #define EXECUTE_H
 
-#include <stdbool.h>
-
-#define EC_STDERR_APPEND 1
-#define EC_STDOUT_APPEND (1 << 1)
+#include "optional.h"
 
 typedef struct {
   // arguments for command
@@ -17,6 +14,8 @@ typedef struct {
   int stderr_fd;
   int flags;
 } execution_context;
+
+typedef OPTIONAL(execution_context) optional_exec_context;
 
 int execute(const execution_context context);
 
