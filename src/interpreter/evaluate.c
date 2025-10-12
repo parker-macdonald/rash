@@ -1,10 +1,11 @@
-#include "parser.h"
+#include "evaluate.h"
 
 #include <fcntl.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include "../vector.h"
@@ -38,7 +39,7 @@ bool bad_syntax(const token_t *const tokens) {
   return false;
 }
 
-int evaluate(const token_t *const tokens) {
+int evaluate(const token_t *tokens) {
   if (bad_syntax(tokens)) {
     return EXIT_FAILURE;
   }
@@ -48,36 +49,39 @@ int evaluate(const token_t *const tokens) {
 
   int last_status = -1;
 
+  VECTOR(pid_t) wait_for_me;
+  VECTOR_INIT(wait_for_me, 0);
+
   execution_context ec = {NULL, -1, -1, -1, 0};
 
-  for (size_t i = 0;; i++) {
-    if (tokens[i].type == STRING) {
-      VECTOR_PUSH(argv, (char *)tokens[i].data);
+  for (;; tokens++) {
+    if (tokens->type == STRING) {
+      VECTOR_PUSH(argv, (char *)tokens->data);
 
       continue;
     }
 
-    if (tokens[i].type == STDIN_REDIR) {
+    if (tokens->type == STDIN_REDIR) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
-      assert(tokens[i + 1].type == STRING);
+      assert((tokens + 1)->type == STRING);
 
-      int fd = open((char *)tokens[i + 1].data, O_RDONLY);
+      int fd = open((char *)(tokens + 1)->data, O_RDONLY);
       if (fd == -1) {
         fprintf(stderr, "rash: ");
-        perror((char *)tokens[i + 1].data);
+        perror((char *)(tokens + 1)->data);
 
         goto error;
       }
 
       ec.stdin_fd = fd;
 
-      i++;
+      tokens++;
       continue;
     }
 
-    if (tokens[i].type == STDIN_REDIR_STRING) {
-      assert(tokens[i + 1].type == STRING);
+    if (tokens->type == STDIN_REDIR_STRING) {
+      assert((tokens + 1)->type == STRING);
 
       int fds[2];
       if (pipe(fds) == -1) {
@@ -86,8 +90,8 @@ int evaluate(const token_t *const tokens) {
         goto error;
       }
 
-      size_t len = strlen((char *)tokens[i + 1].data);
-      if (write(fds[1], tokens[i + 1].data, len) == -1) {
+      size_t len = strlen((char *)(tokens + 1)->data);
+      if (write(fds[1], (tokens + 1)->data, len) == -1) {
         perror("write");
 
         goto error;
@@ -101,79 +105,103 @@ int evaluate(const token_t *const tokens) {
 
       ec.stdin_fd = fds[0];
 
-      i++;
+      tokens++;
       continue;
     }
 
-    if (tokens[i].type == STDOUT_REDIR) {
-      assert(tokens[i + 1].type == STRING);
+    if (tokens->type == STDOUT_REDIR) {
+      assert((tokens + 1)->type == STRING);
 
-      int fd = open(tokens[i + 1].data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+      int fd = open((tokens + 1)->data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
       if (fd == -1) {
         fprintf(stderr, "rash: ");
-        perror((char *)tokens[i + 1].data);
+        perror((char *)(tokens + 1)->data);
 
         goto error;
       }
 
       ec.stdout_fd = fd;
 
-      i++;
+      tokens++;
       continue;
     }
 
-    if (tokens[i].type == STDOUT_REDIR_APPEND) {
-      assert(tokens[i + 1].type == STRING);
+    if (tokens->type == STDOUT_REDIR_APPEND) {
+      assert((tokens + 1)->type == STRING);
 
-      int fd = open(tokens[i + 1].data, O_WRONLY | O_CREAT | O_APPEND, 0644);
+      int fd = open((tokens + 1)->data, O_WRONLY | O_CREAT | O_APPEND, 0644);
       if (fd == -1) {
         fprintf(stderr, "rash: ");
-        perror((char *)tokens[i + 1].data);
+        perror((char *)(tokens + 1)->data);
 
         goto error;
       }
 
       ec.stdout_fd = fd;
 
-      i++;
+      tokens++;
       continue;
     }
 
-    if (tokens[i].type == STDERR_REDIR) {
-      assert(tokens[i + 1].type == STRING);
+    if (tokens->type == STDERR_REDIR) {
+      assert((tokens + 1)->type == STRING);
 
-      int fd = open(tokens[i + 1].data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+      int fd = open((tokens + 1)->data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
       if (fd == -1) {
         fprintf(stderr, "rash: ");
-        perror((char *)tokens[i + 1].data);
+        perror((char *)(tokens + 1)->data);
 
         goto error;
       }
 
       ec.stderr_fd = fd;
 
-      i++;
+      tokens++;
       continue;
     }
 
-    if (tokens[i].type == STDERR_REDIR_APPEND) {
-      assert(tokens[i + 1].type == STRING);
+    if (tokens->type == STDERR_REDIR_APPEND) {
+      assert((tokens + 1)->type == STRING);
 
-      int fd = open(tokens[i + 1].data, O_WRONLY | O_CREAT | O_APPEND, 0644);
+      int fd = open((tokens + 1)->data, O_WRONLY | O_CREAT | O_APPEND, 0644);
       if (fd == -1) {
         fprintf(stderr, "rash: ");
-        perror((char *)tokens[i + 1].data);
+        perror((char *)(tokens + 1)->data);
 
         goto error;
       }
 
       ec.stderr_fd = fd;
 
-      i++;
+      tokens++;
       continue;
     }
 
-    if (tokens[i].type == LOGICAL_AND) {
+    if (tokens->type == PIPE) {
+      VECTOR_PUSH(argv, NULL);
+
+      int fds[2];
+      if (pipe(fds) == -1) {
+        perror("pipe");
+        goto error;
+      }
+
+      ec.stdout_fd = fds[1];
+      ec.argv = argv.data;
+      ec.flags = EC_NO_WAIT;
+      pid_t pid = execute(ec);
+      if (pid == -1) {
+        goto error;
+      }
+      VECTOR_PUSH(wait_for_me, pid);
+
+      ec = (execution_context){NULL, -1, fds[0], -1, 0};
+
+      VECTOR_CLEAR(argv);
+      continue;
+    }
+
+    if (tokens->type == LOGICAL_AND) {
       if (last_status == 0) {
         VECTOR_PUSH(argv, NULL);
         ec.argv = argv.data;
@@ -182,15 +210,15 @@ int evaluate(const token_t *const tokens) {
 
         VECTOR_CLEAR(argv);
       } else {
-        while (tokens[i + 1].type == STRING) {
-          i++;
+        while ((tokens + 1)->type == STRING) {
+          tokens++;
         }
       }
 
       continue;
     }
 
-    if (tokens[i].type == LOGICAL_OR) {
+    if (tokens->type == LOGICAL_OR) {
       if (last_status != 0) {
         VECTOR_PUSH(argv, NULL);
         ec.argv = argv.data;
@@ -199,15 +227,15 @@ int evaluate(const token_t *const tokens) {
 
         VECTOR_CLEAR(argv);
       } else {
-        while (tokens[i + 1].type == STRING) {
-          i++;
+        while ((tokens + 1)->type == STRING) {
+          tokens++;
         }
       }
 
       continue;
     }
 
-    if (tokens[i].type == AMP) {
+    if (tokens->type == AMP) {
       VECTOR_PUSH(argv, NULL);
       ec.argv = argv.data;
       ec.flags = EC_BACKGROUND_JOB;
@@ -218,7 +246,7 @@ int evaluate(const token_t *const tokens) {
       continue;
     }
 
-    if (tokens[i].type == SEMI) {
+    if (tokens->type == SEMI) {
       VECTOR_PUSH(argv, NULL);
       ec.argv = argv.data;
       last_status = execute(ec);
@@ -228,7 +256,7 @@ int evaluate(const token_t *const tokens) {
       continue;
     }
 
-    if (tokens[i].type == END) {
+    if (tokens->type == END) {
       if (argv.length != 0) {
         VECTOR_PUSH(argv, NULL);
         ec.argv = argv.data;
@@ -236,6 +264,10 @@ int evaluate(const token_t *const tokens) {
       }
       break;
     }
+  }
+
+  for (size_t i = 0; i < wait_for_me.length; i++) {
+    (void)waitpid(wait_for_me.data[i], NULL, 0);
   }
 
   return last_status;

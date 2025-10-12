@@ -6,7 +6,7 @@
 
 #include "builtins/find_builtin.h"
 #include "interpreter/lex.h"
-#include "interpreter/parser.h"
+#include "interpreter/evaluate.h"
 #include "jobs.h"
 #include "line_reader/line_reader.h"
 #include "should_exit.h"

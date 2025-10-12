@@ -81,6 +81,10 @@ int execute(const execution_context context) {
       close(context.stdout_fd);
     }
 
+    if (context.flags & EC_NO_WAIT) {
+      return -1;
+    }
+
     return EXIT_FAILURE;
   }
   // parent process
@@ -93,6 +97,10 @@ int execute(const execution_context context) {
     }
     if (context.stdout_fd != -1) {
       close(context.stdout_fd);
+    }
+
+    if (context.flags & EC_NO_WAIT) {
+      return pid;
     }
 
     if (context.flags & EC_BACKGROUND_JOB) {

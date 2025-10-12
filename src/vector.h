@@ -129,7 +129,10 @@ printf("%s", string.data);
   do {                                                                         \
     (vector)._capacity = capacity;                                             \
     (vector).length = 0;                                                       \
-    (vector).data = malloc(sizeof(*(vector).data) * capacity);                 \
+    if (capacity != 0)                                                         \
+      (vector).data = malloc(sizeof(*(vector).data) * capacity);               \
+    else                                                                       \
+      (vector).data = NULL;                                                    \
   } while (0)
 
 #define VECTOR_INIT(...)                                                       \
@@ -138,8 +141,10 @@ printf("%s", string.data);
 #define VECTOR_PUSH(vector, value)                                             \
   do {                                                                         \
     if ((vector)._capacity <= (vector).length) {                               \
-      assert((vector)._capacity != 0);                                         \
-      (vector)._capacity *= 2;                                                 \
+      if ((vector)._capacity == 0)                                             \
+        (vector)._capacity = 1;                                                \
+      else                                                                     \
+        (vector)._capacity *= 2;                                               \
       (vector).data =                                                          \
           realloc((vector).data, sizeof(*(vector).data) * (vector)._capacity); \
     }                                                                          \
