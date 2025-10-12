@@ -193,7 +193,11 @@ token_t *lex(const uint8_t *const source) {
       break;
   }
 
-  ADD_NONSTR_TOKEN(END);
+  if (buffer.length != 0) {
+    VECTOR_PUSH(buffer, '\0');
+    VECTOR_PUSH(tokens, ((token_t){.type = STRING, .data = buffer.data}));
+  }
+  VECTOR_PUSH(tokens, (token_t){.type = END});
 
   return tokens.data;
 

@@ -94,7 +94,6 @@ static bool bad_syntax(const token_t *const tokens) {
       }
 
       stdout_count++;
-      i++;
     }
 
     if (stderr_count > 1) {
@@ -116,6 +115,8 @@ static bool bad_syntax(const token_t *const tokens) {
       stdout_count = 0;
       stdin_count = 1;
       stderr_count = 0;
+
+      i++;
     }
 
     if (tokens[i].type == SEMI || tokens[i].type == LOGICAL_AND ||
