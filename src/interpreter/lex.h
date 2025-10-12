@@ -29,4 +29,6 @@ typedef struct {
 
 token_t *lex(const uint8_t *const source);
 
+void free_tokens(token_t** tokens);
+
 #endif

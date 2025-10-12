@@ -360,9 +360,13 @@ int evaluate(const token_t *tokens) {
     (void)waitpid(wait_for_me.data[i], NULL, 0);
   }
 
+  VECTOR_DESTROY(argv);
+  VECTOR_DESTROY(wait_for_me);
+
   return last_status;
 
 error:
+  VECTOR_DESTROY(wait_for_me);
   VECTOR_DESTROY(argv);
 
   return EXIT_FAILURE;

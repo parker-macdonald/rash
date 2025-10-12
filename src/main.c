@@ -47,6 +47,7 @@ int main(int argc, char **argv) {
 
     if (tokens != NULL) {
       status = evaluate(tokens);
+      free_tokens(&tokens);
     } else {
       status = EXIT_FAILURE;
     }

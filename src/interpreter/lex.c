@@ -93,7 +93,6 @@ token_t *lex(const uint8_t *const source) {
             }
           } else {
             ADD_NONSTR_TOKEN(STDIN_REDIR);
-            i++;
             break;
           }
         }
@@ -202,7 +201,24 @@ token_t *lex(const uint8_t *const source) {
 
 error:
   VECTOR_DESTROY(buffer);
+
+  for (size_t i = 0; i < tokens.length; i++) {
+    if (tokens.data[i].type == STRING || tokens.data[i].type == GLOB) {
+      free(tokens.data[i].data);
+    }
+  }
+
   VECTOR_DESTROY(tokens);
 
   return NULL;
+}
+
+void free_tokens(token_t **tokens) {
+  for (size_t i = 0; tokens[i]->type != END; i++) {
+    if (tokens[i]->type == STRING || tokens[i]->type == GLOB) {
+      free(tokens[i]->data);
+    }
+  }
+
+  free(*tokens);
 }
