@@ -12,7 +12,7 @@ typedef enum {
   STDERR_REDIR, // '2>' used to redirect stderr to a file, replace file contents
   STDERR_REDIR_APPEND, // '2>>' used to redirect stderr to a file, append to file contents
   PIPE, // '|' used to link one programs stdout to anothers stdin
-  GLOB, // any string with a glob (i.e. *, ?, [^x], [!x])
+  GLOB, // any string with a glob (i.e. *, ?, [^x], [!x]) for the time being, this remains unimplemented
   SEMI, // ';' used to run two commands sequentially
   LOGICAL_AND, // '&&' used to run two commands sequencially, but only run the second if the first is successful
   LOGICAL_OR, // '||' used to run two commands sequencially, resulting status code is the logical or of the two commands status 

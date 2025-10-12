@@ -12,28 +12,118 @@
 #include "execute.h"
 #include "lex.h"
 
-bool bad_syntax(const token_t *const tokens) {
+static bool bad_syntax(const token_t *const tokens) {
   if (tokens[0].type != STRING) {
     fprintf(stderr, "rash: expected string as first token.\n");
     return true;
   }
+
+  int stdout_count = 0;
+  int stderr_count = 0;
+  int stdin_count = 0;
 
   for (size_t i = 1; tokens[i].type != END; i++) {
     if (tokens[i].type == STRING) {
       continue;
     }
 
-    if (tokens[i].type == STDIN_REDIR && tokens[i + 1].type != STRING) {
-      fprintf(stderr, "rash: expected file name after ‘<’.\n");
+    if (tokens[i].type == STDIN_REDIR) {
+      if (tokens[i + 1].type != STRING) {
+        fprintf(stderr, "rash: expected file name after ‘<’.\n");
+        return true;
+      }
+
+      i++;
+      stdin_count++;
+    }
+
+    if (tokens[i].type == STDIN_REDIR_STRING) {
+      if (tokens[i + 1].type != STRING) {
+        fprintf(stderr, "rash: expected string after ‘<<<’.\n");
+        return true;
+      }
+
+      i++;
+      stdin_count++;
+    }
+
+    if (tokens[i].type == STDOUT_REDIR) {
+      if (tokens[i + 1].type != STRING) {
+        fprintf(stderr, "rash: expected string after ‘>’.\n");
+        return true;
+      }
+
+      i++;
+      stdout_count++;
+    }
+
+    if (tokens[i].type == STDOUT_REDIR_APPEND) {
+      if (tokens[i + 1].type != STRING) {
+        fprintf(stderr, "rash: expected string after ‘>>’.\n");
+        return true;
+      }
+
+      i++;
+      stdout_count++;
+    }
+
+    if (tokens[i].type == STDERR_REDIR) {
+      if (tokens[i + 1].type != STRING) {
+        fprintf(stderr, "rash: expected string after ‘2>’.\n");
+        return true;
+      }
+
+      i++;
+      stderr_count++;
+    }
+
+    if (tokens[i].type == STDERR_REDIR_APPEND) {
+      if (tokens[i + 1].type != STRING) {
+        fprintf(stderr, "rash: expected string after ‘2>>’.\n");
+        return true;
+      }
+
+      i++;
+      stderr_count++;
+    }
+
+    if (tokens[i].type == PIPE) {
+      if (tokens[i + 1].type != STRING) {
+        fprintf(stderr, "rash: expected command after ‘|’.\n");
+        return true;
+      }
+
+      stdout_count++;
+      i++;
+    }
+
+    if (stderr_count > 1) {
+      fprintf(stderr, "rash: cannot redirect stderr more than once.\n");
       return true;
     }
 
-    if (tokens[i].type == STDIN_REDIR_STRING && tokens[i + 1].type != STRING) {
-      fprintf(stderr, "rash: expected string after ‘<<<’.\n");
+    if (stdout_count > 1) {
+      fprintf(stderr, "rash: cannot redirect stdout more than once.\n");
       return true;
     }
 
-    // if (tokens[i].type ==)
+    if (stdin_count > 1) {
+      fprintf(stderr, "rash: cannot redirect stdin more than once.\n");
+      return true;
+    }
+
+    if (tokens[i].type == PIPE) {
+      stdout_count = 0;
+      stdin_count = 1;
+      stderr_count = 0;
+    }
+
+    if (tokens[i].type == SEMI || tokens[i].type == LOGICAL_AND ||
+        tokens[i].type == LOGICAL_OR || tokens[i].type == AMP) {
+      stdout_count = 0;
+      stdin_count = 0;
+      stderr_count = 0;
+    }
   }
 
   return false;

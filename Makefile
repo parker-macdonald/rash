@@ -2,7 +2,7 @@ PREFIX := /usr/local
 
 SANITIZER :=
 CFLAGS := -std=c17 -D_DEFAULT_SOURCE
-CFLAG_ERRORS := -Wall -Wvla -Wextra -Wunreachable-code -Wshadow -Wpedantic
+CFLAG_ERRORS := -Werror -Wall -Wvla -Wextra -Wunreachable-code -Wshadow -Wpedantic
 LDFLAGS :=
 CC := clang
 LINTER := clang-tidy
@@ -17,7 +17,7 @@ endif
 
 ifeq ($(ERROR_HELL),1)
 	CC = clang
-	CFLAG_ERRORS = -Weverything -Wno-unsafe-buffer-usage -Wno-declaration-after-statement -Wno-switch-default -Wno-disabled-macro-expansion -Wno-padded -Wno-pre-c11-compat
+	CFLAG_ERRORS = -Werror -Weverything -Wno-unsafe-buffer-usage -Wno-declaration-after-statement -Wno-switch-default -Wno-switch-enum -Wno-disabled-macro-expansion -Wno-padded -Wno-pre-c11-compat
 endif
 
 ifeq ($(DEBUG),1)
