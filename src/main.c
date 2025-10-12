@@ -5,9 +5,8 @@
 #include <string.h>
 
 #include "builtins/find_builtin.h"
-#include "execute.h"
 #include "interpreter/lex.h"
-#include "interpreter/parse.h"
+#include "interpreter/parser.h"
 #include "jobs.h"
 #include "line_reader/line_reader.h"
 #include "should_exit.h"
@@ -47,16 +46,7 @@ int main(int argc, char **argv) {
     token_t *tokens = lex(line);
 
     if (tokens != NULL) {
-      optional_exec_context context = parse(tokens);
-
-      if (context.has_value) {
-        status = execute(context.value);
-
-        free(context.value.argv[0]);
-        free(context.value.argv);
-      } else {
-        status = EXIT_FAILURE;
-      }
+      status = evaluate(tokens);
     } else {
       status = EXIT_FAILURE;
     }

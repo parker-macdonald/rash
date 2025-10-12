@@ -8,8 +8,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "./builtins/find_builtin.h"
-#include "jobs.h"
+#include "../builtins/find_builtin.h"
+#include "../jobs.h"
 
 int execute(const execution_context context) {
   if (context.argv == NULL) {
@@ -71,15 +71,6 @@ int execute(const execution_context context) {
   else if (pid == -1) {
     perror("fork");
 
-    return EXIT_FAILURE;
-  }
-  // parent process
-  else {
-    int status = 0;
-    fg_pid = pid;
-
-    waitpid(pid, &status, WUNTRACED);
-
     if (context.stderr_fd != -1) {
       close(context.stderr_fd);
     }
@@ -90,12 +81,37 @@ int execute(const execution_context context) {
       close(context.stdout_fd);
     }
 
+    return EXIT_FAILURE;
+  }
+  // parent process
+  else {
+    if (context.stderr_fd != -1) {
+      close(context.stderr_fd);
+    }
+    if (context.stdin_fd != -1) {
+      close(context.stdin_fd);
+    }
+    if (context.stdout_fd != -1) {
+      close(context.stdout_fd);
+    }
+
+    if (context.flags & EC_BACKGROUND_JOB) {
+      register_job(pid, JOB_RUNNING);
+
+      return EXIT_SUCCESS;
+    }
+
+    int status = 0;
+    fg_pid = pid;
+
+    waitpid(pid, &status, WUNTRACED);
+
     fg_pid = 0;
 
     if (recv_sigtstp) {
       recv_sigtstp = 0;
 
-      register_stopped_job(pid);
+      register_job(pid, JOB_STOPPED);
 
       return 0;
     }

@@ -146,14 +146,14 @@ void clean_jobs(void) {
   jobs_linked_list_lock = 0;
 }
 
-int register_stopped_job(pid_t pid) {
+int register_job(pid_t pid, int state) {
   job_t *new_job = malloc(sizeof(job_t));
 
   new_job->p_next = NULL;
 
   new_job->pid = pid;
 
-  new_job->state = JOB_STOPPED;
+  new_job->state = state;
 
   jobs_linked_list_lock = 1;
 
