@@ -173,6 +173,40 @@ int evaluate(const token_t *const tokens) {
       continue;
     }
 
+    if (tokens[i].type == LOGICAL_AND) {
+      if (last_status == 0) {
+        VECTOR_PUSH(argv, NULL);
+        ec.argv = argv.data;
+        last_status = execute(ec);
+        ec = (execution_context){NULL, -1, -1, -1, 0};
+
+        VECTOR_CLEAR(argv);
+      } else {
+        while (tokens[i + 1].type == STRING) {
+          i++;
+        }
+      }
+
+      continue;
+    }
+
+    if (tokens[i].type == LOGICAL_OR) {
+      if (last_status != 0) {
+        VECTOR_PUSH(argv, NULL);
+        ec.argv = argv.data;
+        last_status = execute(ec);
+        ec = (execution_context){NULL, -1, -1, -1, 0};
+
+        VECTOR_CLEAR(argv);
+      } else {
+        while (tokens[i + 1].type == STRING) {
+          i++;
+        }
+      }
+
+      continue;
+    }
+
     if (tokens[i].type == AMP) {
       VECTOR_PUSH(argv, NULL);
       ec.argv = argv.data;
@@ -181,16 +215,25 @@ int evaluate(const token_t *const tokens) {
       ec = (execution_context){NULL, -1, -1, -1, 0};
 
       VECTOR_CLEAR(argv);
-      break;
+      continue;
     }
 
-    if (tokens[i].type == END) {
+    if (tokens[i].type == SEMI) {
       VECTOR_PUSH(argv, NULL);
       ec.argv = argv.data;
       last_status = execute(ec);
       ec = (execution_context){NULL, -1, -1, -1, 0};
 
       VECTOR_CLEAR(argv);
+      continue;
+    }
+
+    if (tokens[i].type == END) {
+      if (argv.length != 0) {
+        VECTOR_PUSH(argv, NULL);
+        ec.argv = argv.data;
+        last_status = execute(ec);
+      }
       break;
     }
   }
