@@ -140,8 +140,9 @@ int evaluate(const token_t *tokens) {
 
   int last_status = -1;
 
-  VECTOR(pid_t) wait_for_me;
-  VECTOR_INIT(wait_for_me, 0);
+  VECTOR(pid_t) wait_for_me = {0, 0, 0};
+  // this doesn't compile on gcc :(
+  // VECTOR_INIT(wait_for_me, 0);
 
   execution_context ec = {NULL, -1, -1, -1, 0};
 
