@@ -85,12 +85,10 @@ token_t *lex(const uint8_t *const source) {
 
         // stdin redirection
         if (curr == '<') {
-          if (source[i + 1] == '<') {
-            if (source[i + 2] == '<') {
-              ADD_NONSTR_TOKEN(STDIN_REDIR_STRING);
-              i += 2;
-              break;
-            }
+          if (source[i + 1] == '<' && source[i + 2] == '<') {
+            ADD_NONSTR_TOKEN(STDIN_REDIR_STRING);
+            i += 2;
+            break;
           } else {
             ADD_NONSTR_TOKEN(STDIN_REDIR);
             break;
@@ -214,9 +212,9 @@ error:
 }
 
 void free_tokens(token_t **tokens) {
-  for (size_t i = 0; tokens[i]->type != END; i++) {
-    if (tokens[i]->type == STRING || tokens[i]->type == GLOB) {
-      free(tokens[i]->data);
+  for (size_t i = 0; (*tokens)[i].type != END; i++) {
+    if ((*tokens)[i].type == STRING || (*tokens)[i].type == GLOB) {
+      free((*tokens)[i].data);
     }
   }
 
