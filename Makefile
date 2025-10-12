@@ -11,6 +11,11 @@ ERROR_HELL := 0
 DEBUG := 1
 STATIC := 0
 
+ifneq ($(SANITIZER),)
+	CFLAGS += -fsanitize=$(SANITIZER)
+	LDFLAGS += -fsanitize=$(SANITIZER)
+endif
+
 ifeq ($(STATIC),1)
 	LDFLAGS += -static
 endif
@@ -59,11 +64,11 @@ lint:
 build: $(BUILD)/$(OUT)
 
 $(BUILD)/$(OUT): $(OBJ)
-	$(CC) -o $(BUILD)/$(OUT) $(SANITIZER) $(LDFLAGS) $^
+	$(CC) -o $(BUILD)/$(OUT) $(LDFLAGS) $^
 
 $(BUILD)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(CFLAG_ERRORS) $(SANITIZER) -c -o $@ $<
+	$(CC) $(CFLAGS) $(CFLAG_ERRORS) -c -o $@ $<
 
 clean:
 	@rm -rf $(BUILD)
