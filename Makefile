@@ -11,13 +11,18 @@ ERROR_HELL := 0
 DEBUG := 1
 STATIC := 0
 
+ifneq ($(SANITIZER),)
+	CFLAGS += -fsanitize=$(SANITIZER)
+	LDFLAGS += -fsanitize=$(SANITIZER)
+endif
+
 ifeq ($(STATIC),1)
 	LDFLAGS += -static
 endif
 
 ifeq ($(ERROR_HELL),1)
 	CC = clang
-	CFLAG_ERRORS = -Werror -Weverything -Wno-unsafe-buffer-usage -Wno-declaration-after-statement -Wno-switch-default -Wno-disabled-macro-expansion -Wno-padded -Wno-pre-c11-compat
+	CFLAG_ERRORS = -Werror -Weverything -Wno-unsafe-buffer-usage -Wno-declaration-after-statement -Wno-switch-default -Wno-switch-enum -Wno-disabled-macro-expansion -Wno-padded -Wno-pre-c11-compat
 endif
 
 ifeq ($(DEBUG),1)
@@ -59,11 +64,11 @@ lint:
 build: $(BUILD)/$(OUT)
 
 $(BUILD)/$(OUT): $(OBJ)
-	$(CC) -o $(BUILD)/$(OUT) $(SANITIZER) $(LDFLAGS) $^
+	$(CC) -o $(BUILD)/$(OUT) $(LDFLAGS) $^
 
 $(BUILD)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(CFLAG_ERRORS) $(SANITIZER) -c -o $@ $<
+	$(CC) $(CFLAGS) $(CFLAG_ERRORS) -c -o $@ $<
 
 clean:
 	@rm -rf $(BUILD)

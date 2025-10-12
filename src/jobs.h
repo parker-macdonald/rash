@@ -38,11 +38,12 @@ void sig_handler_init(void);
 void clean_jobs(void);
 
 /**
- * @brief adds a stopped job with the given pid to the job list
+ * @brief adds a job with the given pid to the job list
  * @param pid the pid of the job to add
+ * @param state the state to give the job, i.e. JOB_STOPPED or JOB_RUNNING
  * @return the job id assigned to the new job
  */
-int register_stopped_job(pid_t pid);
+int register_job(pid_t pid, int state);
 
 /**
  * @brief returns a job with the given id

@@ -49,7 +49,7 @@ int builtin_fg(char **argv) {
   if (recv_sigtstp) {
     recv_sigtstp = 0;
 
-    register_stopped_job(pid);
+    register_job(pid, JOB_STOPPED);
 
     return 0;
   }

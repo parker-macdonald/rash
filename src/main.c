@@ -5,9 +5,9 @@
 #include <string.h>
 
 #include "builtins/find_builtin.h"
-#include "execute.h"
+#include "interpreter/lex.h"
+#include "interpreter/evaluate.h"
 #include "jobs.h"
-#include "lexer.h"
 #include "line_reader/line_reader.h"
 #include "should_exit.h"
 
@@ -43,13 +43,11 @@ int main(int argc, char **argv) {
       break;
     }
 
-    optional_exec_context context = get_tokens_from_line(line);
+    token_t *tokens = lex(line);
 
-    if (context.has_value) {
-      status = execute(context.value);
-
-      free(context.value.argv[0]);
-      free(context.value.argv);
+    if (tokens != NULL) {
+      status = evaluate(tokens);
+      free_tokens(&tokens);
     } else {
       status = EXIT_FAILURE;
     }
