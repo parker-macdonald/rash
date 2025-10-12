@@ -13,6 +13,7 @@
                     gdb
                     lldb
                     gnumake
+                    valgrind
                 ];
 
                 hardeningDisable = [ "all" ];
