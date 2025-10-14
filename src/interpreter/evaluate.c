@@ -93,6 +93,11 @@ static bool bad_syntax(const token_t *const tokens) {
         return true;
       }
 
+      if (tokens[i - 1].type != STRING) {
+        fprintf(stderr, "rash: bad placement of ‘|’.\n");
+        return true;
+      }
+
       stdout_count++;
     }
 
@@ -119,8 +124,55 @@ static bool bad_syntax(const token_t *const tokens) {
       i++;
     }
 
-    if (tokens[i].type == SEMI || tokens[i].type == LOGICAL_AND ||
-        tokens[i].type == LOGICAL_OR || tokens[i].type == AMP) {
+    if (tokens[i].type == LOGICAL_OR) {
+      if (tokens[i + 1].type != STRING) {
+        fprintf(stderr, "rash: expected command after ‘||’.\n");
+        return true;
+      }
+
+      if (tokens[i - 1].type != STRING) {
+        fprintf(stderr, "rash: bad placement of ‘||’.\n");
+        return true;
+      }
+
+      stdout_count = 0;
+      stdin_count = 0;
+      stderr_count = 0;
+    }
+
+    if (tokens[i].type == LOGICAL_AND) {
+      if (tokens[i + 1].type != STRING) {
+        fprintf(stderr, "rash: expected command after ‘&&’.\n");
+        return true;
+      }
+
+      if (tokens[i - 1].type != STRING) {
+        fprintf(stderr, "rash: bad placement of ‘&&’.\n");
+        return true;
+      }
+
+      stdout_count = 0;
+      stdin_count = 0;
+      stderr_count = 0;
+    }
+
+    if (tokens[i].type == SEMI) {
+      if (tokens[i - 1].type != STRING) {
+        fprintf(stderr, "rash: bad placement of ‘;’.\n");
+        return true;
+      }
+
+      stdout_count = 0;
+      stdin_count = 0;
+      stderr_count = 0;
+    }
+
+    if (tokens[i].type == AMP) {
+      if (tokens[i - 1].type != STRING) {
+        fprintf(stderr, "rash: bad placement of ‘&’.\n");
+        return true;
+      }
+      
       stdout_count = 0;
       stdin_count = 0;
       stderr_count = 0;
