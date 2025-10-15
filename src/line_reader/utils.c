@@ -53,8 +53,8 @@ void pretty_print_strings(char *const strings[], const size_t length) {
 }
 
 int getch(void) {
-  struct termios oldt;
-  struct termios newt;
+  struct termios oldt = {0};
+  struct termios newt = {0};
   uint8_t byte;
   ssize_t nread;
 
