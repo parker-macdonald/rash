@@ -6,23 +6,22 @@
 #include <stdio.h>
 
 #include "../vector.h"
+#include "glob.h"
 
-const char *const TOKEN_NAMES[] = {
-  "STRING",
-  "STDIN_REDIR",
-  "STDIN_REDIR_STRING",
-  "STDOUT_REDIR",
-  "STDOUT_REDIR_APPEND",
-  "STDERR_REDIR",
-  "STDERR_REDIR_APPEND",
-  "PIPE",
-  "GLOB",
-  "SEMI",
-  "LOGICAL_AND",
-  "LOGICAL_OR",
-  "AMP",
-  "END"
-};
+const char *const TOKEN_NAMES[] = {"STRING",
+                                   "STDIN_REDIR",
+                                   "STDIN_REDIR_STRING",
+                                   "STDOUT_REDIR",
+                                   "STDOUT_REDIR_APPEND",
+                                   "STDERR_REDIR",
+                                   "STDERR_REDIR_APPEND",
+                                   "PIPE",
+                                   "GLOB",
+                                   "SEMI",
+                                   "LOGICAL_AND",
+                                   "LOGICAL_OR",
+                                   "AMP",
+                                   "END"};
 
 enum lexer_state {
   DEFAULT,
@@ -36,20 +35,26 @@ enum lexer_state {
   do {                                                                         \
     if (buffer.length != 0) {                                                  \
       VECTOR_PUSH(buffer, '\0');                                               \
-      VECTOR_PUSH(tokens, ((token_t){.type = STRING, .data = buffer.data}));   \
+      if (needs_globbing && glob_str(buffer.data, &tokens) > 0) {              \
+        VECTOR_DESTROY(buffer);                                                \
+      } else {                                                                 \
+        VECTOR_PUSH(tokens, ((token_t){.type = STRING, .data = buffer.data})); \
+      }                                                                        \
       VECTOR_INIT(buffer);                                                     \
     }                                                                          \
     VECTOR_PUSH(tokens, (token_t){.type = token_type});                        \
   } while (0)
 
 token_t *lex(const uint8_t *const source) {
-  VECTOR(token_t) tokens;
+  tokens_t tokens;
   VECTOR_INIT(tokens);
 
   VECTOR(uint8_t) buffer;
   VECTOR_INIT(buffer);
 
   enum lexer_state state = WHITESPACE;
+
+  bool needs_globbing = false;
 
   for (size_t i = 0; source[i] != '\0'; i++) {
     const uint8_t curr = source[i];
@@ -144,6 +149,11 @@ token_t *lex(const uint8_t *const source) {
           break;
         }
 
+        needs_globbing =
+            needs_globbing ||
+            (curr == '*' || curr == '?' || curr == '[' || curr == '^' ||
+             curr == '!' || curr == '{' || curr == ',');
+
         VECTOR_PUSH(buffer, curr);
         break;
 
@@ -195,11 +205,15 @@ token_t *lex(const uint8_t *const source) {
 
   if (buffer.length != 0) {
     VECTOR_PUSH(buffer, '\0');
-    VECTOR_PUSH(tokens, ((token_t){.type = STRING, .data = buffer.data}));
+    if (needs_globbing && glob_str(buffer.data, &tokens)) {
+      VECTOR_DESTROY(buffer);
+    } else {
+      VECTOR_PUSH(tokens, ((token_t){.type = STRING, .data = buffer.data}));
+    }
   } else {
     VECTOR_DESTROY(buffer);
   }
-  
+
   VECTOR_PUSH(tokens, (token_t){.type = END});
 
   return tokens.data;

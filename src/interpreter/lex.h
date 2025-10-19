@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "../vector.h"
+
 typedef enum {
   STRING = 0,
   STDIN_REDIR, // '<' used to redirect stdin from a file
@@ -26,6 +28,8 @@ typedef struct {
   token_type_t type;
   void *data;
 } token_t;
+
+typedef VECTOR(token_t) tokens_t;
 
 token_t *lex(const uint8_t *const source);
 
