@@ -2,8 +2,8 @@
 #define UTF_8_H
 
 #include <stdbool.h>
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 /**
  * @brief When given a line, traverse_back_utf8 will backtrack to find the
@@ -14,8 +14,7 @@
  * @return The number of bytes the character takes up, or one if string is not
  * valid utf-8.
  */
-size_t traverse_back_utf8(const uint8_t *const line,
-                                const size_t cursor_pos);
+size_t traverse_back_utf8(const uint8_t *const line, const size_t cursor_pos);
 
 /**
  * @brief When given a line, traverse_forward_utf8 will traverse through the
@@ -26,9 +25,9 @@ size_t traverse_back_utf8(const uint8_t *const line,
  * @return The number of bytes the character takes up, or one if string is not
  * valid utf-8.
  */
-size_t traverse_forward_utf8(const uint8_t *const line,
-                                   const size_t line_len,
-                                   const size_t cursor_pos);
+size_t traverse_forward_utf8(
+    const uint8_t *const line, const size_t line_len, const size_t cursor_pos
+);
 
 /**
  * @brief Returns true when the given character is a continuation byte in utf-8.

@@ -48,7 +48,11 @@ void draw_line(const char *const prompt, const line_t *const line);
  * the matches vector.
  * @param prefix_len the length of the prefix
  */
-void add_path_matches(matches_t *matches, const char *const path,
-                      const char *const prefix, const size_t prefix_len);
+void add_path_matches(
+    matches_t *matches,
+    const char *const path,
+    const char *const prefix,
+    const size_t prefix_len
+);
 
 #endif

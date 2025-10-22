@@ -11,20 +11,20 @@
 #include "../vector.h"
 
 const char *const TOKEN_NAMES[] = {
-  "STRING",
-  "STDIN_REDIR",
-  "STDIN_REDIR_STRING",
-  "STDOUT_REDIR",
-  "STDOUT_REDIR_APPEND",
-  "STDERR_REDIR",
-  "STDERR_REDIR_APPEND",
-  "PIPE",
-  "GLOB",
-  "SEMI",
-  "LOGICAL_AND",
-  "LOGICAL_OR",
-  "AMP",
-  "END"
+    "STRING",
+    "STDIN_REDIR",
+    "STDIN_REDIR_STRING",
+    "STDOUT_REDIR",
+    "STDOUT_REDIR_APPEND",
+    "STDERR_REDIR",
+    "STDERR_REDIR_APPEND",
+    "PIPE",
+    "GLOB",
+    "SEMI",
+    "LOGICAL_AND",
+    "LOGICAL_OR",
+    "AMP",
+    "END"
 };
 
 enum lexer_state {
@@ -89,8 +89,9 @@ token_t *lex(const uint8_t *source) {
           state = WHITESPACE;
           if (buffer.length != 0) {
             VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(tokens,
-                        ((token_t){.type = STRING, .data = buffer.data}));
+            VECTOR_PUSH(
+                tokens, ((token_t){.type = STRING, .data = buffer.data})
+            );
             VECTOR_INIT(buffer);
           }
 
@@ -198,8 +199,9 @@ token_t *lex(const uint8_t *source) {
             }
 
             if (env_len == 0) {
-              fprintf(stderr,
-                      "rash: cannot expand empty enviroment variable.\n");
+              fprintf(
+                  stderr, "rash: cannot expand empty enviroment variable.\n"
+              );
               goto error;
             }
 
@@ -288,7 +290,7 @@ token_t *lex(const uint8_t *source) {
   } else {
     VECTOR_DESTROY(buffer);
   }
-  
+
   VECTOR_PUSH(tokens, (token_t){.type = END});
 
   return tokens.data;

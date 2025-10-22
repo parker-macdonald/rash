@@ -5,8 +5,8 @@
 #include <string.h>
 
 #include "builtins/find_builtin.h"
-#include "interpreter/lex.h"
 #include "interpreter/evaluate.h"
+#include "interpreter/lex.h"
 #include "jobs.h"
 #include "line_reader/line_reader.h"
 #include "should_exit.h"

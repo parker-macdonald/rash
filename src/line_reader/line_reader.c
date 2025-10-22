@@ -14,8 +14,10 @@
 #include "utils.h"
 
 #ifdef static_assert
-static_assert(sizeof(char) == sizeof(uint8_t),
-              "char is not one byte in size, god save you...");
+static_assert(
+    sizeof(char) == sizeof(uint8_t),
+    "char is not one byte in size, god save you..."
+);
 #endif
 
 typedef struct line_node {
@@ -199,7 +201,8 @@ const uint8_t *readline(void) {
         case 'C':
           if (cursor_pos < line_to_read->length) {
             cursor_pos += traverse_forward_utf8(
-                line_to_read->data, line_to_read->length, cursor_pos);
+                line_to_read->data, line_to_read->length, cursor_pos
+            );
 
             fputs(ANSI_CURSOR_RIGHT, stdout);
             fflush(stdout);
@@ -222,13 +225,15 @@ const uint8_t *readline(void) {
               if (arrow_char == 'C') {
                 if (cursor_pos < line_to_read->length) {
                   cursor_pos += traverse_forward_utf8(
-                      line_to_read->data, line_to_read->length, cursor_pos);
+                      line_to_read->data, line_to_read->length, cursor_pos
+                  );
                   fputs(ANSI_CURSOR_RIGHT, stdout);
 
                   while (cursor_pos <= line_to_read->length - 1 &&
                          line_to_read->data[cursor_pos] != ' ') {
                     cursor_pos += traverse_forward_utf8(
-                        line_to_read->data, line_to_read->length, cursor_pos);
+                        line_to_read->data, line_to_read->length, cursor_pos
+                    );
                     fputs(ANSI_CURSOR_RIGHT, stdout);
                   }
 

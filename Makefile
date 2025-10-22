@@ -49,6 +49,7 @@ endif
 OUT := rash
 BUILD := ./build
 SRC := ${wildcard src/**/*.c} ${wildcard src/**/**/*.c} ${wildcard src/*.c}
+HEADERS := ${wildcard src/**/*.h} ${wildcard src/**/**/*.h} ${wildcard src/*.h}
 OBJ := ${SRC:%.c=$(BUILD)/%.o}
 
 
@@ -58,7 +59,7 @@ OBJ := ${SRC:%.c=$(BUILD)/%.o}
 all: build
 
 format:
-	clang-format -i $(SRC)
+	clang-format -i $(SRC) $(HEADERS)
 
 lint:
 	$(LINTER) $(SRC) -checks=-*,bugprone-*cert-*,clang-analyzer-*,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,performance-*,portability-*,misc-* -warnings-as-errors=*,-misc-include-cleaner -- $(INCS) $(CFLAGS)

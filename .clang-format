@@ -7,6 +7,17 @@ InsertBraces: true
 IndentPPDirectives: BeforeHash
 ReflowComments: true
 SpaceAfterCStyleCast: false
+AllowShortEnumsOnASingleLine: false
+AlignArrayOfStructures: Left
+InsertNewlineAtEOF: true
+AlignAfterOpenBracket: BlockIndent
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+BinPackArguments: false
+BinPackParameters: OnePerLine
 
 IncludeBlocks: Regroup
 IncludeCategories:

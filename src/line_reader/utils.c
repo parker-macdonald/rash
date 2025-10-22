@@ -7,9 +7,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/types.h>
 #include <termios.h>
 #include <unistd.h>
-#include <sys/types.h>
 
 #include "../ansi.h"
 #include "../jobs.h"
@@ -112,8 +112,12 @@ void draw_line(const char *const prompt, const line_t *const line) {
   fflush(stdout);
 }
 
-void add_path_matches(matches_t *matches, const char *const path,
-                      const char *const prefix, const size_t prefix_len) {
+void add_path_matches(
+    matches_t *matches,
+    const char *const path,
+    const char *const prefix,
+    const size_t prefix_len
+) {
   DIR *dir = opendir(path);
   if (dir == NULL) {
     return;

@@ -9,8 +9,9 @@
  * @param byte the byte to add to the line
  * @param cursor_pos where the byte should go in the line
  */
-void line_insert(line_t *const line, const uint8_t byte,
-                 const size_t cursor_pos);
+void line_insert(
+    line_t *const line, const uint8_t byte, const size_t cursor_pos
+);
 
 /**
  * @brief removes the utf-8 character behind the cursor position from the line

@@ -173,7 +173,7 @@ static bool bad_syntax(const token_t *const tokens) {
         fprintf(stderr, "rash: bad placement of ‘&’.\n");
         return true;
       }
-      
+
       stdout_count = 0;
       stdin_count = 0;
       stderr_count = 0;

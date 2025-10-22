@@ -8,8 +8,9 @@
 #include "../vector.h"
 #include "line_reader.h"
 
-void line_insert(line_t *const line, const uint8_t byte,
-                 const size_t cursor_pos) {
+void line_insert(
+    line_t *const line, const uint8_t byte, const size_t cursor_pos
+) {
   if (cursor_pos == line->length) {
     VECTOR_PUSH((*line), byte);
     return;

@@ -8,13 +8,16 @@
 #include <sys/wait.h>
 
 #ifdef static_assert
-static_assert(sizeof(sig_atomic_t) == sizeof(pid_t),
-              "size of sig_atomic_t differs from pid_t. what the hell are "
-              "you compiling this on?");
+static_assert(
+    sizeof(sig_atomic_t) == sizeof(pid_t),
+    "size of sig_atomic_t differs from pid_t. what the hell are "
+    "you compiling this on?"
+);
 #endif
 
-const char *const JOB_STATUSES[NUM_JOB_STATUSES] = {"Exited", "Stopped",
-                                                    "Running"};
+const char *const JOB_STATUSES[NUM_JOB_STATUSES] = {
+    "Exited", "Stopped", "Running"
+};
 
 static struct sigaction sigint_act;
 static struct sigaction sigtstp_act;
@@ -122,8 +125,12 @@ int register_job(pid_t pid, int state) {
 
   last_job = new_job;
 
-  printf("\n[%d] PID: %d, State: %s\n", new_job->id, new_job->pid,
-         JOB_STATUSES[new_job->state]);
+  printf(
+      "\n[%d] PID: %d, State: %s\n",
+      new_job->id,
+      new_job->pid,
+      JOB_STATUSES[new_job->state]
+  );
 
   return new_job->id;
 }
@@ -211,7 +218,11 @@ pid_t get_pid_and_remove(int *id) {
 
 void print_jobs(void) {
   for (job_t *current = root_job; current != NULL; current = current->p_next) {
-    printf("[%d] PID: %d, State: %s\n", current->id, current->pid,
-           JOB_STATUSES[current->state]);
+    printf(
+        "[%d] PID: %d, State: %s\n",
+        current->id,
+        current->pid,
+        JOB_STATUSES[current->state]
+    );
   }
 }
