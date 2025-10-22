@@ -31,14 +31,19 @@ int builtin_fg(char **argv) {
   pid_t pid = get_pid_and_remove(&job_id);
 
   if (pid == 0) {
-    fprintf(stderr, "fg: %d: no such job\n", job_id);
+    if (job_id == -1) {
+      fprintf(stderr, "fg: no running jobs\n");
+    } else {
+      fprintf(stderr, "fg: %d: no such job\n", job_id);
+    }
+
     return EXIT_FAILURE;
   }
 
   fg_pid = pid;
   kill(pid, SIGCONT);
 
-  printf("[%d] PID: %d Continued in foreground\n", job_id, pid);
+  printf("[%d] PID: %d, continued in foreground\n", job_id, pid);
 
   int status;
 
