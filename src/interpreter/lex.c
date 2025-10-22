@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "../vector.h"
 
@@ -42,7 +43,18 @@ enum lexer_state {
     VECTOR_PUSH(tokens, (token_t){.type = token_type});                        \
   } while (0)
 
-token_t *lex(const uint8_t *const source) {
+#define ADD_ENV_TO_VECTOR(env_name, vector)                                    \
+  do {                                                                         \
+    uint8_t *env_value = (uint8_t *)getenv(env_name);                          \
+                                                                               \
+    if (env_value != NULL) {                                                   \
+      for (size_t j = 0; env_value[j] != '\0'; j++) {                          \
+        VECTOR_PUSH(vector, env_value[j]);                                     \
+      }                                                                        \
+    }                                                                          \
+  } while (0)
+
+token_t *lex(const uint8_t *source) {
   VECTOR(token_t) tokens;
   VECTOR_INIT(tokens);
 
@@ -141,6 +153,81 @@ token_t *lex(const uint8_t *const source) {
             break;
           }
           ADD_NONSTR_TOKEN(AMP);
+          break;
+        }
+
+        // crazy logic for enviroment variables
+        if (curr == '$') {
+          if (source[i + 1] == '\0') {
+            VECTOR_PUSH(buffer, '$');
+            break;
+          }
+
+          // special variables
+          i++;
+          if (isdigit((int)source[i]) || source[i] == '?') {
+            char env_name[2];
+            env_name[0] = (char)source[i];
+            env_name[1] = '\0';
+
+            ADD_ENV_TO_VECTOR(env_name, buffer);
+            break;
+          }
+
+          size_t env_len = 0;
+          const uint8_t *env_start = source + i;
+
+          if (source[i] == '{') {
+            i++;
+            env_start++;
+
+            for (;;) {
+              if (source[i] == '}') {
+                break;
+              }
+
+              if (source[i] == '\0') {
+                fprintf(stderr, "rash: expected closing ‘}’ character.\n");
+                goto error;
+              }
+
+              i++;
+              env_len++;
+            }
+
+            if (env_len == 0) {
+              fprintf(stderr,
+                      "rash: cannot expand empty enviroment variable.\n");
+              goto error;
+            }
+
+            char *env_name = malloc(env_len + 1);
+            memcpy(env_name, env_start, env_len);
+            env_name[env_len] = '\0';
+
+            ADD_ENV_TO_VECTOR(env_name, buffer);
+            free(env_name);
+            break;
+          }
+
+          for (;;) {
+            if (!isalnum((int)source[i]) || source[i] == '\0') {
+              i--;
+              break;
+            }
+
+            i++;
+            env_len++;
+          }
+
+          assert(env_len != 0);
+
+          char *env_name = malloc(env_len + 1);
+          memcpy(env_name, env_start, env_len);
+          env_name[env_len] = '\0';
+
+          ADD_ENV_TO_VECTOR(env_name, buffer);
+          free(env_name);
           break;
         }
 
