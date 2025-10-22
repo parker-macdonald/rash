@@ -5,14 +5,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
+#include <sys/types.h>
 
 #include "../ansi.h"
 #include "../jobs.h"
+#include "../vector.h"
 #include "line_reader.h"
 
 void pretty_print_strings(char *const strings[], const size_t length) {

@@ -142,7 +142,7 @@ printf("%s", string.data);
   do {                                                                         \
     if ((vector)._capacity <= (vector).length) {                               \
       if ((vector)._capacity == 0)                                             \
-        (vector)._capacity = 1;                                                \
+        (vector)._capacity = (vector).length + 1;                              \
       else                                                                     \
         (vector)._capacity *= 2;                                               \
       (vector).data =                                                          \
