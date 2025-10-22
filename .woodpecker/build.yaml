@@ -2,13 +2,37 @@ when:
   - event: push
 
 steps:
-#   removing the linter for now since clang-tidy works strangely in the docker image
-#   - name: lint
-#     image: silkeh/clang
-#     commands:
-#       - make lint
+  - name: lint
+    image: silkeh/clang
+    commands:
+      - make lint
 
-  - name: build
+  - name: clang-error-hell
     image: silkeh/clang
     commands:
       - make ERROR_HELL=1
+  
+  - name: clang
+    image: silkeh/clang
+    commands:
+      - make
+  
+  - name: gcc-15
+    image: gcc:15
+    commands:
+      - make CC=gcc
+  
+  - name: gcc-14
+    image: gcc:14
+    commands:
+      - make CC=gcc
+  
+  - name: gcc-13
+    image: gcc:13
+    commands:
+      - make CC=gcc
+  
+  - name: gcc-12
+    image: gcc:12
+    commands:
+      - make CC=gcc
