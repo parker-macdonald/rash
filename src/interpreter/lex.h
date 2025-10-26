@@ -27,8 +27,8 @@ typedef enum {
   // '&&' used to run two commands sequencially, but only run the second if the
   // first is successful
   LOGICAL_AND,
-  // '||' used to run two commands sequencially, resulting status code is the
-  // logical or of the two commands status
+  // '||' used to run two commands sequencially, but only run the second if the
+  // first is unsuccessful
   LOGICAL_OR,
   // '&' run a program in the background
   AMP,

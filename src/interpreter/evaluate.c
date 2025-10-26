@@ -346,15 +346,27 @@ int evaluate(const token_t *tokens) {
       continue;
     }
 
-    if (tokens->type == LOGICAL_AND) {
-      if (last_status == 0) {
-        VECTOR_PUSH(argv, NULL);
-        ec.argv = argv.data;
-        last_status = execute(ec);
-        ec = (execution_context){NULL, -1, -1, -1, 0};
+    if (tokens->type == AMP) {
+      ec.flags = EC_BACKGROUND_JOB;
+      continue;
+    }
 
-        VECTOR_CLEAR(argv);
-      } else {
+    if (argv.length > 0) {
+      VECTOR_PUSH(argv, NULL);
+      ec.argv = argv.data;
+      last_status = execute(ec);
+      ec = (execution_context){NULL, -1, -1, -1, 0};
+  
+      VECTOR_CLEAR(argv);
+  
+      for (size_t i = 0; i < wait_for_me.length; i++) {
+        (void)waitpid(wait_for_me.data[i], NULL, 0);
+      }
+      VECTOR_CLEAR(wait_for_me);
+    }
+
+    if (tokens->type == LOGICAL_AND) {
+      if (last_status != 0) {
         while ((tokens + 1)->type == STRING) {
           tokens++;
         }
@@ -364,14 +376,7 @@ int evaluate(const token_t *tokens) {
     }
 
     if (tokens->type == LOGICAL_OR) {
-      if (last_status != 0) {
-        VECTOR_PUSH(argv, NULL);
-        ec.argv = argv.data;
-        last_status = execute(ec);
-        ec = (execution_context){NULL, -1, -1, -1, 0};
-
-        VECTOR_CLEAR(argv);
-      } else {
+      if (last_status == 0) {
         while ((tokens + 1)->type == STRING) {
           tokens++;
         }
@@ -380,39 +385,13 @@ int evaluate(const token_t *tokens) {
       continue;
     }
 
-    if (tokens->type == AMP) {
-      VECTOR_PUSH(argv, NULL);
-      ec.argv = argv.data;
-      ec.flags = EC_BACKGROUND_JOB;
-      last_status = execute(ec);
-      ec = (execution_context){NULL, -1, -1, -1, 0};
-
-      VECTOR_CLEAR(argv);
-      continue;
-    }
-
     if (tokens->type == SEMI) {
-      VECTOR_PUSH(argv, NULL);
-      ec.argv = argv.data;
-      last_status = execute(ec);
-      ec = (execution_context){NULL, -1, -1, -1, 0};
-
-      VECTOR_CLEAR(argv);
       continue;
     }
 
     if (tokens->type == END) {
-      if (argv.length != 0) {
-        VECTOR_PUSH(argv, NULL);
-        ec.argv = argv.data;
-        last_status = execute(ec);
-      }
       break;
     }
-  }
-
-  for (size_t i = 0; i < wait_for_me.length; i++) {
-    (void)waitpid(wait_for_me.data[i], NULL, 0);
   }
 
   VECTOR_DESTROY(argv);
