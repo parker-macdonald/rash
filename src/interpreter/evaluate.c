@@ -14,8 +14,8 @@
 #include "lex.h"
 
 static bool bad_syntax(const token_t *const tokens) {
-  if (tokens[0].type != STRING) {
-    fprintf(stderr, "rash: expected string as first token.\n");
+  if (!(tokens[0].type & ARGUMENT_TOKENS)) {
+    fprintf(stderr, "rash: invalid first token.\n");
     return true;
   }
 
@@ -191,6 +191,9 @@ int evaluate(const token_t *tokens) {
   VECTOR(char *) argv;
   VECTOR_INIT(argv);
 
+  VECTOR(char) buffer;
+  VECTOR_INIT(buffer);
+
   int last_status = -1;
 
   VECTOR(pid_t) wait_for_me = {0, 0, 0};
@@ -201,7 +204,36 @@ int evaluate(const token_t *tokens) {
 
   for (;; tokens++) {
     if (tokens->type == STRING) {
-      VECTOR_PUSH(argv, (char *)tokens->data);
+      for (size_t i = 0; ((char*)(tokens->data))[i] != '\0'; i++) {
+        VECTOR_PUSH(buffer, ((char*)(tokens->data))[i]);
+      }
+
+      continue;
+    }
+
+    if (tokens->type == ENV_EXPANSION) {
+      char* value = getenv((char*)tokens->data);
+
+      if (value == NULL) {
+        fprintf(stderr, "rash: environment variable ‘%s’ does not exist.\n", (char*)tokens->data);
+        goto error;
+      }
+
+      for (size_t i = 0; value[i] != '\0'; i++) {
+        VECTOR_PUSH(buffer, value[i]);
+      }
+
+      continue;
+    }
+
+    if (tokens->type == GLOB_WILDCARD) {
+      
+    }
+
+    if (tokens->type == END_ARG) {
+      VECTOR_PUSH(buffer, '\0');
+      VECTOR_PUSH(argv, buffer.data);
+      VECTOR_INIT(buffer);
 
       continue;
     }
@@ -356,9 +388,9 @@ int evaluate(const token_t *tokens) {
       ec.argv = argv.data;
       last_status = execute(ec);
       ec = (execution_context){NULL, -1, -1, -1, 0};
-  
+
       VECTOR_CLEAR(argv);
-  
+
       for (size_t i = 0; i < wait_for_me.length; i++) {
         (void)waitpid(wait_for_me.data[i], NULL, 0);
       }
