@@ -205,6 +205,14 @@ token_t *lex(const uint8_t *source) {
             memcpy(env_name, env_start, env_len);
             env_name[env_len] = '\0';
 
+            if (buffer.length != 0) {
+              VECTOR_PUSH(buffer, '\0');
+              VECTOR_PUSH(
+                  tokens, ((token_t){.type = STRING, .data = buffer.data})
+              );
+              VECTOR_INIT(buffer);
+            }
+
             VECTOR_PUSH(
                 tokens, ((token_t){.type = ENV_EXPANSION, .data = env_name})
             );
@@ -226,6 +234,14 @@ token_t *lex(const uint8_t *source) {
           char *env_name = malloc(env_len + 1);
           memcpy(env_name, env_start, env_len);
           env_name[env_len] = '\0';
+
+          if (buffer.length != 0) {
+            VECTOR_PUSH(buffer, '\0');
+            VECTOR_PUSH(
+                tokens, ((token_t){.type = STRING, .data = buffer.data})
+            );
+            VECTOR_INIT(buffer);
+          }
 
           VECTOR_PUSH(
               tokens, ((token_t){.type = ENV_EXPANSION, .data = env_name})
@@ -262,6 +278,14 @@ token_t *lex(const uint8_t *source) {
           memcpy(var_name, var_start, var_len);
           var_name[var_len] = '\0';
 
+          if (buffer.length != 0) {
+            VECTOR_PUSH(buffer, '\0');
+            VECTOR_PUSH(
+                tokens, ((token_t){.type = STRING, .data = buffer.data})
+            );
+            VECTOR_INIT(buffer);
+          }
+
           VECTOR_PUSH(
               tokens, ((token_t){.type = VAR_EXPANSION, .data = var_name})
           );
@@ -270,7 +294,16 @@ token_t *lex(const uint8_t *source) {
 
         if (curr == '*') {
           has_arguments = true;
+          if (buffer.length != 0) {
+            VECTOR_PUSH(buffer, '\0');
+            VECTOR_PUSH(
+                tokens, ((token_t){.type = STRING, .data = buffer.data})
+            );
+            VECTOR_INIT(buffer);
+          }
           VECTOR_PUSH(tokens, ((token_t){.type = GLOB_WILDCARD}));
+
+          break;
         }
 
         has_arguments = true;

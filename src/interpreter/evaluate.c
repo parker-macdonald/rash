@@ -1,11 +1,13 @@
 #include "evaluate.h"
 
 #include <assert.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -183,12 +185,127 @@ static bool bad_syntax(const token_t *const tokens) {
   return false;
 }
 
+typedef VECTOR(char *) argv_t;
+
+// modified Krauss's wildcard matching algorithm
+bool match(char *str, char *pattern) {
+  char *after_last_wild = NULL;
+  // Location after last "*", if we've encountered one
+  char t, w;
+  // Walk the text strings one character at a time.
+  while (1) {
+    t = *str;
+    w = *pattern;
+    // How do you match a unique text string?
+    if (!t || t == '/') {
+      // Easy: unique up on it!
+      if (!w || w == '/') {
+        return true; // "x" matches "x"
+      } else if (w == '\033') {
+        pattern++;
+        continue; // "x*" matches "x" or "xy"
+      }
+      return false; // "x" doesn't match "xy"
+    } else {
+      // How do you match a tame text string?
+      if (t != w) {
+        // The tame way: unique up on it!
+        if (w == '\033') {
+          after_last_wild = ++pattern;
+          continue; // "*y" matches "xy"
+        } else if (after_last_wild) {
+          pattern = after_last_wild;
+          w = *pattern;
+
+          if (!w || w == '/') {
+            return true; // "*" matches "x"
+          } else if (t == w) {
+            pattern++;
+          }
+          str++;
+          continue; // "*sip*" matches "mississippi"
+        } else {
+          return false; // "x" doesn't match "y"
+        }
+      }
+    }
+    str++;
+    pattern++;
+  }
+  return true;
+}
+
+int glob_recurse(argv_t *argv, char *pattern, char* path, size_t path_len) {
+  DIR* dir = opendir(path);
+
+  if (dir == NULL) {
+    return 0;
+  }
+
+  struct dirent *ent;
+
+  bool end = false;
+  char* new_pattern = pattern;
+  for (; ; new_pattern++) {
+    if (*new_pattern == '/') {
+      new_pattern++;
+      if (*new_pattern == '\0') {
+        end = true;
+      }
+      break;
+    }
+
+    if (*new_pattern == '\0') {
+      end = true;
+      break;
+    }
+  }
+
+  while ((ent = readdir(dir)) != NULL) {
+    if (match(ent->d_name, pattern)) {
+      if (end) {
+        VECTOR_PUSH(*argv, strdup(ent->d_name));
+        continue;
+      }
+
+      size_t ent_len = strlen(ent->d_name);
+
+      char* new_path = malloc(path_len + ent_len + 2);
+      memcpy(new_path, path, path_len);
+      new_path[path_len] = '/';
+      memcpy(new_path + path_len + 1, ent->d_name, ent_len);
+      new_path[path_len + ent_len + 1] = '\0';
+
+      glob_recurse(argv, new_pattern, new_path, path_len + ent_len);
+
+      free(new_path);
+    }
+  }
+
+  closedir(dir);
+
+  return 0;
+}
+
+int glob(argv_t *argv, char *pattern) {
+  char* path;
+
+  if (pattern[0] == '/') {
+    pattern++;
+    path = "/";
+  } else {
+    path = ".";
+  }
+
+  return glob_recurse(argv, pattern, path, 1);
+}
+
 int evaluate(const token_t *tokens) {
   if (bad_syntax(tokens)) {
     return EXIT_FAILURE;
   }
 
-  VECTOR(char *) argv;
+  argv_t argv;
   VECTOR_INIT(argv);
 
   VECTOR(char) buffer;
@@ -200,22 +317,28 @@ int evaluate(const token_t *tokens) {
   // this doesn't compile on gcc :(
   // VECTOR_INIT(wait_for_me, 0);
 
+  bool needs_globbing = false;
+
   execution_context ec = {NULL, -1, -1, -1, 0};
 
   for (;; tokens++) {
     if (tokens->type == STRING) {
-      for (size_t i = 0; ((char*)(tokens->data))[i] != '\0'; i++) {
-        VECTOR_PUSH(buffer, ((char*)(tokens->data))[i]);
+      for (size_t i = 0; ((char *)(tokens->data))[i] != '\0'; i++) {
+        VECTOR_PUSH(buffer, ((char *)(tokens->data))[i]);
       }
 
       continue;
     }
 
     if (tokens->type == ENV_EXPANSION) {
-      char* value = getenv((char*)tokens->data);
+      char *value = getenv((char *)tokens->data);
 
       if (value == NULL) {
-        fprintf(stderr, "rash: environment variable ‘%s’ does not exist.\n", (char*)tokens->data);
+        fprintf(
+            stderr,
+            "rash: environment variable ‘%s’ does not exist.\n",
+            (char *)tokens->data
+        );
         goto error;
       }
 
@@ -227,12 +350,19 @@ int evaluate(const token_t *tokens) {
     }
 
     if (tokens->type == GLOB_WILDCARD) {
-      
+      VECTOR_PUSH(buffer, '\033');
+      needs_globbing = true;
+      continue;
     }
 
     if (tokens->type == END_ARG) {
       VECTOR_PUSH(buffer, '\0');
-      VECTOR_PUSH(argv, buffer.data);
+      if (needs_globbing) {
+        glob(&argv, buffer.data);
+        VECTOR_DESTROY(buffer);
+      } else {
+        VECTOR_PUSH(argv, buffer.data);
+      }
       VECTOR_INIT(buffer);
 
       continue;
