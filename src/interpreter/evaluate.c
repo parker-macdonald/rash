@@ -189,6 +189,10 @@ typedef VECTOR(char *) argv_t;
 
 // modified Krauss's wildcard matching algorithm
 bool match(char *str, char *pattern) {
+  if (str[0] == '.' && pattern[0] != '.') {
+    return false;
+  }
+
   char *after_last_wild = NULL;
   // Location after last "*", if we've encountered one
   char t, w;
@@ -276,7 +280,7 @@ int glob_recurse(argv_t *argv, char *pattern, char* path, size_t path_len) {
       memcpy(new_path + path_len + 1, ent->d_name, ent_len);
       new_path[path_len + ent_len + 1] = '\0';
 
-      glob_recurse(argv, new_pattern, new_path, path_len + ent_len);
+      glob_recurse(argv, new_pattern, new_path, path_len + ent_len + 1);
 
       free(new_path);
     }
@@ -519,6 +523,9 @@ int evaluate(const token_t *tokens) {
       last_status = execute(ec);
       ec = (execution_context){NULL, -1, -1, -1, 0};
 
+      for (size_t i = 0; i < argv.length; i++) {
+        free(argv.data[i]);
+      }
       VECTOR_CLEAR(argv);
 
       for (size_t i = 0; i < wait_for_me.length; i++) {
@@ -557,12 +564,14 @@ int evaluate(const token_t *tokens) {
   }
 
   VECTOR_DESTROY(argv);
+  VECTOR_DESTROY(buffer);
   VECTOR_DESTROY(wait_for_me);
 
   return last_status;
 
 error:
   VECTOR_DESTROY(wait_for_me);
+  VECTOR_DESTROY(buffer);
   VECTOR_DESTROY(argv);
 
   return EXIT_FAILURE;
