@@ -6,13 +6,13 @@
 
 int builtin_export(char **const argv) {
   if (argv[1] == NULL) {
-    fprintf(stderr, "Usage: %s [VAR NAME]=[VAR VALUE]", argv[0]);
+    fprintf(stderr, "Usage: %s [VAR NAME]=[VAR VALUE]\n", argv[0]);
     return EXIT_FAILURE;
   }
 
   for (size_t i = 1; argv[i] != NULL; i++) {
     if (!isalpha(argv[i][0])) {
-      fprintf(stderr, "export: Invalid identifier: `%s`\n", argv[i]);
+      fprintf(stderr, "export: Invalid identifier: ‘%s’\n", argv[i]);
       continue;
     }
 
@@ -26,8 +26,8 @@ int builtin_export(char **const argv) {
         break;
       }
 
-      if (!isalnum(character)) {
-        fprintf(stderr, "export: Invalid identifier: `%s`\n", argv[i]);
+      if (!isalnum(character) || character != '_') {
+        fprintf(stderr, "export: Invalid identifier: ‘%s’\n", argv[i]);
         continue;
       }
     }
