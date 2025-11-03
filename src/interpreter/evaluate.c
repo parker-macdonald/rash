@@ -11,8 +11,8 @@
 #include <unistd.h>
 
 #include "../vector.h"
-#include "glob.h"
 #include "execute.h"
+#include "glob.h"
 #include "lex.h"
 
 static bool bad_syntax(const token_t *const tokens) {
@@ -235,6 +235,11 @@ int evaluate(const token_t *tokens) {
     }
 
     if (tokens->type == GLOB_WILDCARD) {
+      // this is a really dumb solution to this problem, but the line reader
+      // assures that '\033' never be in the string, so it's not bad unless i
+      // forget to strip out '\033' when i implement shell scripts. also if
+      // futures globs besides the wildcard are added, this will need to be
+      // reworked
       VECTOR_PUSH(buffer, '\033');
       needs_globbing = true;
       continue;
@@ -243,7 +248,15 @@ int evaluate(const token_t *tokens) {
     if (tokens->type == END_ARG) {
       VECTOR_PUSH(buffer, '\0');
       if (needs_globbing) {
-        glob(&argv, buffer.data);
+        if (glob(&argv, buffer.data) == 0) {
+          for (size_t i = 0; i < buffer.length; i++) {
+            if (buffer.data[i] == '\033') {
+              buffer.data[i] = '*';
+            }
+          }
+          fprintf(stderr,"rash: nothing matched glob pattern ‘%s’.\n", buffer.data);
+          goto error;
+        }
         VECTOR_DESTROY(buffer);
       } else {
         VECTOR_PUSH(argv, buffer.data);
