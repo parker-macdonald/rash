@@ -12,7 +12,10 @@ struct queue_node {
   char *path;
   // path_len does not include the null terminator
   size_t path_len;
+  size_t pattern_index;
 };
+
+#define QUEUE_PUSH (path, path_len, pattern_index)
 
 // modified Krauss's wildcard matching algorithm
 static bool match(const char *str, const char *pattern) {
@@ -69,14 +72,14 @@ static bool match(const char *str, const char *pattern) {
 int glob(argv_t *argv, const char *pattern) {
   struct queue_node *head = malloc(sizeof(struct queue_node));
   struct queue_node *tail = head;
-  size_t queue_length = 1;
   int args_added = 0;
 
   head->p_next = NULL;
-  head->path_len = 1;
   head->path = malloc(sizeof(char) * 2);
-  head->path[1] = '\0';
+  head->path_len = 1;
+  head->pattern_index = 0;
 
+  head->path[1] = '\0';
   if (pattern[0] == '/') {
     pattern++;
     head->path[0] = '/';
@@ -84,20 +87,42 @@ int glob(argv_t *argv, const char *pattern) {
     head->path[0] = '.';
   }
 
-  while (queue_length > 0) {
+  while (head != NULL) {
     DIR *dir = opendir(head->path);
     struct dirent *ent;
 
     if (dir == NULL) {
       if (errno == ENOTDIR) {
+        struct queue_node *temp = head->p_next;
+        free(head->path);
+        free(head);
+        head = temp;
         continue;
       }
 
+      // TODO: add error handling
       assert(0);
     }
 
+    bool end = false;
+    size_t new_pattern_index = head->pattern_index;
+    for (;; new_pattern_index++) {
+      if (pattern[new_pattern_index] == '/') {
+        new_pattern_index++;
+        if (pattern[new_pattern_index] == '\0') {
+          end = true;
+        }
+        break;
+      }
+
+      if (pattern[new_pattern_index] == '\0') {
+        end = true;
+        break;
+      }
+    }
+
     while ((ent = readdir(dir)) != NULL) {
-      if (match(ent->d_name, pattern)) {
+      if (match(ent->d_name, pattern + head->pattern_index)) {
         const size_t ent_len = strlen(ent->d_name);
         const size_t path_len = head->path_len;
 
@@ -108,14 +133,20 @@ int glob(argv_t *argv, const char *pattern) {
         memcpy(new_path + path_len + 1, ent->d_name, ent_len);
         new_path[new_path_len] = '\0';
 
+        if (end) {
+          VECTOR_PUSH(*argv, new_path);
+          args_added++;
+          continue;
+        }
+
         struct queue_node *node = malloc(sizeof(struct queue_node));
         node->path = new_path;
         node->path_len = new_path_len;
         node->p_next = NULL;
+        node->pattern_index = new_pattern_index;
 
         tail->p_next = node;
         tail = node;
-        queue_length++;
       }
     }
 
@@ -123,30 +154,6 @@ int glob(argv_t *argv, const char *pattern) {
 
     struct queue_node *temp = head->p_next;
     free(head->path);
-    free(head);
-    head = temp;
-    queue_length--;
-
-    for (;; pattern++) {
-      if (*pattern == '/') {
-        pattern++;
-        if (*pattern == '\0') {
-          goto final;
-        }
-        break;
-      }
-
-      if (*pattern == '\0') {
-        goto final;
-      }
-    }
-  }
-
-final:
-  while (head != NULL) {
-    VECTOR_PUSH(*argv, head->path);
-
-    struct queue_node *temp = head->p_next;
     free(head);
     head = temp;
   }
