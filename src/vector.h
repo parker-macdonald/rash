@@ -13,6 +13,8 @@ e.g.
 ```
 VECTOR(int) my_vector;
 
+// or...
+
 typedef VECTOR(int) int_vector;
 
 int_vector my_other_vector;

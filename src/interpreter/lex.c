@@ -42,18 +42,11 @@ enum lexer_state {
       VECTOR_PUSH(tokens, ((token_t){.type = STRING, .data = buffer.data}));   \
       VECTOR_INIT(buffer);                                                     \
     }                                                                          \
-    VECTOR_PUSH(tokens, (token_t){.type = token_type});                        \
-  } while (0)
-
-#define ADD_ENV_TO_VECTOR(env_name, vector)                                    \
-  do {                                                                         \
-    uint8_t *env_value = (uint8_t *)getenv(env_name);                          \
-                                                                               \
-    if (env_value != NULL) {                                                   \
-      for (size_t j = 0; env_value[j] != '\0'; j++) {                          \
-        VECTOR_PUSH(vector, env_value[j]);                                     \
-      }                                                                        \
+    if (has_arguments) {                                                       \
+      VECTOR_PUSH(tokens, ((token_t){.type = END_ARG}));                       \
+      has_arguments = false;                                                   \
     }                                                                          \
+    VECTOR_PUSH(tokens, (token_t){.type = token_type});                        \
   } while (0)
 
 token_t *lex(const uint8_t *source) {
@@ -63,6 +56,8 @@ token_t *lex(const uint8_t *source) {
   VECTOR(uint8_t) buffer;
   VECTOR_INIT(buffer);
 
+  bool has_arguments = false;
+
   enum lexer_state state = WHITESPACE;
 
   for (size_t i = 0; source[i] != '\0'; i++) {
@@ -71,16 +66,19 @@ token_t *lex(const uint8_t *source) {
     switch (state) {
       case DEFAULT:
         if (curr == '"') {
+          has_arguments = true;
           state = DOUBLE_QUOTE;
           break;
         }
 
         if (curr == '\'') {
+          has_arguments = true;
           state = SINGLE_QUOTE;
           break;
         }
 
         if (curr == '\\') {
+          has_arguments = true;
           state = SINGLE_LITERAL;
           break;
         }
@@ -92,7 +90,12 @@ token_t *lex(const uint8_t *source) {
             VECTOR_PUSH(
                 tokens, ((token_t){.type = STRING, .data = buffer.data})
             );
+
             VECTOR_INIT(buffer);
+          }
+          if (has_arguments) {
+            VECTOR_PUSH(tokens, ((token_t){.type = END_ARG}));
+            has_arguments = false;
           }
 
           break;
@@ -161,22 +164,15 @@ token_t *lex(const uint8_t *source) {
 
         // crazy logic for enviroment variables
         if (curr == '$') {
+          has_arguments = true;
+          // if there's no character after the $, just treat the dollar sign
+          // like an ordinary character
           if (source[i + 1] == '\0') {
             VECTOR_PUSH(buffer, '$');
             break;
           }
 
-          // special variables
           i++;
-          if (isdigit((int)source[i]) || source[i] == '?') {
-            char env_name[2];
-            env_name[0] = (char)source[i];
-            env_name[1] = '\0';
-
-            ADD_ENV_TO_VECTOR(env_name, buffer);
-            break;
-          }
-
           size_t env_len = 0;
           const uint8_t *env_start = source + i;
 
@@ -209,8 +205,17 @@ token_t *lex(const uint8_t *source) {
             memcpy(env_name, env_start, env_len);
             env_name[env_len] = '\0';
 
-            ADD_ENV_TO_VECTOR(env_name, buffer);
-            free(env_name);
+            if (buffer.length != 0) {
+              VECTOR_PUSH(buffer, '\0');
+              VECTOR_PUSH(
+                  tokens, ((token_t){.type = STRING, .data = buffer.data})
+              );
+              VECTOR_INIT(buffer);
+            }
+
+            VECTOR_PUSH(
+                tokens, ((token_t){.type = ENV_EXPANSION, .data = env_name})
+            );
             break;
           }
 
@@ -230,11 +235,78 @@ token_t *lex(const uint8_t *source) {
           memcpy(env_name, env_start, env_len);
           env_name[env_len] = '\0';
 
-          ADD_ENV_TO_VECTOR(env_name, buffer);
-          free(env_name);
+          if (buffer.length != 0) {
+            VECTOR_PUSH(buffer, '\0');
+            VECTOR_PUSH(
+                tokens, ((token_t){.type = STRING, .data = buffer.data})
+            );
+            VECTOR_INIT(buffer);
+          }
+
+          VECTOR_PUSH(
+              tokens, ((token_t){.type = ENV_EXPANSION, .data = env_name})
+          );
           break;
         }
 
+        if (curr == '{') {
+          has_arguments = true;
+          i++;
+          const uint8_t *var_start = source + i;
+          size_t var_len = 0;
+
+          for (;;) {
+            if (source[i] == '}') {
+              break;
+            }
+
+            if (source[i] == '\0') {
+              fprintf(stderr, "rash: expected closing ‘}’ character.\n");
+              goto error;
+            }
+
+            i++;
+            var_len++;
+          }
+
+          if (var_len == 0) {
+            fprintf(stderr, "rash: cannot expand empty shell variable.\n");
+            goto error;
+          }
+
+          char *var_name = malloc(var_len + 1);
+          memcpy(var_name, var_start, var_len);
+          var_name[var_len] = '\0';
+
+          if (buffer.length != 0) {
+            VECTOR_PUSH(buffer, '\0');
+            VECTOR_PUSH(
+                tokens, ((token_t){.type = STRING, .data = buffer.data})
+            );
+            VECTOR_INIT(buffer);
+          }
+
+          VECTOR_PUSH(
+              tokens, ((token_t){.type = VAR_EXPANSION, .data = var_name})
+          );
+          break;
+        }
+
+        if (curr == '*') {
+          has_arguments = true;
+          if (buffer.length != 0) {
+            VECTOR_PUSH(buffer, '\0');
+            VECTOR_PUSH(
+                tokens, ((token_t){.type = STRING, .data = buffer.data})
+            );
+            VECTOR_INIT(buffer);
+          }
+          VECTOR_PUSH(tokens, ((token_t){.type = GLOB_WILDCARD}));
+
+          break;
+        }
+
+        has_arguments = true;
         VECTOR_PUSH(buffer, curr);
         break;
 
@@ -291,6 +363,10 @@ token_t *lex(const uint8_t *source) {
     VECTOR_DESTROY(buffer);
   }
 
+  if (has_arguments) {
+    VECTOR_PUSH(tokens, ((token_t){.type = END_ARG}));
+  }
+
   VECTOR_PUSH(tokens, (token_t){.type = END});
 
   return tokens.data;
@@ -299,7 +375,8 @@ error:
   VECTOR_DESTROY(buffer);
 
   for (size_t i = 0; i < tokens.length; i++) {
-    if (tokens.data[i].type == STRING || tokens.data[i].type == GLOB) {
+    if (tokens.data[i].type == STRING || tokens.data[i].type == ENV_EXPANSION ||
+        tokens.data[i].type == VAR_EXPANSION) {
       free(tokens.data[i].data);
     }
   }
@@ -311,7 +388,8 @@ error:
 
 void free_tokens(token_t **tokens) {
   for (size_t i = 0; (*tokens)[i].type != END; i++) {
-    if ((*tokens)[i].type == STRING || (*tokens)[i].type == GLOB) {
+    if ((*tokens)[i].type == STRING || (*tokens)[i].type == ENV_EXPANSION ||
+        (*tokens)[i].type == VAR_EXPANSION) {
       free((*tokens)[i].data);
     }
   }
