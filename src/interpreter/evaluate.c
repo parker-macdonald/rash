@@ -96,7 +96,7 @@ static bool bad_syntax(const token_t *const tokens) {
         return true;
       }
 
-      if (tokens[i - 1].type != STRING) {
+      if (tokens[i - 1].type != END_ARG) {
         fprintf(stderr, "rash: bad placement of ‘|’.\n");
         return true;
       }
@@ -133,7 +133,7 @@ static bool bad_syntax(const token_t *const tokens) {
         return true;
       }
 
-      if (tokens[i - 1].type != STRING) {
+      if (tokens[i - 1].type != END_ARG) {
         fprintf(stderr, "rash: bad placement of ‘||’.\n");
         return true;
       }
@@ -149,7 +149,7 @@ static bool bad_syntax(const token_t *const tokens) {
         return true;
       }
 
-      if (tokens[i - 1].type != STRING) {
+      if (tokens[i - 1].type != END_ARG) {
         fprintf(stderr, "rash: bad placement of ‘&&’.\n");
         return true;
       }
@@ -160,7 +160,7 @@ static bool bad_syntax(const token_t *const tokens) {
     }
 
     if (tokens[i].type == SEMI) {
-      if (tokens[i - 1].type != STRING) {
+      if (tokens[i - 1].type != END_ARG) {
         fprintf(stderr, "rash: bad placement of ‘;’.\n");
         return true;
       }
@@ -171,7 +171,7 @@ static bool bad_syntax(const token_t *const tokens) {
     }
 
     if (tokens[i].type == AMP) {
-      if (tokens[i - 1].type != STRING) {
+      if (tokens[i - 1].type != END_ARG) {
         fprintf(stderr, "rash: bad placement of ‘&’.\n");
         return true;
       }
@@ -258,6 +258,7 @@ int evaluate(const token_t *tokens) {
           goto error;
         }
         VECTOR_DESTROY(buffer);
+        needs_globbing = false;
       } else {
         VECTOR_PUSH(argv, buffer.data);
       }
