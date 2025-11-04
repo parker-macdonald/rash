@@ -24,7 +24,7 @@ endif
 
 ifeq ($(ERROR_HELL),1)
 	CC = clang
-	CFLAG_ERRORS = -Werror -Weverything -Wno-unsafe-buffer-usage -Wno-declaration-after-statement -Wno-switch-default -Wno-switch-enum -Wno-disabled-macro-expansion -Wno-padded -Wno-pre-c11-compat
+	CFLAG_ERRORS = -Werror -Weverything -Wno-unsafe-buffer-usage -Wno-declaration-after-statement -Wno-switch-default -Wno-switch-enum -Wno-disabled-macro-expansion -Wno-padded -Wno-pre-c11-compat -Wno-implicit-void-ptr-cast -Wno-date-time
 endif
 
 ifeq ($(DEBUG),1)
@@ -62,7 +62,7 @@ format:
 	clang-format -i $(SRC) $(HEADERS)
 
 lint:
-	$(LINTER) $(SRC) -checks=-*,bugprone-*cert-*,clang-analyzer-*,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,performance-*,portability-*,misc-* -warnings-as-errors=*,-misc-include-cleaner -- $(INCS) $(CFLAGS)
+	$(LINTER) $(SRC) -checks=-*,bugprone-*,cert-*,clang-analyzer-*,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,performance-*,portability-*,misc-* -warnings-as-errors=*,-misc-include-cleaner -- $(INCS) $(CFLAGS)
 
 build: $(BUILD)/$(OUT)
 

@@ -1,3 +1,6 @@
+#include "glob.h"
+
+#include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -14,8 +17,6 @@ struct queue_node {
   size_t path_len;
   size_t pattern_index;
 };
-
-#define QUEUE_PUSH (path, path_len, pattern_index)
 
 // modified Krauss's wildcard matching algorithm
 static bool match(const char *str, const char *pattern) {
