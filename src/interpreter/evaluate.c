@@ -254,7 +254,9 @@ int evaluate(const token_t *tokens) {
               buffer.data[i] = '*';
             }
           }
-          fprintf(stderr,"rash: nothing matched glob pattern ‘%s’.\n", buffer.data);
+          fprintf(
+              stderr, "rash: nothing matched glob pattern ‘%s’.\n", buffer.data
+          );
           goto error;
         }
         VECTOR_DESTROY(buffer);
@@ -431,7 +433,7 @@ int evaluate(const token_t *tokens) {
 
     if (tokens->type == LOGICAL_AND) {
       if (last_status != 0) {
-        while ((tokens + 1)->type == STRING) {
+        while ((tokens + 1)->type == END_ARG) {
           tokens++;
         }
       }
@@ -441,7 +443,7 @@ int evaluate(const token_t *tokens) {
 
     if (tokens->type == LOGICAL_OR) {
       if (last_status == 0) {
-        while ((tokens + 1)->type == STRING) {
+        while ((tokens + 1)->type == END_ARG) {
           tokens++;
         }
       }
