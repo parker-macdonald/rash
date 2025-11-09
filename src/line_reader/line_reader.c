@@ -124,22 +124,10 @@ void print_history(int count) {
   do {                                                                         \
     displayed_cursor_pos--;                                                    \
     if ((displayed_cursor_pos + 1) % width == 0) {                             \
-      fputs("\033[999C\033[Aa", stdout);                                       \
+      fputs("\033[999C\033[A", stdout);                                        \
     } else {                                                                   \
       fputs(ANSI_CURSOR_LEFT, stdout);                                         \
     }                                                                          \
-  } while (0)
-
-#define DRAW_LINE(line)                                                        \
-  do {                                                                         \
-    width = get_terminal_width();                                              \
-    if (characters_printed / width > 0) {                                      \
-      printf("\033[%zuA", characters_printed / width);                         \
-    }                                                                          \
-    fputs(ANSI_REMOVE_BELOW_CURSOR, stdout);                                   \
-    printf("\r");                                                              \
-    fputs(prompt, stdout);                                                     \
-    PRINT_LINE(line);                                                          \
   } while (0)
 
 const uint8_t *readline(void) {
@@ -219,8 +207,14 @@ const uint8_t *readline(void) {
               displayed_cursor_pos =
                   strlen_utf8(node->line.data, node->line.length) +
                   prompt_length;
+
+              width = get_terminal_width();
+              size_t moves_up = characters_printed / width;
+              if (moves_up) {
+                printf("\033[%zuA", moves_up);
+              }
               characters_printed = displayed_cursor_pos;
-              DRAW_LINE(node->line);
+              draw_line(prompt, &node->line);
               fflush(stdout);
             }
           } else if (node->p_prev != NULL) {
@@ -228,8 +222,14 @@ const uint8_t *readline(void) {
             cursor_pos = node->line.length;
             displayed_cursor_pos =
                 strlen_utf8(node->line.data, node->line.length) + prompt_length;
+
+            width = get_terminal_width();
+            size_t moves_up = characters_printed / width;
+            if (moves_up) {
+              printf("\033[%zuA", moves_up);
+            }
             characters_printed = displayed_cursor_pos;
-            DRAW_LINE(node->line);
+            draw_line(prompt, &node->line);
             fflush(stdout);
           }
           continue;
@@ -240,16 +240,28 @@ const uint8_t *readline(void) {
             cursor_pos = node->line.length;
             displayed_cursor_pos =
                 strlen_utf8(node->line.data, node->line.length) + prompt_length;
+
+            width = get_terminal_width();
+            size_t moves_up = characters_printed / width;
+            if (moves_up) {
+              printf("\033[%zuA", moves_up);
+            }
             characters_printed = displayed_cursor_pos;
-            DRAW_LINE(node->line);
+            draw_line(prompt, &node->line);
             fflush(stdout);
           } else {
             node = NULL;
             cursor_pos = line.length;
             displayed_cursor_pos =
                 strlen_utf8(line.data, line.length) + prompt_length;
+
+            width = get_terminal_width();
+            size_t moves_up = characters_printed / width;
+            if (moves_up) {
+              printf("\033[%zuA", moves_up);
+            }
             characters_printed = displayed_cursor_pos;
-            DRAW_LINE(line);
+            draw_line(prompt, &line);
             fflush(stdout);
           }
           continue;
@@ -375,7 +387,16 @@ const uint8_t *readline(void) {
 
     fputs(ANSI_CURSOR_POS_SAVE, stdout);
 
-    DRAW_LINE(line);
+    width = get_terminal_width();
+
+    if (characters_printed / width > 0) {
+      printf("\033[%zuA", characters_printed / width);
+    }
+    fputs(ANSI_REMOVE_BELOW_CURSOR, stdout);
+    printf("\r");
+
+    fputs(prompt, stdout);
+    PRINT_LINE(line);
 
     fputs(ANSI_CURSOR_POS_RESTORE, stdout);
 

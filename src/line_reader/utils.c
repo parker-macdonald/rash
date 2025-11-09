@@ -102,7 +102,7 @@ int getch(void) {
 void draw_line(const char *const prompt, const line_t *const line) {
   // the old line reader used to just redraw what changed, but that had lots of
   // bugs so now i'm just redrawing the whole line
-  fputs(ANSI_REMOVE_FULL_LINE, stdout);
+  fputs(ANSI_REMOVE_BELOW_CURSOR, stdout);
   // reset cursor to start of line
   fputs("\r", stdout);
 
