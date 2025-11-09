@@ -16,6 +16,16 @@
 #include "../vector.h"
 #include "line_reader.h"
 
+unsigned short get_terminal_width(void) {
+  struct winsize win;
+  if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &win) != -1) {
+    return win.ws_col;
+  } else {
+    // assume 80 columns if we cant get the terminal size
+    return 80;
+  }
+}
+
 void pretty_print_strings(char *const strings[], const size_t length) {
   unsigned int max_len = 0;
   for (size_t i = 0; i < length; i++) {
@@ -29,16 +39,7 @@ void pretty_print_strings(char *const strings[], const size_t length) {
   // add some padding
   max_len += 2;
 
-  unsigned int width;
-
-  struct winsize win;
-  if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &win) != -1) {
-    width = win.ws_col;
-  } else {
-    // assume 80 columns if we cant get the terminal size
-    width = 80;
-  }
-  const unsigned int col = width / max_len;
+  const unsigned int col = (unsigned int)get_terminal_width() / max_len;
 
   printf("\n");
 
@@ -101,7 +102,7 @@ int getch(void) {
 void draw_line(const char *const prompt, const line_t *const line) {
   // the old line reader used to just redraw what changed, but that had lots of
   // bugs so now i'm just redrawing the whole line
-  fputs(ANSI_REMOVE_FULL_LINE, stdout);
+  fputs(ANSI_REMOVE_BELOW_CURSOR, stdout);
   // reset cursor to start of line
   fputs("\r", stdout);
 

@@ -36,4 +36,12 @@ size_t traverse_forward_utf8(
  */
 bool is_continuation_byte_utf8(const uint8_t byte);
 
+/**
+ * @brief returns the number of characters in a string that is utf-8 encoded.
+ * @param str the string to read.
+ * @param len the length of the string in bytes.
+ * @return the number of characters in the string.
+*/
+size_t strlen_utf8(const uint8_t *const str, size_t len);
+
 #endif
