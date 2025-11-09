@@ -112,8 +112,7 @@ void print_history(int count) {
 #define CURSOR_RIGHT                                                           \
   do {                                                                         \
     displayed_cursor_pos++;                                                    \
-    if (displayed_cursor_pos - 1 % width != 0 &&                               \
-        displayed_cursor_pos % width == 0) {                                   \
+    if (displayed_cursor_pos % width == 0) {                                   \
       fputs("\r\033[B", stdout);                                               \
     } else {                                                                   \
       fputs(ANSI_CURSOR_RIGHT, stdout);                                        \

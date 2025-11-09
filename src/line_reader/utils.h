@@ -7,7 +7,10 @@
 
 // just a quick short hand for printing out a line.
 #define PRINT_LINE(line)                                                       \
-  fwrite((line).data, sizeof(*(line).data), (line).length, stdout)
+  do {                                                                         \
+    fwrite((line).data, sizeof(*(line).data), (line).length, stdout);          \
+    fputs(" ", stdout);                                                        \
+  } while (0)
 
 // returned by getch when a sigint interrupted the read.
 #define SIGINT_ON_READ -1
