@@ -389,7 +389,7 @@ const uint8_t *readline(void) {
 
     width = get_terminal_width();
 
-    if (characters_printed / width > 0) {
+    if (displayed_cursor_pos / width > 0) {
       printf("\033[%zuA", characters_printed / width);
     }
     fputs(ANSI_REMOVE_BELOW_CURSOR, stdout);
