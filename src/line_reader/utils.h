@@ -55,4 +55,6 @@ void add_path_matches(
     const size_t prefix_len
 );
 
+unsigned short get_terminal_width(void);
+
 #endif

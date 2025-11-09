@@ -47,7 +47,7 @@ size_t traverse_forward_utf8(
     const uint8_t *const line, const size_t line_len, const size_t cursor_pos
 ) {
   size_t offset = cursor_pos;
-  size_t char_size = count_leading_ones(line[offset]);
+  size_t char_size = (size_t)count_leading_ones(line[offset]);
 
   // if char_size is has a bad number of leading zeros, treat the character as
   // a byte
@@ -76,6 +76,18 @@ size_t traverse_forward_utf8(
   }
 
   return char_size;
+}
+
+size_t strlen_utf8(const uint8_t *const str, size_t len) {
+  size_t length = 0;
+  size_t i = 0;
+
+  while (i < len) {
+    i += traverse_forward_utf8(str, len, i);
+    length++;
+  }
+
+  return length;
 }
 
 bool is_continuation_byte_utf8(const uint8_t byte) {

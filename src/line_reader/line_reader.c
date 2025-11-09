@@ -109,6 +109,39 @@ void print_history(int count) {
   }
 }
 
+#define CURSOR_RIGHT                                                           \
+  do {                                                                         \
+    displayed_cursor_pos++;                                                    \
+    if (displayed_cursor_pos - 1 % width != 0 &&                               \
+        displayed_cursor_pos % width == 0) {                                   \
+      fputs("\r\033[B", stdout);                                               \
+    } else {                                                                   \
+      fputs(ANSI_CURSOR_RIGHT, stdout);                                        \
+    }                                                                          \
+  } while (0)
+
+#define CURSOR_LEFT                                                            \
+  do {                                                                         \
+    displayed_cursor_pos--;                                                    \
+    if ((displayed_cursor_pos + 1) % width == 0) {                             \
+      fputs("\033[999C\033[Aa", stdout);                                       \
+    } else {                                                                   \
+      fputs(ANSI_CURSOR_LEFT, stdout);                                         \
+    }                                                                          \
+  } while (0)
+
+#define DRAW_LINE(line)                                                        \
+  do {                                                                         \
+    width = get_terminal_width();                                              \
+    if (characters_printed / width > 0) {                                      \
+      printf("\033[%zuA", characters_printed / width);                         \
+    }                                                                          \
+    fputs(ANSI_REMOVE_BELOW_CURSOR, stdout);                                   \
+    printf("\r");                                                              \
+    fputs(prompt, stdout);                                                     \
+    PRINT_LINE(line);                                                          \
+  } while (0)
+
 const uint8_t *readline(void) {
   char *prompt = getenv("PS1");
   if (prompt == NULL) {
@@ -118,12 +151,17 @@ const uint8_t *readline(void) {
   printf("%s", prompt);
   fflush(stdout);
 
+  unsigned short width = get_terminal_width();
+  const size_t prompt_length = strlen(prompt);
+  size_t characters_printed = prompt_length;
+
   line_node_t *node = NULL;
 
   line_t line;
   VECTOR_INIT(line);
 
   size_t cursor_pos = 0;
+  size_t displayed_cursor_pos = characters_printed;
 
   uint8_t curr_byte;
   for (;;) {
@@ -134,6 +172,7 @@ const uint8_t *readline(void) {
     if (ch == SIGINT_ON_READ) {
       printf("\n%s", prompt);
       fflush(stdout);
+      characters_printed = prompt_length;
       line.length = 0;
       cursor_pos = 0;
       continue;
@@ -177,12 +216,21 @@ const uint8_t *readline(void) {
             if (last_line_node != NULL) {
               node = last_line_node;
               cursor_pos = node->line.length;
-              draw_line(prompt, &node->line);
+              displayed_cursor_pos =
+                  strlen_utf8(node->line.data, node->line.length) +
+                  prompt_length;
+              characters_printed = displayed_cursor_pos;
+              DRAW_LINE(node->line);
+              fflush(stdout);
             }
           } else if (node->p_prev != NULL) {
             node = node->p_prev;
             cursor_pos = node->line.length;
-            draw_line(prompt, &node->line);
+            displayed_cursor_pos =
+                strlen_utf8(node->line.data, node->line.length) + prompt_length;
+            characters_printed = displayed_cursor_pos;
+            DRAW_LINE(node->line);
+            fflush(stdout);
           }
           continue;
         // arrow down
@@ -190,11 +238,19 @@ const uint8_t *readline(void) {
           if (node != NULL && node->p_next != NULL) {
             node = node->p_next;
             cursor_pos = node->line.length;
-            draw_line(prompt, &node->line);
+            displayed_cursor_pos =
+                strlen_utf8(node->line.data, node->line.length) + prompt_length;
+            characters_printed = displayed_cursor_pos;
+            DRAW_LINE(node->line);
+            fflush(stdout);
           } else {
             node = NULL;
             cursor_pos = line.length;
-            draw_line(prompt, &line);
+            displayed_cursor_pos =
+                strlen_utf8(line.data, line.length) + prompt_length;
+            characters_printed = displayed_cursor_pos;
+            DRAW_LINE(line);
+            fflush(stdout);
           }
           continue;
         // right arrow
@@ -204,7 +260,7 @@ const uint8_t *readline(void) {
                 line_to_read->data, line_to_read->length, cursor_pos
             );
 
-            fputs(ANSI_CURSOR_RIGHT, stdout);
+            CURSOR_RIGHT;
             fflush(stdout);
           }
           continue;
@@ -213,7 +269,7 @@ const uint8_t *readline(void) {
           if (cursor_pos > 0) {
             cursor_pos -= traverse_back_utf8(line_to_read->data, cursor_pos);
 
-            fputs(ANSI_CURSOR_LEFT, stdout);
+            CURSOR_LEFT;
             fflush(stdout);
           }
           continue;
@@ -227,14 +283,14 @@ const uint8_t *readline(void) {
                   cursor_pos += traverse_forward_utf8(
                       line_to_read->data, line_to_read->length, cursor_pos
                   );
-                  fputs(ANSI_CURSOR_RIGHT, stdout);
+                  CURSOR_RIGHT;
 
                   while (cursor_pos <= line_to_read->length - 1 &&
                          line_to_read->data[cursor_pos] != ' ') {
                     cursor_pos += traverse_forward_utf8(
                         line_to_read->data, line_to_read->length, cursor_pos
                     );
-                    fputs(ANSI_CURSOR_RIGHT, stdout);
+                    CURSOR_RIGHT;
                   }
 
                   fflush(stdout);
@@ -247,13 +303,13 @@ const uint8_t *readline(void) {
                 if (cursor_pos > 0) {
                   cursor_pos -=
                       traverse_back_utf8(line_to_read->data, cursor_pos);
-                  fputs(ANSI_CURSOR_LEFT, stdout);
+                  CURSOR_LEFT;
 
                   while (cursor_pos > 0 &&
                          line_to_read->data[cursor_pos - 1] != ' ') {
                     cursor_pos -=
                         traverse_back_utf8(line_to_read->data, cursor_pos);
-                    fputs(ANSI_CURSOR_LEFT, stdout);
+                    CURSOR_LEFT;
                   }
 
                   fflush(stdout);
@@ -273,6 +329,7 @@ const uint8_t *readline(void) {
                 node = NULL;
               }
               line_delete(&line, cursor_pos);
+              characters_printed--;
             }
             // should probably refactor to not use goto, but, i mean, it
             // works...
@@ -293,7 +350,8 @@ const uint8_t *readline(void) {
         }
         const size_t bytes_removed = line_backspace(&line, cursor_pos);
         cursor_pos -= bytes_removed;
-        fputs(ANSI_CURSOR_LEFT, stdout);
+        characters_printed--;
+        CURSOR_LEFT;
         goto draw_line;
       }
 
@@ -309,19 +367,15 @@ const uint8_t *readline(void) {
     cursor_pos++;
 
     if (!is_continuation_byte_utf8(curr_byte)) {
-      fputs(ANSI_CURSOR_RIGHT, stdout);
+      CURSOR_RIGHT;
+      characters_printed++;
     }
 
   draw_line:
 
     fputs(ANSI_CURSOR_POS_SAVE, stdout);
 
-    fputs(ANSI_REMOVE_FULL_LINE, stdout);
-    // reset cursor to start of line
-    printf("\r");
-
-    fputs(prompt, stdout);
-    PRINT_LINE(line);
+    DRAW_LINE(line);
 
     fputs(ANSI_CURSOR_POS_RESTORE, stdout);
 
