@@ -44,7 +44,11 @@ int builtin_bg(char **argv) {
     return EXIT_FAILURE;
   }
 
-  kill(job->pid, SIGCONT);
+  if (kill(job->pid, SIGCONT) != 0) {
+    perror("bg: kill");
+    return EXIT_FAILURE;
+  }
+  
   job->state = JOB_RUNNING;
 
   printf("[%d] PID: %d, continued in background\n", job->id, job->pid);

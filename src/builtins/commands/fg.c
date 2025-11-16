@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <errno.h>
 #include <limits.h>
 #include <signal.h>
@@ -41,13 +42,18 @@ int builtin_fg(char **argv) {
   }
 
   fg_pid = pid;
-  kill(pid, SIGCONT);
+  if (kill(pid, SIGCONT) != 0) {
+    perror("fg: kill");
+    return EXIT_FAILURE;
+  }
 
   printf("[%d] PID: %d, continued in foreground\n", job_id, pid);
 
   int status;
 
-  waitpid(pid, &status, WUNTRACED);
+  pid_t id = waitpid(pid, &status, WUNTRACED);
+  // if this waitpid fails, something in rash has gone wrong
+  assert(id != -1);
 
   fg_pid = 0;
 

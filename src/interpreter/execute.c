@@ -112,7 +112,8 @@ int execute(const execution_context context) {
     int status = 0;
     fg_pid = pid;
 
-    waitpid(pid, &status, WUNTRACED);
+    pid_t id = waitpid(pid, &status, WUNTRACED);
+    assert(id != -1);
 
     fg_pid = 0;
 

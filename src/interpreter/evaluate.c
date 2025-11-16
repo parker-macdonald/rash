@@ -248,7 +248,8 @@ int evaluate(const token_t *tokens) {
     if (tokens->type == END_ARG) {
       VECTOR_PUSH(buffer, '\0');
       if (needs_globbing) {
-        if (glob(&argv, buffer.data) == 0) {
+        int args_added = glob(&argv, buffer.data);
+        if (args_added == 0) {
           for (size_t i = 0; i < buffer.length; i++) {
             if (buffer.data[i] == '\033') {
               buffer.data[i] = '*';
@@ -257,6 +258,9 @@ int evaluate(const token_t *tokens) {
           fprintf(
               stderr, "rash: nothing matched glob pattern ‘%s’.\n", buffer.data
           );
+          goto error;
+        }
+        if (args_added == -1) {
           goto error;
         }
         VECTOR_DESTROY(buffer);
@@ -426,7 +430,9 @@ int evaluate(const token_t *tokens) {
       VECTOR_CLEAR(argv);
 
       for (size_t i = 0; i < wait_for_me.length; i++) {
-        (void)waitpid(wait_for_me.data[i], NULL, 0);
+        pid_t id = waitpid(wait_for_me.data[i], NULL, 0);
+        // from my understanding, if waitpid fails, something in rash went wrong
+        assert(id != -1);
       }
       VECTOR_CLEAR(wait_for_me);
     }
@@ -467,6 +473,11 @@ int evaluate(const token_t *tokens) {
   return last_status;
 
 error:
+  for (size_t i = 0; i < wait_for_me.length; i++) {
+    pid_t id = waitpid(wait_for_me.data[i], NULL, 0);
+    // from my understanding, if waitpid fails, something in rash went wrong
+    assert(id != -1);
+  }
   VECTOR_DESTROY(wait_for_me);
   VECTOR_DESTROY(buffer);
   VECTOR_DESTROY(argv);

@@ -26,7 +26,7 @@ int builtin_export(char **const argv) {
         break;
       }
 
-      if (!isalnum(character) || character != '_') {
+      if (!isalnum(character) && character != '_') {
         fprintf(stderr, "export: Invalid identifier: ‘%s’\n", argv[i]);
         continue;
       }

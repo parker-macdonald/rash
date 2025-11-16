@@ -6,14 +6,14 @@
 int builtin_version(char **argv) {
   (void)argv;
 
-  printf(
-      "rash version: %s\ncompiled on: %s\n",
+  puts(
+      "rash version: "
 #ifdef VERSION
       VERSION
 #else
       "no one knows"
 #endif
-      ,
+      "\ncompiled on: "
 #ifdef __DATE__
       __DATE__
 #else

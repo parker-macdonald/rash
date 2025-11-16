@@ -1,9 +1,11 @@
 #include "glob.h"
 
+#include <asm-generic/errno-base.h>
 #include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -101,8 +103,25 @@ int glob(argv_t *argv, const char *pattern) {
         continue;
       }
 
-      // TODO: add error handling
-      assert(0);
+      if (errno == EACCES) {
+        struct queue_node *temp = head->p_next;
+        free(head->path);
+        free(head);
+        head = temp;
+        continue;
+      }
+
+      perror("glob: opendir");
+      struct queue_node *node = head;
+
+      while (node != NULL) {
+        struct queue_node *temp = node->p_next;
+        free(node->path);
+        free(node);
+        node = temp;
+      }
+
+      return -1;
     }
 
     bool end = false;
