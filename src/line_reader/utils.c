@@ -15,6 +15,7 @@
 #include "../jobs.h"
 #include "../vector.h"
 #include "line_reader.h"
+#include "prompt.h"
 
 unsigned short get_terminal_width(void) {
   struct winsize win;
@@ -106,7 +107,7 @@ void draw_line(const char *const prompt, const line_t *const line) {
   // bugs so now i'm just redrawing the whole line
   fputs(ANSI_REMOVE_BELOW_CURSOR, stdout);
 
-  fputs(prompt, stdout);
+  print_prompt(prompt);
 
   PRINT_LINE(*line);
 

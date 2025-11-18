@@ -11,6 +11,7 @@
 #include "../utf_8.h"
 #include "../vector.h"
 #include "modify_line.h"
+#include "prompt.h"
 #include "utils.h"
 
 #ifdef static_assert
@@ -129,17 +130,21 @@ void print_history(int count) {
     }                                                                          \
   } while (0)
 
+struct thread_data {
+  unsigned int delay;
+  uint8_t **prompts;
+};
+
 const uint8_t *readline(void) {
   char *prompt = getenv("PS1");
   if (prompt == NULL) {
     prompt = "$ ";
   }
 
-  printf("%s", prompt);
+  const unsigned int prompt_length = print_prompt(prompt);
   fflush(stdout);
 
   unsigned short width = get_terminal_width();
-  const size_t prompt_length = strlen(prompt);
   size_t characters_printed = prompt_length;
 
   line_node_t *node = NULL;
@@ -157,7 +162,8 @@ const uint8_t *readline(void) {
     // this is sent by the sigint handler to let the line reader know the user
     // pressed ctrl-c to trigger a SIGINT.
     if (ch == SIGINT_ON_READ) {
-      printf("\n%s", prompt);
+      fputs("\n", stdout);
+      print_prompt(prompt);
       fflush(stdout);
       characters_printed = prompt_length;
       line.length = 0;
@@ -184,7 +190,8 @@ const uint8_t *readline(void) {
         break;
       }
 
-      printf("\n%s", prompt);
+      fputs("\n", stdout);
+      print_prompt(prompt);
       fflush(stdout);
       continue;
     }
@@ -395,7 +402,7 @@ const uint8_t *readline(void) {
     fputs(ANSI_REMOVE_BELOW_CURSOR, stdout);
     printf("\r");
 
-    fputs(prompt, stdout);
+    print_prompt(prompt);
     PRINT_LINE(line);
 
     fputs(ANSI_CURSOR_POS_RESTORE, stdout);
