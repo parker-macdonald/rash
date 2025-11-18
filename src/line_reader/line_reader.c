@@ -1,11 +1,9 @@
 #include "line_reader.h"
 
 #include <assert.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "../ansi.h"
 #include "../utf_8.h"
@@ -130,18 +128,41 @@ void print_history(int count) {
     }                                                                          \
   } while (0)
 
-struct thread_data {
-  unsigned int delay;
-  uint8_t **prompts;
-};
+#define DRAW_LINE(line)                                                        \
+  do {                                                                         \
+    fputs("\r", stdout);                                                       \
+    fputs(ANSI_REMOVE_BELOW_CURSOR, stdout);                                   \
+    print_prompt(&prompts);                                                    \
+    PRINT_LINE(line);                                                          \
+    fflush(stdout);                                                            \
+  } while (0)
+
+static size_t last_frame = 0;
+
+static unsigned int print_prompt(const prompts_t *const prompts) {
+  last_frame++;
+  last_frame %= prompts->length;
+
+  fwrite(
+      prompts->data[last_frame].data,
+      prompts->data[last_frame].length,
+      1,
+      stdout
+  );
+
+  return prompts->data[last_frame].characters;
+}
 
 const uint8_t *readline(void) {
   char *prompt = getenv("PS1");
+
   if (prompt == NULL) {
-    prompt = "$ ";
+    prompt = "[x    ] \\,[ x   ] \\,[  x  ] \\,[   x ] \\,[    x] \\,[   x ] \\,[  x  ] \\,[ x   ] ";
   }
 
-  const unsigned int prompt_length = print_prompt(prompt);
+  prompts_t prompts = get_prompts(prompt);
+
+  unsigned int prompt_length = print_prompt(&prompts);
   fflush(stdout);
 
   unsigned short width = get_terminal_width();
@@ -163,7 +184,7 @@ const uint8_t *readline(void) {
     // pressed ctrl-c to trigger a SIGINT.
     if (ch == SIGINT_ON_READ) {
       fputs("\n", stdout);
-      print_prompt(prompt);
+      prompt_length = print_prompt(&prompts);
       fflush(stdout);
       characters_printed = prompt_length;
       line.length = 0;
@@ -191,7 +212,7 @@ const uint8_t *readline(void) {
       }
 
       fputs("\n", stdout);
-      print_prompt(prompt);
+      prompt_length = print_prompt(&prompts);
       fflush(stdout);
       continue;
     }
@@ -220,7 +241,7 @@ const uint8_t *readline(void) {
                 printf("\033[%zuA", moves_up);
               }
               characters_printed = displayed_cursor_pos;
-              draw_line(prompt, &node->line);
+              DRAW_LINE(node->line);
               fflush(stdout);
             }
           } else if (node->p_prev != NULL) {
@@ -235,7 +256,7 @@ const uint8_t *readline(void) {
               printf("\033[%zuA", moves_up);
             }
             characters_printed = displayed_cursor_pos;
-            draw_line(prompt, &node->line);
+            DRAW_LINE(node->line);
             fflush(stdout);
           }
           continue;
@@ -253,7 +274,7 @@ const uint8_t *readline(void) {
               printf("\033[%zuA", moves_up);
             }
             characters_printed = displayed_cursor_pos;
-            draw_line(prompt, &node->line);
+            DRAW_LINE(node->line);
             fflush(stdout);
           } else {
             node = NULL;
@@ -267,7 +288,7 @@ const uint8_t *readline(void) {
               printf("\033[%zuA", moves_up);
             }
             characters_printed = displayed_cursor_pos;
-            draw_line(prompt, &line);
+            DRAW_LINE(line);
             fflush(stdout);
           }
           continue;
@@ -381,12 +402,14 @@ const uint8_t *readline(void) {
       node = NULL;
     }
 
-    line_insert(&line, curr_byte, cursor_pos);
-    cursor_pos++;
+    if (curr_byte != 0) {
+      line_insert(&line, curr_byte, cursor_pos);
+      cursor_pos++;
 
-    if (!is_continuation_byte_utf8(curr_byte)) {
-      CURSOR_RIGHT;
-      characters_printed++;
+      if (!is_continuation_byte_utf8(curr_byte)) {
+        CURSOR_RIGHT;
+        characters_printed++;
+      }
     }
 
   draw_line:
@@ -402,7 +425,7 @@ const uint8_t *readline(void) {
     fputs(ANSI_REMOVE_BELOW_CURSOR, stdout);
     printf("\r");
 
-    print_prompt(prompt);
+    prompt_length = print_prompt(&prompts);
     PRINT_LINE(line);
 
     fputs(ANSI_CURSOR_POS_RESTORE, stdout);

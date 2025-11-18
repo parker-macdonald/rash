@@ -1,15 +1,14 @@
+#include "prompt.h"
+
 #include <errno.h>
 #include <pwd.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <sys/types.h>
+#include <stddef.h>
 #include <sys/utsname.h>
 #include <unistd.h>
 
 #include "../vector.h"
 
-char *getcwd_good(void) {
+static char *getcwd_good(void) {
   size_t cwd_size = 16;
   char *cwd = malloc(sizeof(char) * cwd_size);
 
@@ -38,18 +37,21 @@ char *getcwd_good(void) {
   return cwd;
 }
 
-unsigned int print_prompt(const char *const prompt) {
-  unsigned int characters_printed = 0;
-  VECTOR(uint8_t) buffer;
+prompts_t get_prompts(const char *const prompt) {
+  prompts_t prompts;
+  VECTOR_INIT(prompts);
+
+  unsigned int characters = 0;
+  VECTOR(char) buffer;
   VECTOR_INIT(buffer);
 
-  unsigned int counting = 1;
+  unsigned int increment = 1;
 
   for (size_t i = 0; prompt[i] != '\0'; i++) {
     if (prompt[i] == '\\') {
       if (prompt[i + 1] == '\0') {
         VECTOR_PUSH(buffer, '\\');
-        characters_printed += counting;
+        characters += increment;
         break;
       }
 
@@ -57,7 +59,7 @@ unsigned int print_prompt(const char *const prompt) {
         case 'e':
           VECTOR_PUSH(buffer, '\033');
           i++;
-          break;
+          continue;
 
         case 'h': {
           struct utsname name;
@@ -66,10 +68,10 @@ unsigned int print_prompt(const char *const prompt) {
                name.nodename[j] != '.' && name.nodename[j] != '\0';
                j++) {
             VECTOR_PUSH(buffer, name.nodename[j]);
-            characters_printed += counting;
+            characters += increment;
           }
           i++;
-          break;
+          continue;
         }
 
         case 'H': {
@@ -77,23 +79,23 @@ unsigned int print_prompt(const char *const prompt) {
           (void)uname(&name);
           for (size_t j = 0; name.nodename[j] != '\0'; j++) {
             VECTOR_PUSH(buffer, name.nodename[j]);
-            characters_printed += counting;
+            characters += increment;
           }
           i++;
-          break;
+          continue;
         }
 
         case 'n':
           VECTOR_PUSH(buffer, '\n');
-          characters_printed += counting;
+          characters += increment;
           i++;
-          break;
+          continue;
 
         case 'r':
           VECTOR_PUSH(buffer, '\r');
-          characters_printed += counting;
+          characters += increment;
           i++;
-          break;
+          continue;
 
         case 'w': {
           char *cwd = getcwd_good();
@@ -111,25 +113,25 @@ unsigned int print_prompt(const char *const prompt) {
             }
 
             VECTOR_PUSH(buffer, '~');
-            characters_printed += counting;
+            characters += increment;
 
             for (; cwd[j] != '\0'; j++) {
               VECTOR_PUSH(buffer, cwd[j]);
-              characters_printed += counting;
+              characters += increment;
             }
 
             i++;
-            break;
+            continue;
           }
 
         just_copy_all:
           for (size_t j = 0; cwd[j] != '\0'; j++) {
             VECTOR_PUSH(buffer, cwd[j]);
-            characters_printed += counting;
+            characters += increment;
           }
 
           i++;
-          break;
+          continue;
         }
 
         case 'u': {
@@ -141,43 +143,74 @@ unsigned int print_prompt(const char *const prompt) {
 
           for (size_t j = 0; p->pw_name[j] != '\0'; j++) {
             VECTOR_PUSH(buffer, p->pw_name[j]);
-            characters_printed += counting;
+            characters += increment;
           }
 
           i++;
-          break;
+          continue;
         }
 
         case '$':
           if (geteuid() == 0) {
             VECTOR_PUSH(buffer, '#');
-            characters_printed += counting;
+            characters += increment;
           } else {
             VECTOR_PUSH(buffer, '$');
-            characters_printed += counting;
+            characters += increment;
           }
           i++;
-          break;
+          continue;
 
         case '[':
-          counting = 0;
+          increment = 0;
           i++;
-          break;
+          continue;
 
         case ']':
-          counting = 1;
+          increment = 1;
           i++;
-          break;
-      }
+          continue;
 
-      continue;
+        case ',':
+          if (buffer.length == 0) {
+            VECTOR_PUSH(
+                prompts,
+                ((struct prompt){.data = NULL, .length = 0, .characters = 0})
+            );
+            continue;
+          }
+
+          VECTOR_PUSH(
+              prompts,
+              ((struct prompt){.data = buffer.data,
+                               .length = buffer.length,
+                               .characters = characters})
+          );
+          VECTOR_INIT(buffer);
+          increment = 1;
+          characters = 0;
+          i++;
+          continue;
+      }
     }
 
     VECTOR_PUSH(buffer, prompt[i]);
-    characters_printed += counting;
+    characters += increment;
   }
 
-  fwrite(buffer.data, buffer.length, 1, stdout);
+  if (buffer.length == 0) {
+    VECTOR_DESTROY(buffer);
+    VECTOR_PUSH(
+        prompts, ((struct prompt){.data = NULL, .length = 0, .characters = 0})
+    );
+  } else {
+    VECTOR_PUSH(
+        prompts,
+        ((struct prompt){.data = buffer.data,
+                         .length = buffer.length,
+                         .characters = characters})
+    );
+  }
 
-  return characters_printed;
+  return prompts;
 }

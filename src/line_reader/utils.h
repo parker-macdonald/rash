@@ -34,15 +34,6 @@ void pretty_print_strings(char *const strings[], const size_t length);
 int getch(void);
 
 /**
- * @brief prints the prompt followed by the line, the cursor position is
- * preserved.
- * @param prompt the prompt to print, currently this is printed as is, and thus
- * is not expanded.
- * @param line the line to print
- */
-void draw_line(const char *const prompt, const line_t *const line);
-
-/**
  * @brief searches the files in path and adds the files that begin with prefix
  * to the matches vector.
  * @param matches the vector to add the matches to.
