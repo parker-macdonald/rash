@@ -9,6 +9,7 @@
 #include "interpreter/lex.h"
 #include "jobs.h"
 #include "line_reader/line_reader.h"
+#include "shell_vars.h"
 #include "should_exit.h"
 
 bool should_exit = false;
@@ -32,7 +33,7 @@ int main(int argc, char **argv) {
   trie_init();
   sig_handler_init();
 
-  setenv("PS1", "$ ", 0);
+  set_var("PS1", "$ ");
 
   while (!should_exit) {
     const uint8_t *line = readline();
@@ -57,10 +58,10 @@ int main(int argc, char **argv) {
     }
 
     // 3 digit number (exit status is max of 255) + null terminator
-    char status_env[3 + 1] = {0};
+    char status_str[3 + 1] = {0};
 
-    snprintf(status_env, sizeof(status_env), "%d", status);
-    setenv("?", status_env, 1);
+    snprintf(status_str, sizeof(status_str), "%d", status);
+    set_var("?", status_str);
   }
 
   line_reader_destroy();

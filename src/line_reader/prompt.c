@@ -37,10 +37,7 @@ static char *getcwd_good(void) {
   return cwd;
 }
 
-prompts_t get_prompts(const char *const prompt) {
-  prompts_t prompts;
-  VECTOR_INIT(prompts);
-
+unsigned int get_prompt(char** dest, const char *const prompt) {
   unsigned int characters = 0;
   VECTOR(char) buffer;
   VECTOR_INIT(buffer);
@@ -63,6 +60,7 @@ prompts_t get_prompts(const char *const prompt) {
 
         case 'h': {
           struct utsname name;
+          // this function only fails if name is an invalid pointer, and it isn't
           (void)uname(&name);
           for (size_t j = 0;
                name.nodename[j] != '.' && name.nodename[j] != '\0';
@@ -76,6 +74,7 @@ prompts_t get_prompts(const char *const prompt) {
 
         case 'H': {
           struct utsname name;
+          // this function only fails if name is an invalid pointer, and it isn't
           (void)uname(&name);
           for (size_t j = 0; name.nodename[j] != '\0'; j++) {
             VECTOR_PUSH(buffer, name.nodename[j]);
@@ -170,27 +169,6 @@ prompts_t get_prompts(const char *const prompt) {
           increment = 1;
           i++;
           continue;
-
-        case ',':
-          if (buffer.length == 0) {
-            VECTOR_PUSH(
-                prompts,
-                ((struct prompt){.data = NULL, .length = 0, .characters = 0})
-            );
-            continue;
-          }
-
-          VECTOR_PUSH(
-              prompts,
-              ((struct prompt){.data = buffer.data,
-                               .length = buffer.length,
-                               .characters = characters})
-          );
-          VECTOR_INIT(buffer);
-          increment = 1;
-          characters = 0;
-          i++;
-          continue;
       }
     }
 
@@ -198,19 +176,7 @@ prompts_t get_prompts(const char *const prompt) {
     characters += increment;
   }
 
-  if (buffer.length == 0) {
-    VECTOR_DESTROY(buffer);
-    VECTOR_PUSH(
-        prompts, ((struct prompt){.data = NULL, .length = 0, .characters = 0})
-    );
-  } else {
-    VECTOR_PUSH(
-        prompts,
-        ((struct prompt){.data = buffer.data,
-                         .length = buffer.length,
-                         .characters = characters})
-    );
-  }
-
-  return prompts;
+  VECTOR_PUSH(buffer, '\0');
+  *dest = buffer.data;
+  return characters;
 }

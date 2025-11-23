@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "../ansi.h"
+#include "../shell_vars.h"
 #include "../utf_8.h"
 #include "../vector.h"
 #include "modify_line.h"
@@ -130,6 +131,12 @@ void print_history(int count) {
 
 #define DRAW_LINE(line)                                                        \
   do {                                                                         \
+    printf("\r\033[0J%s%.*s", prompt, (int)line.length, (char *)line.data);    \
+    fflush(stdout);                                                            \
+  } while (0)
+
+#define PRINT_PROMPT(line)                                                     \
+  do {                                                                         \
     fputs("\r", stdout);                                                       \
     fputs(ANSI_REMOVE_BELOW_CURSOR, stdout);                                   \
     print_prompt(&prompts);                                                    \
@@ -137,32 +144,19 @@ void print_history(int count) {
     fflush(stdout);                                                            \
   } while (0)
 
-static size_t last_frame = 0;
-
-static unsigned int print_prompt(const prompts_t *const prompts) {
-  last_frame++;
-  last_frame %= prompts->length;
-
-  fwrite(
-      prompts->data[last_frame].data,
-      prompts->data[last_frame].length,
-      1,
-      stdout
-  );
-
-  return prompts->data[last_frame].characters;
-}
-
 const uint8_t *readline(void) {
-  char *prompt = getenv("PS1");
+  const char *prompt_var = get_var("PS1");
+  char *prompt;
+  unsigned int prompt_length;
 
-  if (prompt == NULL) {
-    prompt = "[x    ] \\,[ x   ] \\,[  x  ] \\,[   x ] \\,[    x] \\,[   x ] \\,[  x  ] \\,[ x   ] ";
+  if (prompt_var == NULL) {
+    prompt = "$ ";
+    prompt_length = 2;
+  } else {
+    prompt_length = get_prompt(&prompt, prompt_var);
   }
 
-  prompts_t prompts = get_prompts(prompt);
-
-  unsigned int prompt_length = print_prompt(&prompts);
+  fputs(prompt, stdout);
   fflush(stdout);
 
   unsigned short width = get_terminal_width();
@@ -183,9 +177,10 @@ const uint8_t *readline(void) {
     // this is sent by the sigint handler to let the line reader know the user
     // pressed ctrl-c to trigger a SIGINT.
     if (ch == SIGINT_ON_READ) {
-      fputs("\n", stdout);
-      prompt_length = print_prompt(&prompts);
+      printf("\n%s", prompt);
       fflush(stdout);
+      fflush(stdout);
+
       characters_printed = prompt_length;
       line.length = 0;
       cursor_pos = 0;
@@ -196,6 +191,9 @@ const uint8_t *readline(void) {
 
     if (curr_byte == ASCII_END_OF_TRANSMISSION) {
       printf("\n");
+      if (prompt_var != NULL) {
+        free(prompt);
+      }
       VECTOR_DESTROY(line);
       line_reader_destroy();
       return NULL;
@@ -211,8 +209,7 @@ const uint8_t *readline(void) {
         break;
       }
 
-      fputs("\n", stdout);
-      prompt_length = print_prompt(&prompts);
+      printf("\n%s", prompt);
       fflush(stdout);
       continue;
     }
@@ -422,11 +419,8 @@ const uint8_t *readline(void) {
     if (moves_up > 0) {
       printf("\033[%zuA", moves_up);
     }
-    fputs(ANSI_REMOVE_BELOW_CURSOR, stdout);
-    printf("\r");
 
-    prompt_length = print_prompt(&prompts);
-    PRINT_LINE(line);
+    DRAW_LINE(line);
 
     fputs(ANSI_CURSOR_POS_RESTORE, stdout);
 
@@ -456,6 +450,10 @@ const uint8_t *readline(void) {
   last_line_node = new_node;
 
   printf("\n");
+
+  if (prompt_var != NULL) {
+    free(prompt);
+  }
 
   return line.data;
 }
