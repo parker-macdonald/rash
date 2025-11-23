@@ -1,6 +1,5 @@
 #include "glob.h"
 
-#include <asm-generic/errno-base.h>
 #include <assert.h>
 #include <dirent.h>
 #include <errno.h>
