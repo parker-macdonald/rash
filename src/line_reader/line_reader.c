@@ -97,7 +97,7 @@ void print_history(int count) {
     count = length;
   }
 
-  for (int i = count - 1; node != NULL; i--) {
+  for (unsigned int i = (unsigned int)count - 1; node != NULL; i--) {
     printf(
         "%5u  %.*s\n", i, (int)node->const_line_len, (char *)node->const_line
     );
@@ -127,15 +127,6 @@ void print_history(int count) {
 
 #define DRAW_LINE(line)                                                        \
   printf("\r\033[0J%s%.*s", prompt, (int)(line).length, (char *)(line).data)
-
-#define PRINT_PROMPT(line)                                                     \
-  do {                                                                         \
-    fputs("\r", stdout);                                                       \
-    fputs(ANSI_REMOVE_BELOW_CURSOR, stdout);                                   \
-    print_prompt(&prompts);                                                    \
-    PRINT_LINE(line);                                                          \
-    fflush(stdout);                                                            \
-  } while (0)
 
 const uint8_t *readline(void) {
   const char *prompt_var = get_var("PS1");
@@ -171,7 +162,6 @@ const uint8_t *readline(void) {
     // pressed ctrl-c to trigger a SIGINT.
     if (ch == SIGINT_ON_READ) {
       printf("\n%s", prompt);
-      fflush(stdout);
       fflush(stdout);
 
       characters_printed = prompt_length;

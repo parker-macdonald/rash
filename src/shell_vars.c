@@ -1,3 +1,5 @@
+#include "shell_vars.h"
+
 #include <stdlib.h>
 #include <string.h>
 

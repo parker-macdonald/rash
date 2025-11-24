@@ -8,7 +8,7 @@ typedef enum {
   // '<' used to redirect stdin from a file
   STDIN_REDIR = 1 << 1,
   // '<<<' used to redirect stdin from a string
-  STDIN_REDIR_STRING= 1 << 2,
+  STDIN_REDIR_STRING = 1 << 2,
   // '>' used to redirect stdout to a file, replace file contents
   STDOUT_REDIR = 1 << 3,
   // '>>' used to redirect stdout to a file, append to file contents

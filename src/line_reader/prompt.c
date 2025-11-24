@@ -2,7 +2,7 @@
 
 #include <errno.h>
 #include <pwd.h>
-#include <stddef.h>
+#include <stdlib.h>
 #include <sys/utsname.h>
 #include <unistd.h>
 
@@ -37,7 +37,7 @@ static char *getcwd_good(void) {
   return cwd;
 }
 
-unsigned int get_prompt(char** dest, const char *const prompt) {
+unsigned int get_prompt(char **dest, const char *const prompt) {
   unsigned int characters = 0;
   VECTOR(char) buffer;
   VECTOR_INIT(buffer);
@@ -60,7 +60,8 @@ unsigned int get_prompt(char** dest, const char *const prompt) {
 
         case 'h': {
           struct utsname name;
-          // this function only fails if name is an invalid pointer, and it isn't
+          // this function only fails if name is an invalid pointer, and it
+          // isn't
           (void)uname(&name);
           for (size_t j = 0;
                name.nodename[j] != '.' && name.nodename[j] != '\0';
@@ -74,7 +75,8 @@ unsigned int get_prompt(char** dest, const char *const prompt) {
 
         case 'H': {
           struct utsname name;
-          // this function only fails if name is an invalid pointer, and it isn't
+          // this function only fails if name is an invalid pointer, and it
+          // isn't
           (void)uname(&name);
           for (size_t j = 0; name.nodename[j] != '\0'; j++) {
             VECTOR_PUSH(buffer, name.nodename[j]);

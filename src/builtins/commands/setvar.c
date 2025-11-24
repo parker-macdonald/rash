@@ -1,10 +1,12 @@
-#include "../../shell_vars.h"
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "../../shell_vars.h"
+#include "../builtins.h"
+
 int builtin_setvar(char **argv) {
   if (argv[1] == NULL || argv[2] == NULL) {
-    fputs("Usage: setvar KEY VALUE\n",stderr);
+    fputs("Usage: setvar KEY VALUE\n", stderr);
     return EXIT_FAILURE;
   }
 
