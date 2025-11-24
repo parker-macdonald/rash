@@ -107,7 +107,7 @@ unsigned int get_prompt(char **dest, const char *const prompt) {
           char *home = getenv("HOME");
           if (home != NULL) {
             size_t j;
-            for (j = 0; home[j] != '\0' && cwd[j] != '\0'; j++) {
+            for (j = 0; home[j] != '\0'; j++) {
               if (cwd[j] != home[j]) {
                 goto just_copy_all;
               }
