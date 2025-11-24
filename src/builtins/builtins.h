@@ -27,4 +27,6 @@ int builtin_version(char **argv);
 
 int builtin_setvar(char **argv);
 
+int builtin_unsetvar(char **argv);
+
 #endif

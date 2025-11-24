@@ -55,3 +55,29 @@ const char *get_var(const char *const key) {
 
   return NULL;
 }
+
+int unset_var(const char *const key) {
+  struct var_node *prev = NULL;
+  struct var_node *node = head;
+
+  while (node != NULL) {
+    if (strcmp(node->key, key) == 0) {
+      free(node->key);
+      free(node->value);
+
+      if (prev == NULL) {
+        head = node->p_next;
+      } else {
+        prev->p_next = node->p_next;
+      }
+
+      free(node);
+      return 0;
+    }
+
+    prev = node;
+    node = node->p_next;
+  }
+
+  return 1;
+}

@@ -73,6 +73,7 @@ void trie_init(void) {
   trie_insert("jobs", &builtin_jobs);
   trie_insert("version", &builtin_version);
   trie_insert("setvar", &builtin_setvar);
+  trie_insert("unsetvar", &builtin_unsetvar);
 }
 
 builtin_t find_builtin(const char *const str) {
