@@ -64,11 +64,7 @@ int main(int argc, char **argv) {
     set_var("?", status_str);
   }
 
-  line_reader_destroy();
-
   fclose(file);
-
-  trie_destroy();
 
   return status;
 }
