@@ -62,8 +62,6 @@ int getch(void) {
   tcgetattr(STDIN_FILENO, &oldt);
   newt = oldt;
   newt.c_lflag &= ~(unsigned int)(ICANON | ECHO);
-  newt.c_cc[VTIME] = 1;
-  newt.c_cc[VMIN] = 0;
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
   for (;;) {
