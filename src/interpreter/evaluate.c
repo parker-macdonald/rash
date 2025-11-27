@@ -10,6 +10,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "../shell_vars.h"
 #include "../vector.h"
 #include "execute.h"
 #include "glob.h"
@@ -222,6 +223,25 @@ int evaluate(const token_t *tokens) {
         fprintf(
             stderr,
             "rash: environment variable ‘%s’ does not exist.\n",
+            (char *)tokens->data
+        );
+        goto error;
+      }
+
+      for (size_t i = 0; value[i] != '\0'; i++) {
+        VECTOR_PUSH(buffer, value[i]);
+      }
+
+      continue;
+    }
+
+    if (tokens->type == VAR_EXPANSION) {
+      const char *value = get_var((char *)tokens->data);
+
+      if (value == NULL) {
+        fprintf(
+            stderr,
+            "rash: shell variable ‘%s’ does not exist.\n",
             (char *)tokens->data
         );
         goto error;

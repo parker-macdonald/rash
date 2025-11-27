@@ -14,7 +14,6 @@
 #include "../ansi.h"
 #include "../jobs.h"
 #include "../vector.h"
-#include "line_reader.h"
 
 unsigned short get_terminal_width(void) {
   struct winsize win;
@@ -57,14 +56,13 @@ void pretty_print_strings(char *const strings[], const size_t length) {
 int getch(void) {
   struct termios oldt = {0};
   struct termios newt = {0};
-  uint8_t byte;
+  uint8_t byte = 0;
   ssize_t nread;
 
-  tcgetattr(STDIN_FILENO, &oldt); // Get the current terminal settings
-  newt = oldt;                    // Copy them to a new variable
-  newt.c_lflag &=
-      ~(unsigned int)(ICANON | ECHO);      // Disable canonical mode and echo
-  tcsetattr(STDIN_FILENO, TCSANOW, &newt); // Set the new settings
+  tcgetattr(STDIN_FILENO, &oldt);
+  newt = oldt;
+  newt.c_lflag &= ~(unsigned int)(ICANON | ECHO);
+  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
   for (;;) {
     errno = 0;
@@ -97,20 +95,6 @@ int getch(void) {
   }
 
   return (int)byte;
-}
-
-void draw_line(const char *const prompt, const line_t *const line) {
-  // reset cursor to start of line
-  fputs("\r", stdout);
-  // the old line reader used to just redraw what changed, but that had lots of
-  // bugs so now i'm just redrawing the whole line
-  fputs(ANSI_REMOVE_BELOW_CURSOR, stdout);
-
-  fputs(prompt, stdout);
-
-  PRINT_LINE(*line);
-
-  fflush(stdout);
 }
 
 void add_path_matches(

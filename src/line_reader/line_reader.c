@@ -1,16 +1,17 @@
 #include "line_reader.h"
 
 #include <assert.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "../ansi.h"
+#include "../shell_vars.h"
 #include "../utf_8.h"
 #include "../vector.h"
 #include "modify_line.h"
+#include "prompt.h"
 #include "utils.h"
 
 #ifdef static_assert
@@ -23,29 +24,15 @@ static_assert(
 typedef struct line_node {
   struct line_node *p_next;
   struct line_node *p_prev;
-  line_t line;
+  // line that can be mutated by using the up and down arrows
+  line_t mut_line;
+  // line thats used for displaying history
+  uint8_t *const_line;
+  size_t const_line_len;
 } line_node_t;
 
 static line_node_t *root_line_node = NULL;
 static line_node_t *last_line_node = NULL;
-
-void line_reader_destroy(void) {
-  line_node_t *node = last_line_node;
-
-  while (node != NULL) {
-    VECTOR_DESTROY(node->line);
-
-    line_node_t *prev_node = node->p_prev;
-
-    free(node);
-    node = NULL;
-
-    node = prev_node;
-  }
-
-  root_line_node = NULL;
-  last_line_node = NULL;
-}
 
 void clear_history(void) {
   line_node_t *node = root_line_node;
@@ -53,10 +40,19 @@ void clear_history(void) {
   while (node != NULL) {
     line_node_t *next_node = node->p_next;
 
+    free(node->const_line);
+    VECTOR_DESTROY(node->mut_line);
     free(node);
 
     node = next_node;
   }
+  root_line_node = NULL;
+  last_line_node = NULL;
+}
+
+void line_reader_destroy(void) {
+  clear_history();
+
   root_line_node = NULL;
   last_line_node = NULL;
 }
@@ -72,9 +68,9 @@ void print_history(int count) {
 
   if (count == -1) {
     for (unsigned int i = 1; node != NULL; i++) {
-      printf("%5u  ", i);
-      PRINT_LINE(node->line);
-      fputs("\n", stdout);
+      printf(
+          "%5u  %.*s\n", i, (int)node->const_line_len, (char *)node->const_line
+      );
       node = node->p_next;
     }
 
@@ -101,10 +97,10 @@ void print_history(int count) {
     count = length;
   }
 
-  for (int i = count - 1; node != NULL; i--) {
-    printf("%5d  ", length - i);
-    PRINT_LINE(node->line);
-    fputs("\n", stdout);
+  for (unsigned int i = (unsigned int)count - 1; node != NULL; i--) {
+    printf(
+        "%5u  %.*s\n", i, (int)node->const_line_len, (char *)node->const_line
+    );
     node = node->p_next;
   }
 }
@@ -129,17 +125,25 @@ void print_history(int count) {
     }                                                                          \
   } while (0)
 
+#define DRAW_LINE(line)                                                        \
+  printf("\r\033[0J%s%.*s", prompt, (int)(line).length, (char *)(line).data)
+
 const uint8_t *readline(void) {
-  char *prompt = getenv("PS1");
-  if (prompt == NULL) {
+  const char *prompt_var = get_var("PS1");
+  char *prompt;
+  unsigned int prompt_length;
+
+  if (prompt_var == NULL) {
     prompt = "$ ";
+    prompt_length = 2;
+  } else {
+    prompt_length = get_prompt(&prompt, prompt_var);
   }
 
-  printf("%s", prompt);
+  fputs(prompt, stdout);
   fflush(stdout);
 
   unsigned short width = get_terminal_width();
-  const size_t prompt_length = strlen(prompt);
   size_t characters_printed = prompt_length;
 
   line_node_t *node = NULL;
@@ -159,6 +163,7 @@ const uint8_t *readline(void) {
     if (ch == SIGINT_ON_READ) {
       printf("\n%s", prompt);
       fflush(stdout);
+
       characters_printed = prompt_length;
       line.length = 0;
       cursor_pos = 0;
@@ -169,6 +174,9 @@ const uint8_t *readline(void) {
 
     if (curr_byte == ASCII_END_OF_TRANSMISSION) {
       printf("\n");
+      if (prompt_var != NULL) {
+        free(prompt);
+      }
       VECTOR_DESTROY(line);
       line_reader_destroy();
       return NULL;
@@ -177,7 +185,7 @@ const uint8_t *readline(void) {
     // readonly line to get length or data info from. when the user is going
     // through history, node contains the line they are viewing whereas line
     // contains the buffer the user is currently editting
-    line_t *line_to_read = node == NULL ? &line : &node->line;
+    line_t *line_to_read = node == NULL ? &line : &node->mut_line;
 
     if (curr_byte == '\n') {
       if (line_to_read->length != 0) {
@@ -202,9 +210,9 @@ const uint8_t *readline(void) {
           if (node == NULL) {
             if (last_line_node != NULL) {
               node = last_line_node;
-              cursor_pos = node->line.length;
+              cursor_pos = node->mut_line.length;
               displayed_cursor_pos =
-                  strlen_utf8(node->line.data, node->line.length) +
+                  strlen_utf8(node->mut_line.data, node->mut_line.length) +
                   prompt_length;
 
               width = get_terminal_width();
@@ -213,14 +221,15 @@ const uint8_t *readline(void) {
                 printf("\033[%zuA", moves_up);
               }
               characters_printed = displayed_cursor_pos;
-              draw_line(prompt, &node->line);
+              DRAW_LINE(node->mut_line);
               fflush(stdout);
             }
           } else if (node->p_prev != NULL) {
             node = node->p_prev;
-            cursor_pos = node->line.length;
+            cursor_pos = node->mut_line.length;
             displayed_cursor_pos =
-                strlen_utf8(node->line.data, node->line.length) + prompt_length;
+                strlen_utf8(node->mut_line.data, node->mut_line.length) +
+                prompt_length;
 
             width = get_terminal_width();
             size_t moves_up = characters_printed / width;
@@ -228,7 +237,7 @@ const uint8_t *readline(void) {
               printf("\033[%zuA", moves_up);
             }
             characters_printed = displayed_cursor_pos;
-            draw_line(prompt, &node->line);
+            DRAW_LINE(node->mut_line);
             fflush(stdout);
           }
           continue;
@@ -236,9 +245,10 @@ const uint8_t *readline(void) {
         case 'B':
           if (node != NULL && node->p_next != NULL) {
             node = node->p_next;
-            cursor_pos = node->line.length;
+            cursor_pos = node->mut_line.length;
             displayed_cursor_pos =
-                strlen_utf8(node->line.data, node->line.length) + prompt_length;
+                strlen_utf8(node->mut_line.data, node->mut_line.length) +
+                prompt_length;
 
             width = get_terminal_width();
             size_t moves_up = characters_printed / width;
@@ -246,7 +256,7 @@ const uint8_t *readline(void) {
               printf("\033[%zuA", moves_up);
             }
             characters_printed = displayed_cursor_pos;
-            draw_line(prompt, &node->line);
+            DRAW_LINE(node->mut_line);
             fflush(stdout);
           } else {
             node = NULL;
@@ -260,7 +270,7 @@ const uint8_t *readline(void) {
               printf("\033[%zuA", moves_up);
             }
             characters_printed = displayed_cursor_pos;
-            draw_line(prompt, &line);
+            DRAW_LINE(line);
             fflush(stdout);
           }
           continue;
@@ -335,11 +345,7 @@ const uint8_t *readline(void) {
           // delete key
           if (getch() == '~') {
             if (cursor_pos < line_to_read->length) {
-              if (node != NULL) {
-                line_copy(&line, &node->line);
-                node = NULL;
-              }
-              line_delete(&line, cursor_pos);
+              line_delete(line_to_read, cursor_pos);
               characters_printed--;
             }
             // should probably refactor to not use goto, but, i mean, it
@@ -355,11 +361,7 @@ const uint8_t *readline(void) {
     // backspace
     if (curr_byte == ASCII_DEL) {
       if (cursor_pos > 0) {
-        if (node != NULL) {
-          line_copy(&line, &node->line);
-          node = NULL;
-        }
-        const size_t bytes_removed = line_backspace(&line, cursor_pos);
+        const size_t bytes_removed = line_backspace(line_to_read, cursor_pos);
         cursor_pos -= bytes_removed;
         characters_printed--;
         CURSOR_LEFT;
@@ -369,17 +371,14 @@ const uint8_t *readline(void) {
       continue;
     }
 
-    if (node != NULL) {
-      line_copy(&line, &node->line);
-      node = NULL;
-    }
+    if (curr_byte != 0) {
+      line_insert(line_to_read, curr_byte, cursor_pos);
+      cursor_pos++;
 
-    line_insert(&line, curr_byte, cursor_pos);
-    cursor_pos++;
-
-    if (!is_continuation_byte_utf8(curr_byte)) {
-      CURSOR_RIGHT;
-      characters_printed++;
+      if (!is_continuation_byte_utf8(curr_byte)) {
+        CURSOR_RIGHT;
+        characters_printed++;
+      }
     }
 
   draw_line:
@@ -392,11 +391,8 @@ const uint8_t *readline(void) {
     if (moves_up > 0) {
       printf("\033[%zuA", moves_up);
     }
-    fputs(ANSI_REMOVE_BELOW_CURSOR, stdout);
-    printf("\r");
 
-    fputs(prompt, stdout);
-    PRINT_LINE(line);
+    DRAW_LINE(*line_to_read);
 
     fputs(ANSI_CURSOR_POS_RESTORE, stdout);
 
@@ -405,16 +401,19 @@ const uint8_t *readline(void) {
 
   line_node_t *new_node = malloc(sizeof(line_node_t));
   if (node != NULL) {
-    node->line.length++;
-    line_copy(&line, &node->line);
-    node->line.length--;
+    VECTOR_PUSH(node->mut_line, '\0');
+    line_copy(&line, &node->mut_line);
+    node->mut_line.length--;
     line.length--;
   } else {
     VECTOR_PUSH(line, '\0');
     line.length--;
   }
 
-  new_node->line = line;
+  new_node->mut_line = line;
+  new_node->const_line = malloc(line.length + 1);
+  strcpy((char *)new_node->const_line, (char *)line.data);
+  new_node->const_line_len = line.length;
 
   new_node->p_next = NULL;
   new_node->p_prev = last_line_node;
@@ -426,6 +425,10 @@ const uint8_t *readline(void) {
   last_line_node = new_node;
 
   printf("\n");
+
+  if (prompt_var != NULL) {
+    free(prompt);
+  }
 
   return line.data;
 }
