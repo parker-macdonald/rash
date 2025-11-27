@@ -86,7 +86,7 @@ int getch(void) {
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // Restore original settings
 
   if (nread == 0) {
-    return 0;
+    return ASCII_END_OF_TRANSMISSION;
   }
 
   if (nread == -1) {

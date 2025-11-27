@@ -59,11 +59,11 @@ static void sigtstp_handler(int sig) {
 
 void sig_handler_init(void) {
   sigint_act.sa_handler = sigint_handler;
-  sigint_act.sa_flags = 0;
+  sigint_act.sa_flags = SA_RESTART;
   sigemptyset(&sigint_act.sa_mask);
 
   sigtstp_act.sa_handler = sigtstp_handler;
-  sigtstp_act.sa_flags = 0;
+  sigtstp_act.sa_flags = SA_RESTART;
   sigemptyset(&sigtstp_act.sa_mask);
 
   // Set up SIGINT handler using sigaction
