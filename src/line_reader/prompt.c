@@ -122,6 +122,7 @@ unsigned int get_prompt(char **dest, const char *const prompt) {
             }
 
             i++;
+            free(cwd);
             continue;
           }
 
@@ -132,6 +133,7 @@ unsigned int get_prompt(char **dest, const char *const prompt) {
           }
 
           i++;
+          free(cwd);
           continue;
         }
 
