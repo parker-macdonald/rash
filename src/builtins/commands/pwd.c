@@ -2,12 +2,19 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "../builtins.h"
 
+const char *const PWD_HELP = "Usage: pwd\n"
+                             "Prints the current working directory.";
+
 int builtin_pwd(char **argv) {
-  (void)argv;
+  if (argv[1] != NULL && strcmp(argv[1], "--help") == 0) {
+    puts(PWD_HELP);
+    return EXIT_SUCCESS;
+  }
 
   size_t cwd_size = 16;
   char *cwd = malloc(sizeof(char) * cwd_size);

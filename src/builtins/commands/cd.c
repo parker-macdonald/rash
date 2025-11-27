@@ -1,8 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "../builtins.h"
+
+const char *const CD_HELP =
+    "Usage: cd [DIR]\n"
+    "Set the current working directory to DIR.\n"
+    "If no directory is specified, the value of the HOME enviroment variable\n"
+    "is used instead.";
 
 int builtin_cd(char **const argv) {
   char *path = argv[1];
@@ -15,6 +22,11 @@ int builtin_cd(char **const argv) {
     }
 
     path = home;
+  }
+
+  if (strcmp(argv[1], "--help") == 0) {
+    puts(CD_HELP);
+    return EXIT_SUCCESS;
   }
 
   if (chdir(path) == -1) {

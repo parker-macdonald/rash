@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "builtins/find_builtin.h"
 #include "interpreter/evaluate.h"
@@ -13,10 +14,22 @@
 
 bool should_exit = false;
 
+extern const char *const VERSION_STRING;
+extern const char *const HELP_STRING;
+
 int main(int argc, char **argv) {
   FILE *file = NULL;
 
   if (argc == 2) {
+    if (strcmp(argv[1], "--version") == 0) {
+      puts(VERSION_STRING);
+      return 0;
+    }
+
+    if (strcmp(argv[1], "--help") == 0) {
+      puts(HELP_STRING);
+      return 0;
+    }
     fprintf(stderr, "rash: Non-interactive mode is currently disabled\n");
     return EXIT_FAILURE;
   }

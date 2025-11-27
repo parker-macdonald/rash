@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 
 #include "../../jobs.h"
@@ -11,12 +12,22 @@
 
 #define BASE 10
 
+const char *const FG_HELP =
+    "Usage: fg [JOB_ID]\n"
+    "Run a paused job in the foreground based on the job id.\n"
+    "If no job id is specified, the most recent job is used instead.";
+
 int builtin_fg(char **argv) {
   int job_id;
 
   if (argv[1] == NULL) {
     job_id = -1;
   } else {
+    if (strcmp(argv[1], "--help") == 0) {
+      puts(FG_HELP);
+      return EXIT_FAILURE;
+    }
+
     char *endptr;
     errno = 0;
     long num = strtol(argv[1], &endptr, BASE);

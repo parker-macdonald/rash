@@ -9,12 +9,25 @@
 
 #define BASE 10
 
+const char *const HISTORY_HELP =
+    "Usage: history [-c] [COUNT]\n"
+    "View the last COUNT commands.\n"
+    "If count isn't specified, all history is printed.\n"
+    "When the -c option is specied, all command history is cleared and "
+    "nothing\n"
+    "is displayed.";
+
 int builtin_history(char **const argv) {
   int count = -1;
 
   if (argv[1] != NULL) {
     if (strcmp(argv[1], "-c") == 0) {
       clear_history();
+      return EXIT_SUCCESS;
+    }
+
+    if (strcmp(argv[1], "--help") == 0) {
+      puts(HISTORY_HELP);
       return EXIT_SUCCESS;
     }
 

@@ -3,11 +3,17 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "../../jobs.h"
 #include "../builtins.h"
 
 #define BASE 10
+
+const char *const BG_HELP =
+    "Usage: bg [JOB_ID]\n"
+    "Run a paused job in the background based on the job id.\n"
+    "If no job id is specified, the most recent job is used instead.";
 
 int builtin_bg(char **argv) {
   int job_id;
@@ -15,6 +21,11 @@ int builtin_bg(char **argv) {
   if (argv[1] == NULL) {
     job_id = -1;
   } else {
+    if (strcmp(argv[1], "--help") == 0) {
+      puts(BG_HELP);
+      return EXIT_FAILURE;
+    }
+
     char *endptr;
     errno = 0;
     long num = strtol(argv[1], &endptr, BASE);
