@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 
+#include "interactive.h"
+
 #ifdef static_assert
 static_assert(
     sizeof(sig_atomic_t) == sizeof(pid_t),
@@ -35,6 +37,10 @@ volatile sig_atomic_t recv_sigtstp = 0;
 volatile sig_atomic_t recv_sigint = 0;
 
 static void sigint_handler(int sig) {
+  if (!interactive) {
+    exit(EXIT_FAILURE);
+  }
+
   if (fg_pid != 0) {
     kill((pid_t)fg_pid, sig);
     fg_pid = 0;

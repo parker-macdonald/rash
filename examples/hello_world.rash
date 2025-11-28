@@ -1,0 +1,5 @@
+setvar a hello
+setvar b world
+
+# prints hello world
+echo {a} {b}

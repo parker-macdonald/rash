@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -5,6 +6,8 @@
 #include <string.h>
 
 #include "builtins/find_builtin.h"
+#include "file_reader.h"
+#include "interactive.h"
 #include "interpreter/evaluate.h"
 #include "interpreter/lex.h"
 #include "jobs.h"
@@ -13,14 +16,17 @@
 #include "should_exit.h"
 
 bool should_exit = false;
+volatile sig_atomic_t interactive = 0;
 
 extern const char *const VERSION_STRING;
 extern const char *const HELP_STRING;
 
 int main(int argc, char **argv) {
-  FILE *file = NULL;
+  const uint8_t *(*reader)(void) = readline;
 
-  if (argc == 2) {
+  if (argc == 1) {
+    interactive = 1;
+  } else if (argc == 2) {
     if (strcmp(argv[1], "--version") == 0) {
       puts(VERSION_STRING);
       return 0;
@@ -30,11 +36,16 @@ int main(int argc, char **argv) {
       puts(HELP_STRING);
       return 0;
     }
-    fprintf(stderr, "rash: Non-interactive mode is currently disabled\n");
-    return EXIT_FAILURE;
-  }
-  if (argc == 1) {
-    file = stdin;
+
+    FILE *file = fopen(argv[1], "r");
+
+    if (file == NULL) {
+      fprintf(stderr, "rash: %s: %s\n", argv[1], strerror(errno));
+      return EXIT_FAILURE;
+    }
+
+    file_reader_init(file);
+    reader = file_reader_read;
   } else {
     fprintf(stderr, "Usage: %s [FILE]\n", argv[0]);
     return EXIT_FAILURE;
@@ -48,7 +59,7 @@ int main(int argc, char **argv) {
   set_var("PS1", "$ ");
 
   while (!should_exit) {
-    const uint8_t *line = readline();
+    const uint8_t *line = reader();
     clean_jobs();
 
     if (line == NULL) {
@@ -75,8 +86,6 @@ int main(int argc, char **argv) {
     snprintf(status_str, sizeof(status_str), "%d", status);
     set_var("?", status_str);
   }
-
-  fclose(file);
 
   return status;
 }

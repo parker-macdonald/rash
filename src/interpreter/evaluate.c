@@ -187,6 +187,10 @@ static bool bad_syntax(const token_t *const tokens) {
 }
 
 int evaluate(const token_t *tokens) {
+  if (tokens[0].type == END) {
+    return EXIT_SUCCESS;
+  }
+
   if (bad_syntax(tokens)) {
     return EXIT_FAILURE;
   }

@@ -306,6 +306,10 @@ token_t *lex(const uint8_t *source) {
           break;
         }
 
+        if (curr == '#') {
+          goto success;
+        }
+
         has_arguments = true;
         VECTOR_PUSH(buffer, curr);
         break;
@@ -355,6 +359,8 @@ token_t *lex(const uint8_t *source) {
     default:
       break;
   }
+
+success:
 
   if (buffer.length != 0) {
     VECTOR_PUSH(buffer, '\0');
