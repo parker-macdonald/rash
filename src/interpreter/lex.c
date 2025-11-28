@@ -11,7 +11,10 @@
 #include "../vector.h"
 
 #ifdef static_assert
-static_assert(sizeof(token_type_t) >= 3, "token type is not large enough for all enumerations.");
+static_assert(
+    sizeof(token_type_t) >= 3,
+    "token type is not large enough for all enumerations."
+);
 #endif
 
 enum lexer_state {
@@ -300,7 +303,7 @@ token_t *lex(const uint8_t *source) {
         // crude tilde expansion
         if (curr == '~') {
           has_arguments = true;
-          char* home = getenv("HOME");
+          char *home = getenv("HOME");
 
           if (home == NULL) {
             VECTOR_PUSH(buffer, '~');
@@ -308,7 +311,7 @@ token_t *lex(const uint8_t *source) {
           }
 
           for (size_t j = 0; home[j] != '\0'; j++) {
-            VECTOR_PUSH(buffer, home[j]);
+            VECTOR_PUSH(buffer, (uint8_t)home[j]);
           }
           break;
         }

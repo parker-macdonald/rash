@@ -33,6 +33,4 @@ int builtin_exit(char **const argv) {
   }
 
   exit((int)status);
-
-  return 0;
 }
