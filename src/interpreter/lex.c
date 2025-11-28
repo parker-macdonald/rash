@@ -10,22 +10,9 @@
 
 #include "../vector.h"
 
-const char *const TOKEN_NAMES[] = {
-    "STRING",
-    "STDIN_REDIR",
-    "STDIN_REDIR_STRING",
-    "STDOUT_REDIR",
-    "STDOUT_REDIR_APPEND",
-    "STDERR_REDIR",
-    "STDERR_REDIR_APPEND",
-    "PIPE",
-    "GLOB",
-    "SEMI",
-    "LOGICAL_AND",
-    "LOGICAL_OR",
-    "AMP",
-    "END"
-};
+#ifdef static_assert
+static_assert(sizeof(token_type_t) >= 3, "token type is not large enough for all enumerations.");
+#endif
 
 enum lexer_state {
   DEFAULT,
@@ -308,6 +295,22 @@ token_t *lex(const uint8_t *source) {
 
         if (curr == '#') {
           goto success;
+        }
+
+        // crude tilde expansion
+        if (curr == '~') {
+          has_arguments = true;
+          char* home = getenv("HOME");
+
+          if (home == NULL) {
+            VECTOR_PUSH(buffer, '~');
+            break;
+          }
+
+          for (size_t j = 0; home[j] != '\0'; j++) {
+            VECTOR_PUSH(buffer, home[j]);
+          }
+          break;
         }
 
         has_arguments = true;
