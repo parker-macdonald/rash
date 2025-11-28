@@ -5,7 +5,7 @@
 #include "../../shell_vars.h"
 #include "../builtins.h"
 
-const char *const SETVAR_HELP = "Usage: setvar KEY VALUE\n"
+static const char *const SETVAR_HELP = "Usage: setvar KEY VALUE\n"
                                 "Set the shell variable KEY equal to VALUE.";
 
 int builtin_setvar(char **argv) {

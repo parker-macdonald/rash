@@ -5,7 +5,7 @@
 
 #include "../builtins.h"
 
-const char *const EXPORT_HELP =
+static const char *const EXPORT_HELP =
     "Usage: export NAME=VALUE\n"
     "Set the enviroment variable NAME to VALUE.\n"
     "By convention, enivroment variables must start with an capital letter, \n"

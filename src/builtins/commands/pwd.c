@@ -7,7 +7,7 @@
 
 #include "../builtins.h"
 
-const char *const PWD_HELP = "Usage: pwd\n"
+static const char *const PWD_HELP = "Usage: pwd\n"
                              "Prints the current working directory.";
 
 int builtin_pwd(char **argv) {

@@ -10,7 +10,7 @@
 
 #define BASE 10
 
-const char *const EXIT_HELP = "Usage: exit [STATUS]\n"
+static const char *const EXIT_HELP = "Usage: exit [STATUS]\n"
                               "Quit rash with the specified status code.\n"
                               "If no status code is specified, 0 is used.";
 

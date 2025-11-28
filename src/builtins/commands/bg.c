@@ -10,7 +10,7 @@
 
 #define BASE 10
 
-const char *const BG_HELP =
+static const char *const BG_HELP =
     "Usage: bg [JOB_ID]\n"
     "Run a paused job in the background based on the job id.\n"
     "If no job id is specified, the most recent job is used instead.";

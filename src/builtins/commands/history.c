@@ -9,7 +9,7 @@
 
 #define BASE 10
 
-const char *const HISTORY_HELP =
+static const char *const HISTORY_HELP =
     "Usage: history [-c] [COUNT]\n"
     "View the last COUNT commands.\n"
     "If count isn't specified, all history is printed.\n"

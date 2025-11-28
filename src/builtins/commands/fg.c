@@ -12,7 +12,7 @@
 
 #define BASE 10
 
-const char *const FG_HELP =
+static const char *const FG_HELP =
     "Usage: fg [JOB_ID]\n"
     "Run a paused job in the foreground based on the job id.\n"
     "If no job id is specified, the most recent job is used instead.";

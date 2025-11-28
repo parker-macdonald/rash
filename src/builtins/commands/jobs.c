@@ -6,7 +6,7 @@
 
 #include "../builtins.h"
 
-const char *const JOBS_HELP = "Usage: jobs\n"
+static const char *const JOBS_HELP = "Usage: jobs\n"
                               "List all the paused and background jobs.";
 
 int builtin_jobs(char **argv) {

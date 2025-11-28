@@ -5,7 +5,7 @@
 
 #include "../builtins.h"
 
-const char *const CD_HELP =
+static const char *const CD_HELP =
     "Usage: cd [DIR]\n"
     "Set the current working directory to DIR.\n"
     "If no directory is specified, the value of the HOME enviroment variable\n"
