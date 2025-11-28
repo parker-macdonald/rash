@@ -15,4 +15,5 @@ const char *const HELP_STRING =
     "  true: set the status code to 0.\n"
     "  unsetvar: remove a shell variable.\n"
     "  version: display the version of rash.\n"
+    "  source: read and execute the commands from a specified file.\n"
     "For more help with builtin commands type the command followed by --help";

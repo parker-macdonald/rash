@@ -29,4 +29,6 @@ int builtin_setvar(char **argv);
 
 int builtin_unsetvar(char **argv);
 
+int builtin_source(char **argv);
+
 #endif

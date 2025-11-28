@@ -1,21 +1,15 @@
 #include <errno.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "builtins/find_builtin.h"
 #include "file_reader.h"
 #include "interactive.h"
-#include "interpreter/evaluate.h"
-#include "interpreter/lex.h"
+#include "interpreter/repl.h"
 #include "jobs.h"
 #include "line_reader/line_reader.h"
-#include "shell_vars.h"
-#include "should_exit.h"
 
-bool should_exit = false;
 volatile sig_atomic_t interactive = 0;
 
 extern const char *const VERSION_STRING;
@@ -41,51 +35,55 @@ int main(int argc, char **argv) {
 
     if (file == NULL) {
       fprintf(stderr, "rash: %s: %s\n", argv[1], strerror(errno));
-      return EXIT_FAILURE;
+      return 1;
     }
 
     file_reader_init(file);
     reader = file_reader_read;
   } else {
     fprintf(stderr, "Usage: %s [FILE]\n", argv[0]);
-    return EXIT_FAILURE;
+    return 1;
   }
-
-  int status = EXIT_SUCCESS;
 
   trie_init();
   sig_handler_init();
 
-  set_var("PS1", "$ ");
+  if (interactive) {
+    char *home = getenv("HOME");
 
-  while (!should_exit) {
-    const uint8_t *line = reader();
-    clean_jobs();
-
-    if (line == NULL) {
-      status = EXIT_SUCCESS;
-      break;
+    if (home == NULL) {
+      goto failure;
     }
 
-    token_t *tokens = lex(line);
+    size_t len = strlen(home);
 
-    if (tokens != NULL) {
-      status = evaluate(tokens);
-      free_tokens(&tokens);
-    } else {
-      status = EXIT_FAILURE;
+    char *rc_path = malloc(len + sizeof("/.rashrc"));
+
+    if (rc_path == NULL) {
+      goto failure;
     }
 
-    if (should_exit) {
-      break;
+    memcpy(rc_path, home, len);
+    rc_path[len] = '/';
+    strcpy(rc_path + len + 1, "/.rashrc");
+
+    FILE *rashrc = fopen(rc_path, "r");
+
+    if (rashrc == NULL) {
+      if (errno != ENOENT) {
+        perror("Failed to load .rash file");
+      }
+
+      free(rc_path);
+      goto failure;
     }
 
-    // 3 digit number (exit status is max of 255) + null terminator
-    char status_str[3 + 1] = {0};
+    file_reader_init(rashrc);
 
-    snprintf(status_str, sizeof(status_str), "%d", status);
-    set_var("?", status_str);
+    repl(file_reader_read);
   }
 
-  return status;
+failure:
+
+  return repl(reader);
 }
