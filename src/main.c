@@ -64,17 +64,17 @@ int main(int argc, char **argv) {
     }
 
     memcpy(rc_path, home, len);
-    rc_path[len] = '/';
-    strcpy(rc_path + len + 1, "/.rashrc");
+    strcpy(rc_path + len, "/.rashrc");
 
     FILE *rashrc = fopen(rc_path, "r");
+
+    free(rc_path);
 
     if (rashrc == NULL) {
       if (errno != ENOENT) {
         perror("Failed to load .rash file");
       }
 
-      free(rc_path);
       goto failure;
     }
 
