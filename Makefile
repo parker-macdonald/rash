@@ -4,7 +4,7 @@ PREFIX := /usr/local
 
 SANITIZER :=
 CFLAGS := -std=c17 -D_DEFAULT_SOURCE -DVERSION=\"$(VERSION)\"
-CFLAG_ERRORS := -Werror -Wall -Wvla -Wextra -Wunreachable-code -Wshadow -Wpedantic
+CFLAG_ERRORS := -Werror -Wall -Wvla -Wextra -Wunreachable-code -Wshadow -Wpedantic -Wconversion
 LDFLAGS :=
 CC := clang
 LINTER := clang-tidy
