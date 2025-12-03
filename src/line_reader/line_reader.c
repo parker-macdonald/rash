@@ -140,6 +140,7 @@ const uint8_t *readline(void) {
     prompt_length = get_prompt(&prompt, prompt_var);
   }
 
+  putc('\r', stdout);
   fputs(prompt, stdout);
   fflush(stdout);
 
