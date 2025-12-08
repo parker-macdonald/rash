@@ -188,7 +188,7 @@ const uint8_t *readline(void) {
     // contains the buffer the user is currently editting
     line_t *line_to_read = node == NULL ? &line : &node->mut_line;
 
-    if (curr_byte == '\n') {
+    if (curr_byte == '\n' || curr_byte == '\r') {
       if (line_to_read->length != 0) {
         break;
       }
