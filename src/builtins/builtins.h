@@ -31,4 +31,6 @@ int builtin_unsetvar(char **argv);
 
 int builtin_source(char **argv);
 
+int builtin_which(char **argv);
+
 #endif

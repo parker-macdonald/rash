@@ -75,6 +75,7 @@ void trie_init(void) {
   trie_insert("setvar", &builtin_setvar);
   trie_insert("unsetvar", &builtin_unsetvar);
   trie_insert("source", &builtin_source);
+  trie_insert("which", &builtin_which);
 }
 
 builtin_t find_builtin(const char *const str) {
