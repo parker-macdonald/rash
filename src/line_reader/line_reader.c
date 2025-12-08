@@ -140,8 +140,7 @@ const uint8_t *readline(void) {
     prompt_length = get_prompt(&prompt, prompt_var);
   }
 
-  putc('\r', stdout);
-  fputs(prompt, stdout);
+  printf("\r%s", prompt);
   fflush(stdout);
 
   unsigned short width = get_terminal_width();
