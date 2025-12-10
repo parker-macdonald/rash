@@ -155,12 +155,6 @@ token_t *lex(const uint8_t *source) {
         // crazy logic for enviroment variables
         if (curr == '$') {
           has_arguments = true;
-          // if there's no character after the $, just treat the dollar sign
-          // like an ordinary character
-          if (source[i + 1] == '\0') {
-            VECTOR_PUSH(buffer, '$');
-            break;
-          }
 
           i++;
           size_t env_len = 0;
@@ -219,7 +213,10 @@ token_t *lex(const uint8_t *source) {
             env_len++;
           }
 
-          assert(env_len != 0);
+          if (env_len == 0) {
+            VECTOR_PUSH(buffer, '$');
+            break;
+          }
 
           char *env_name = malloc(env_len + 1);
           memcpy(env_name, env_start, env_len);
