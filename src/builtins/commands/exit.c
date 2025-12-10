@@ -9,9 +9,10 @@
 
 #define BASE 10
 
-static const char *const EXIT_HELP = "Usage: exit [STATUS]\n"
-                              "Quit rash with the specified status code.\n"
-                              "If no status code is specified, 0 is used.";
+static const char *const EXIT_HELP =
+    "Usage: exit [STATUS]\n"
+    "Quit rash with the specified status code.\n"
+    "If no status code is specified, 0 is used.";
 
 int builtin_exit(char **const argv) {
   if (argv[1] == NULL) {

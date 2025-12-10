@@ -8,7 +8,7 @@
 #include "../builtins.h"
 
 static const char *const PWD_HELP = "Usage: pwd\n"
-                             "Prints the current working directory.";
+                                    "Prints the current working directory.";
 
 int builtin_pwd(char **argv) {
   if (argv[1] != NULL && strcmp(argv[1], "--help") == 0) {

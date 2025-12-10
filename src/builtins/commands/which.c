@@ -4,8 +4,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "../find_builtin.h"
 #include "../../search_path.h"
+#include "../find_builtin.h"
 
 static const char *const WHICH_HELP =
     "Usage: which FILE...\n"
@@ -36,7 +36,7 @@ int builtin_which(char **argv) {
       continue;
     }
 
-    char* file = search_path(argv[i]);
+    char *file = search_path(argv[i]);
 
     if (file != NULL) {
       printf("%s\n", file);

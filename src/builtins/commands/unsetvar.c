@@ -6,7 +6,7 @@
 #include "../builtins.h"
 
 static const char *const UNSETVAR_HELP = "Usage: unsetvar KEY\n"
-                                  "Remove the shell variable KEY.";
+                                         "Remove the shell variable KEY.";
 
 int builtin_unsetvar(char **argv) {
   if (argv[1] == NULL) {
