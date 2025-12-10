@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "../../search_path.h"
+#include "../builtins.h"
 #include "../find_builtin.h"
 
 static const char *const WHICH_HELP =
