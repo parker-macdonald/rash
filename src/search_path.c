@@ -6,10 +6,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "environment.h"
 #include "vector.h"
 
 char *search_path(const char *file) {
-  const char *path = getenv("PATH");
+  const char *path = env_get("PATH");
   if (path == NULL) {
     path = "/usr/local/bin:/bin:/usr/bin";
   }

@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "builtins/find_builtin.h"
+#include "environment.h"
 #include "file_reader.h"
 #include "interactive.h"
 #include "interpreter/repl.h"
@@ -47,9 +48,10 @@ int main(int argc, char **argv) {
 
   trie_init();
   sig_handler_init();
+  env_init();
 
   if (interactive) {
-    char *home = getenv("HOME");
+    const char *home = env_get("HOME");
 
     if (home == NULL) {
       goto failure;

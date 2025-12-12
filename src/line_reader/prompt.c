@@ -6,6 +6,7 @@
 #include <sys/utsname.h>
 #include <unistd.h>
 
+#include "../environment.h"
 #include "../vector.h"
 
 static char *getcwd_good(void) {
@@ -104,7 +105,7 @@ unsigned int get_prompt(char **dest, const char *const prompt) {
             break;
           }
 
-          char *home = getenv("HOME");
+          const char *home = env_get("HOME");
           if (home != NULL) {
             size_t j;
             for (j = 0; home[j] != '\0'; j++) {

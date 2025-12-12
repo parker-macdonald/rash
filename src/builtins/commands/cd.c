@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "../../environment.h"
 #include "../builtins.h"
 
 static const char *const CD_HELP =
@@ -12,9 +13,9 @@ static const char *const CD_HELP =
     "is used instead.";
 
 int builtin_cd(char **const argv) {
-  char *path = argv[1];
+  const char *path = argv[1];
   if (argv[1] == NULL) {
-    char *home = getenv("HOME");
+    const char *home = env_get("HOME");
 
     if (home == NULL) {
       fprintf(stderr, "cd: HOME is not set\n");
