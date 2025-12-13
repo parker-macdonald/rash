@@ -31,7 +31,7 @@ key_compare(const char *const env_string, const char *const key) {
 }
 
 int env_set(const char *const key, const char *const value) {
-  // make sure the key and value don't contain '=' (posix forbids this)
+  // make sure the key doesn't contain '=' (posix forbids this)
   size_t key_len;
   for (key_len = 0; key[key_len] != '\0'; key_len++) {
     if (key[key_len] == '=') {
@@ -39,12 +39,11 @@ int env_set(const char *const key, const char *const value) {
     }
   }
 
-  size_t val_len;
-  for (val_len = 0; value[val_len] != '\0'; val_len++) {
-    if (value[val_len] == '=') {
-      return 1;
-    }
+  if (key_len == 0) {
+    return 1;
   }
+
+  size_t val_len = strlen(value);
 
   // generate the environment variable string ("KEY=VALUE"), same as environ
   char *env_string = malloc(strlen(key) + strlen(value) + 2);
@@ -86,14 +85,11 @@ int env_set(const char *const key, const char *const value) {
 }
 
 int env_put(const char *const env_string) {
-  unsigned int equals_count = 0;
-  size_t str_len;
-
-  for (str_len = 0; env_string[str_len] != '\0'; str_len++) {
-    if (env_string[str_len] == '=' && ++equals_count == 2) {
-      return 1;
-    }
+  if (env_string[0] == '=' || env_string[0] == '\0') {
+    return 1;
   }
+  
+  size_t str_len = strlen(env_string);
 
   char *new_str = malloc(str_len);
   memcpy(new_str, env_string, str_len);
@@ -187,4 +183,14 @@ char** env_get_environ(void) {
   new_environ[i] = NULL;
 
   return new_environ;
+}
+
+void env_print(void) {
+  struct env_node *node = head;
+
+  while (node != NULL) {
+    printf("%s\n", node->string);
+  }
+
+  return;
 }
