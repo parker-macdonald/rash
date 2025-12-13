@@ -22,9 +22,7 @@ int builtin_cd(char **const argv) {
     }
 
     path = home;
-  }
-
-  if (strcmp(argv[1], "--help") == 0) {
+  } else if (strcmp(argv[1], "--help") == 0) {
     puts(CD_HELP);
     return EXIT_SUCCESS;
   }
