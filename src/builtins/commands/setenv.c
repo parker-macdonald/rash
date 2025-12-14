@@ -25,7 +25,7 @@ int builtin_setenv(char **argv) {
     return EXIT_FAILURE;
   }
 
-  setenv(argv[1], argv[2], 1);
+  setenv(argv[1], argv[2] ? argv[2] : "", 1);
 
   return EXIT_SUCCESS;
 }

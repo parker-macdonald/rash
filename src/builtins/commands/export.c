@@ -29,8 +29,14 @@ int builtin_export(char **const argv) {
       continue;
     }
 
-    char *str = strdup(argv[i]);
-    putenv(str);
+    char* separator = strchr(argv[i], '=');
+
+    if (separator) {
+      *separator = '\0';
+      setenv(argv[i], separator + 1, 1);
+    } else {
+      setenv(argv[i], "", 1);
+    }
   }
 
   return EXIT_SUCCESS;
