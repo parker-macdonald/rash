@@ -19,7 +19,7 @@ int builtin_unsetvar(char **argv) {
     return EXIT_SUCCESS;
   }
 
-  if (unset_var(argv[1]) == 1) {
+  if (var_unset(argv[1]) == 1) {
     fprintf(
         stderr, "unsetvar: shell variable ‘%s’ was not declared.\n", argv[1]
     );

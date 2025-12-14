@@ -5,11 +5,15 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include "../builtins/find_builtin.h"
 #include "../jobs.h"
+#include "../search_path.h"
+
+extern char **environ;
 
 int execute(const execution_context context) {
   if (context.argv == NULL) {
@@ -50,7 +54,14 @@ int execute(const execution_context context) {
       assert(new_fd == STDIN_FILENO);
     }
 
-    int status = execvp(context.argv[0], context.argv);
+    // search path for executable
+    if (strchr(context.argv[0], '/') == NULL) {
+      char *argv0 = search_path(context.argv[0]);
+      free(context.argv[0]);
+      context.argv[0] = argv0;
+    }
+
+    int status = execve(context.argv[0], context.argv, environ);
 
     if (status == -1) {
       fprintf(stderr, "rash: ");

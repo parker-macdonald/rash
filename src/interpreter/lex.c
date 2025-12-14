@@ -300,7 +300,7 @@ token_t *lex(const uint8_t *source) {
         // crude tilde expansion
         if (curr == '~') {
           has_arguments = true;
-          char *home = getenv("HOME");
+          const char *home = getenv("HOME");
 
           if (home == NULL) {
             VECTOR_PUSH(buffer, '~');

@@ -12,9 +12,9 @@ static const char *const CD_HELP =
     "is used instead.";
 
 int builtin_cd(char **const argv) {
-  char *path = argv[1];
+  const char *path = argv[1];
   if (argv[1] == NULL) {
-    char *home = getenv("HOME");
+    const char *home = getenv("HOME");
 
     if (home == NULL) {
       fprintf(stderr, "cd: HOME is not set\n");

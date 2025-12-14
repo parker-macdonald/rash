@@ -1,4 +1,3 @@
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,30 +22,20 @@ int builtin_export(char **const argv) {
   }
 
   for (size_t i = 1; argv[i] != NULL; i++) {
-    if (!isalpha(argv[i][0])) {
-      fprintf(stderr, "export: Invalid identifier: ‘%s’\n", argv[i]);
+    if (argv[i][0] == '=' || argv[i][0] == '\0') {
+      fprintf(
+          stderr, "export: malformed environment variable: ‘%s’\n", argv[i]
+      );
       continue;
     }
 
-    char *env_value = NULL;
+    char* separator = strchr(argv[i], '=');
 
-    for (size_t j = 1; argv[i][j] != '\0'; j++) {
-      char character = argv[i][j];
-      if (character == '=') {
-        argv[i][j] = '\0';
-        env_value = &argv[i][j] + 1;
-        break;
-      }
-
-      if (!isalnum(character) && character != '_') {
-        fprintf(stderr, "export: Invalid identifier: ‘%s’\n", argv[i]);
-        continue;
-      }
-    }
-
-    if (setenv(argv[i], env_value ? env_value : "", 1) != 0) {
-      fprintf(stderr, "export: ");
-      perror(argv[i]);
+    if (separator) {
+      *separator = '\0';
+      setenv(argv[i], separator + 1, 1);
+    } else {
+      setenv(argv[i], "", 1);
     }
   }
 

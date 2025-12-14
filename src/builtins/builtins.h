@@ -33,4 +33,12 @@ int builtin_source(char **argv);
 
 int builtin_which(char **argv);
 
+int builtin_var(char **argv);
+
+int builtin_env(char **argv);
+
+int builtin_setenv(char **argv);
+
+int builtin_unsetenv(char **argv);
+
 #endif
