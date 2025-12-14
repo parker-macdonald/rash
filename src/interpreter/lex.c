@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../environment.h"
 #include "../vector.h"
 
 #ifdef static_assert
@@ -301,7 +300,7 @@ token_t *lex(const uint8_t *source) {
         // crude tilde expansion
         if (curr == '~') {
           has_arguments = true;
-          const char *home = env_get("HOME");
+          const char *home = getenv("HOME");
 
           if (home == NULL) {
             VECTOR_PUSH(buffer, '~');

@@ -1,5 +1,6 @@
 #include "shell_vars.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -12,7 +13,7 @@ struct var_node {
 
 static struct var_node *head = NULL;
 
-void set_var(const char *const key, const char *const value) {
+void var_set(const char *const key, const char *const value) {
   if (head == NULL) {
     head = malloc(sizeof(struct var_node));
 
@@ -25,11 +26,15 @@ void set_var(const char *const key, const char *const value) {
 
   struct var_node *node = head;
 
-  while (node->p_next != NULL) {
+  while (node != NULL) {
     if (strcmp(key, node->key) == 0) {
       free(node->value);
       node->value = strdup(value);
       return;
+    }
+
+    if (node->p_next == NULL) {
+      break;
     }
 
     node = node->p_next;
@@ -44,7 +49,7 @@ void set_var(const char *const key, const char *const value) {
   node->p_next = new_node;
 }
 
-const char *get_var(const char *const key) {
+const char *var_get(const char *const key) {
   struct var_node *node = head;
 
   while (node != NULL) {
@@ -58,7 +63,7 @@ const char *get_var(const char *const key) {
   return NULL;
 }
 
-int unset_var(const char *const key) {
+int var_unset(const char *const key) {
   struct var_node *prev = NULL;
   struct var_node *node = head;
 
@@ -82,4 +87,14 @@ int unset_var(const char *const key) {
   }
 
   return 1;
+}
+
+void var_print(void) {
+  struct var_node *node = head;
+
+  while (node != NULL) {
+    printf("{%s}:\t\"%s\"\n", node->key, node->value);
+
+    node = node->p_next;
+  }
 }

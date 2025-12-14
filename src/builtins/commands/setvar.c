@@ -20,7 +20,7 @@ int builtin_setvar(char **argv) {
     return EXIT_SUCCESS;
   }
 
-  set_var(argv[1], argv[2]);
+  var_set(argv[1], argv[2]);
 
   return EXIT_SUCCESS;
 }

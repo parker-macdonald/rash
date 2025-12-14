@@ -10,9 +10,10 @@
 #include <unistd.h>
 
 #include "../builtins/find_builtin.h"
-#include "../environment.h"
 #include "../jobs.h"
 #include "../search_path.h"
+
+extern char **environ;
 
 int execute(const execution_context context) {
   if (context.argv == NULL) {
@@ -59,8 +60,6 @@ int execute(const execution_context context) {
       free(context.argv[0]);
       context.argv[0] = argv0;
     }
-
-    char **environ = env_get_environ();
 
     int status = execve(context.argv[0], context.argv, environ);
 

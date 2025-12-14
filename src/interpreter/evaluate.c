@@ -10,7 +10,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "../environment.h"
 #include "../shell_vars.h"
 #include "../vector.h"
 #include "execute.h"
@@ -222,7 +221,7 @@ int evaluate(const token_t *tokens) {
     }
 
     if (tokens->type == ENV_EXPANSION) {
-      const char *value = env_get((char *)tokens->data);
+      const char *value = getenv((char *)tokens->data);
 
       if (value == NULL) {
         fprintf(
@@ -241,7 +240,7 @@ int evaluate(const token_t *tokens) {
     }
 
     if (tokens->type == VAR_EXPANSION) {
-      const char *value = get_var((char *)tokens->data);
+      const char *value = var_get((char *)tokens->data);
 
       if (value == NULL) {
         fprintf(

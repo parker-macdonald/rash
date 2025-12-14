@@ -34,7 +34,7 @@ int repl(const uint8_t *(*reader)(void)) {
     char status_str[3 + 1] = {0};
 
     snprintf(status_str, sizeof(status_str), "%d", status);
-    set_var("?", status_str);
+    var_set("?", status_str);
   }
 
   return status;

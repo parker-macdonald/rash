@@ -1,4 +1,3 @@
-#include "../../environment.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,9 +22,13 @@ int builtin_export(char **const argv) {
   }
 
   for (size_t i = 1; argv[i] != NULL; i++) {
-    if (env_put(argv[i]) != 0) {
-      fprintf(stderr, "export: Invalid identifier: ‘%s’\n", argv[i]);
+    if (argv[i][0] == '=' || argv[i][0] == '\0') {
+      fprintf(stderr, "export: malformed environment variable: ‘%s’\n", argv[i]);
+      continue;
     }
+
+    char* str = strdup(argv[i]);
+    putenv(str);
   }
 
   return EXIT_SUCCESS;

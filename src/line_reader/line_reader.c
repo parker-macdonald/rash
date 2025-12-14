@@ -129,7 +129,7 @@ void print_history(int count) {
   printf("\r\033[0J%s%.*s", prompt, (int)(line).length, (char *)(line).data)
 
 const uint8_t *readline(void) {
-  const char *prompt_var = get_var("PS1");
+  const char *prompt_var = var_get("PS1");
   char *prompt;
   unsigned int prompt_length;
 
