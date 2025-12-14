@@ -16,7 +16,7 @@ int builtin_env(char **argv) {
   }
 
   char **e = environ;
-  
+
   while (*e != NULL) {
     printf("%s\n", *e);
     e++;

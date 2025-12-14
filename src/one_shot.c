@@ -1,3 +1,5 @@
+#include "one_shot.h"
+
 #include <stddef.h>
 #include <stdint.h>
 

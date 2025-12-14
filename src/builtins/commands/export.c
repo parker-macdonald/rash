@@ -23,11 +23,13 @@ int builtin_export(char **const argv) {
 
   for (size_t i = 1; argv[i] != NULL; i++) {
     if (argv[i][0] == '=' || argv[i][0] == '\0') {
-      fprintf(stderr, "export: malformed environment variable: ‘%s’\n", argv[i]);
+      fprintf(
+          stderr, "export: malformed environment variable: ‘%s’\n", argv[i]
+      );
       continue;
     }
 
-    char* str = strdup(argv[i]);
+    char *str = strdup(argv[i]);
     putenv(str);
   }
 

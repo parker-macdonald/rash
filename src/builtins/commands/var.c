@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "../../shell_vars.h"
+#include "../builtins.h"
 
 static const char *const VAR_HELP = "Usage: var\n"
                                     "Prints all declared shell variables.";

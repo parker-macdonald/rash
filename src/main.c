@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    one_shot_init((uint8_t*)argv[2]);
+    one_shot_init((uint8_t *)argv[2]);
     reader = one_shot_reader;
   } else {
     fprintf(stderr, "Usage: %s [FILE]\n", argv[0]);
