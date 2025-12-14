@@ -3,6 +3,4 @@
 
 extern const char *const VERSION_STRING;
 
-extern const char *const HELP_STRING;
-
 #endif
