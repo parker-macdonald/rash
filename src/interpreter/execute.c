@@ -57,6 +57,12 @@ int execute(const execution_context context) {
     // search path for executable
     if (strchr(context.argv[0], '/') == NULL) {
       char *argv0 = search_path(context.argv[0]);
+
+      if (argv0 == NULL) {
+        fprintf(stderr, "%s: command not found\n", context.argv[0]);
+        _exit(EXIT_FAILURE);
+      }
+
       free(context.argv[0]);
       context.argv[0] = argv0;
     }
