@@ -353,6 +353,35 @@ const uint8_t *readline(void) {
             goto draw_line;
           }
           break;
+        // home key
+        case 'H': {
+          cursor_pos = 0;
+          size_t moves_up = displayed_cursor_pos / width;
+          displayed_cursor_pos = prompt_length;
+          if (moves_up > 0) {
+            printf("\033[%zuA", moves_up);
+          }
+          printf("\r\033[%uC", prompt_length);
+          fflush(stdout);
+          continue;
+        }
+        // end key
+        case 'F': {
+          cursor_pos = line_to_read->length;
+          // eol is end of line
+          size_t line_len =
+              strlen_utf8(line_to_read->data, line_to_read->length) +
+              prompt_length;
+          // this is real code written by sane individuals
+          size_t moves_down = (line_len - displayed_cursor_pos) / width;
+          displayed_cursor_pos = line_len;
+          if (moves_down > 0) {
+            printf("\033[%zuB", moves_down);
+          }
+          printf("\r\033[%zuC", line_len % width);
+          fflush(stdout);
+        }
+
         default:
           continue;
       }
