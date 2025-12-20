@@ -11,6 +11,7 @@
 char *search_path(const char *file) {
   const char *path = getenv("PATH");
   if (path == NULL) {
+    // musl does this same thing, not sure why /sbin or /usr/sbin aren't there.
     path = "/usr/local/bin:/bin:/usr/bin";
   }
 
