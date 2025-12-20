@@ -1,6 +1,7 @@
 #include "evaluate.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -304,8 +305,12 @@ int evaluate(const token_t *tokens) {
 
       int fd = open((char *)(tokens + 1)->data, O_RDONLY);
       if (fd == -1) {
-        fprintf(stderr, "rash: ");
-        perror((char *)(tokens + 1)->data);
+        fprintf(
+            stderr,
+            "rash: %s: %s\n",
+            (char *)(tokens + 1)->data,
+            strerror(errno)
+        );
 
         goto error;
       }
@@ -350,8 +355,12 @@ int evaluate(const token_t *tokens) {
 
       int fd = open((tokens + 1)->data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
       if (fd == -1) {
-        fprintf(stderr, "rash: ");
-        perror((char *)(tokens + 1)->data);
+        fprintf(
+            stderr,
+            "rash: %s: %s\n",
+            (char *)(tokens + 1)->data,
+            strerror(errno)
+        );
 
         goto error;
       }
@@ -367,8 +376,12 @@ int evaluate(const token_t *tokens) {
 
       int fd = open((tokens + 1)->data, O_WRONLY | O_CREAT | O_APPEND, 0644);
       if (fd == -1) {
-        fprintf(stderr, "rash: ");
-        perror((char *)(tokens + 1)->data);
+        fprintf(
+            stderr,
+            "rash: %s: %s\n",
+            (char *)(tokens + 1)->data,
+            strerror(errno)
+        );
 
         goto error;
       }
@@ -384,8 +397,12 @@ int evaluate(const token_t *tokens) {
 
       int fd = open((tokens + 1)->data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
       if (fd == -1) {
-        fprintf(stderr, "rash: ");
-        perror((char *)(tokens + 1)->data);
+        fprintf(
+            stderr,
+            "rash: %s: %s\n",
+            (char *)(tokens + 1)->data,
+            strerror(errno)
+        );
 
         goto error;
       }
@@ -401,8 +418,12 @@ int evaluate(const token_t *tokens) {
 
       int fd = open((tokens + 1)->data, O_WRONLY | O_CREAT | O_APPEND, 0644);
       if (fd == -1) {
-        fprintf(stderr, "rash: ");
-        perror((char *)(tokens + 1)->data);
+        fprintf(
+            stderr,
+            "rash: %s: %s\n",
+            (char *)(tokens + 1)->data,
+            strerror(errno)
+        );
 
         goto error;
       }

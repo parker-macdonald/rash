@@ -90,6 +90,8 @@ int main(int argc, char **argv) {
     free(rc_path);
 
     if (rashrc == NULL) {
+      // if opening the rashrc fails for a reason other than the file does not
+      // exist, i.e. file permission error, or the value of home is malformed.
       if (errno != ENOENT) {
         perror("Failed to load .rash file");
       }

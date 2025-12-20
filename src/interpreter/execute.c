@@ -70,13 +70,11 @@ int execute(const execution_context context) {
     int status = execve(context.argv[0], context.argv, environ);
 
     if (status == -1) {
-      fprintf(stderr, "rash: ");
-
+      
       if (errno != ENOENT) {
-        fprintf(stderr, "execvp: ");
-        perror(context.argv[0]);
+        fprintf(stderr, "rash: execve: %s\n", strerror(errno));
       } else {
-        fprintf(stderr, "%s: command not found\n", context.argv[0]);
+        fprintf(stderr, "rash: %s: command not found\n", context.argv[0]);
       }
     }
 

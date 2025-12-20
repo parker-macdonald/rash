@@ -28,7 +28,8 @@ int builtin_which(char **argv) {
   for (size_t i = 1; argv[i] != NULL; i++) {
     if (strchr(argv[i], '/') != NULL) {
       if (faccessat(AT_FDCWD, argv[i], X_OK, AT_EACCESS) == 0) {
-        printf("%s\n", argv[i]);
+        printf("executable: %s\n", argv[i]);
+        continue;
       }
     }
 
@@ -40,8 +41,10 @@ int builtin_which(char **argv) {
     char *file = search_path(argv[i]);
 
     if (file != NULL) {
-      printf("%s\n", file);
+      printf("executable: %s\n", file);
       free(file);
+    } else {
+      printf("cannot be executed: %s\n", argv[i]);
     }
   }
 

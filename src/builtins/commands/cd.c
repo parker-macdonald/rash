@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,8 +29,7 @@ int builtin_cd(char **const argv) {
   }
 
   if (chdir(path) == -1) {
-    fprintf(stderr, "cd: ");
-    perror(path);
+    fprintf(stderr, "cd: %s: %s\n", path, strerror(errno));
 
     return EXIT_FAILURE;
   }
