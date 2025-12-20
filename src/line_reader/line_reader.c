@@ -380,6 +380,7 @@ const uint8_t *readline(void) {
           }
           printf("\r\033[%zuC", line_len % width);
           fflush(stdout);
+          continue;
         }
 
         default:
