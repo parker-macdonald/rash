@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 
-void one_shot_init(const uint8_t *line);
-
-const uint8_t *one_shot_reader(void);
+const uint8_t *one_shot_reader(void *data);
 
 #endif

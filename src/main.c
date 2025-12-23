@@ -10,34 +10,41 @@
 #include "jobs.h"
 #include "line_reader/line_reader.h"
 #include "one_shot.h"
+#include "rashrc.h"
 #include "strings/strings.h"
 
-volatile sig_atomic_t interactive = 0;
+bool interactive = 0;
+
+const char *const HELP_STRING =
+    "Usage: %s [-c] [FILENAME]\n"
+    "If a filename is specified, rash will run the file as a script.\n"
+    "If no filename is specified rash will run in interactive mode.\n"
+    "The -c option specifies one-shot mode, rash will run one command \n"
+    "specified in the next argument, then exit.\n"
+    "For example: \n"
+    "  rash -c 'echo hello'\n"
+    "rash will run 'echo hello', then exit.\n";
 
 int main(int argc, char **argv) {
-  const uint8_t *(*reader)(void) = readline;
+  trie_init();
+  sig_handler_init();
 
   // no arguments means interactive mode
   if (argc == 1) {
-    interactive = 1;
-  } else if (argc == 2) {
+    interactive = true;
+    load_rashrc();
+
+    return repl(readline, NULL);
+  }
+
+  if (argc == 2) {
     if (strcmp(argv[1], "--version") == 0) {
       puts(VERSION_STRING);
       return 0;
     }
 
     if (strcmp(argv[1], "--help") == 0) {
-      printf(
-          "Usage: %s [-c] [FILENAME]\n"
-          "If a filename is specified, rash will run the file as a script.\n"
-          "If no filename is specified rash will run in interactive mode.\n"
-          "The -c option specifies one-shot mode, rash will run one command \n"
-          "specified in the next argument, then exit.\n"
-          "For example: \n"
-          "  rash -c 'echo hello'\n"
-          "rash will run 'echo hello', then exit.\n",
-          argv[0]
-      );
+      printf(HELP_STRING, argv[0]);
       return 0;
     }
 
@@ -48,63 +55,22 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    file_reader_init(file);
-    reader = file_reader_read;
-  } else if (argc == 3) {
+    struct file_reader reader_data;
+    file_reader_init(&reader_data, file);
+    return repl(file_reader_read, &reader_data);
+  }
+
+  if (argc == 3) {
     // one-shot mode
     if (strcmp(argv[1], "-c") != 0) {
-      fprintf(stderr, "Usage: %s [FILE]\n", argv[0]);
+      fprintf(stderr, HELP_STRING, argv[0]);
       return 1;
     }
 
-    one_shot_init((uint8_t *)argv[2]);
-    reader = one_shot_reader;
-  } else {
-    fprintf(stderr, "Usage: %s [FILE]\n", argv[0]);
-    return 1;
+    // again, undefined behavior with function ptr casting
+    return repl((const uint8_t *(*)(void *))one_shot_reader, argv[2]);
   }
 
-  trie_init();
-  sig_handler_init();
-
-  if (interactive) {
-    const char *home = getenv("HOME");
-
-    if (home == NULL) {
-      goto failure;
-    }
-
-    size_t len = strlen(home);
-
-    char *rc_path = malloc(len + sizeof("/.rashrc"));
-
-    if (rc_path == NULL) {
-      goto failure;
-    }
-
-    memcpy(rc_path, home, len);
-    strcpy(rc_path + len, "/.rashrc");
-
-    FILE *rashrc = fopen(rc_path, "r");
-
-    free(rc_path);
-
-    if (rashrc == NULL) {
-      // if opening the rashrc fails for a reason other than the file does not
-      // exist, i.e. file permission error, or the value of home is malformed.
-      if (errno != ENOENT) {
-        perror("Failed to load .rash file");
-      }
-
-      goto failure;
-    }
-
-    file_reader_init(rashrc);
-
-    repl(file_reader_read);
-  }
-
-failure:
-
-  return repl(reader);
+  fprintf(stderr, HELP_STRING, argv[0]);
+  return 1;
 }

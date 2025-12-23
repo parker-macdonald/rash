@@ -12,7 +12,7 @@ typedef VECTOR(uint8_t) line_t;
  * include the '\n' and is null-terminated.
  * @return a null-terminated buffer containing the line (without the '\n')
  */
-const uint8_t *readline(void);
+const uint8_t *readline(void *);
 
 /**
  * @brief clears the history of the line reader.

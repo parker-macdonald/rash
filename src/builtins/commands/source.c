@@ -30,7 +30,8 @@ int builtin_source(char **argv) {
     return EXIT_FAILURE;
   }
 
-  file_reader_init(file);
+  struct file_reader reader_data;
+  file_reader_init(&reader_data, file);
 
-  return repl(file_reader_read);
+  return repl(file_reader_read, &reader_data);
 }

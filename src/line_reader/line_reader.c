@@ -128,7 +128,7 @@ void print_history(int count) {
 #define DRAW_LINE(line)                                                        \
   printf("\r\033[0J%s%.*s", prompt, (int)(line).length, (char *)(line).data)
 
-const uint8_t *readline(void) {
+const uint8_t *readline(void *_) {
   const char *prompt_var = var_get("PS1");
   char *prompt;
   unsigned int prompt_length;

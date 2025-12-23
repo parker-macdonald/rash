@@ -3,6 +3,6 @@
 
 #include <stdint.h>
 
-int repl(const uint8_t *(*reader)(void));
+int repl(const uint8_t *(*reader)(void *), void *reader_data);
 
 #endif
