@@ -131,7 +131,11 @@ void line_insert_bulk(
   // move previous data over
   // i think this is the first feature newer than c99 i've used so far (besides
   // static_assert)
-  memmove(line->data + cursor_pos + src_len, line->data + cursor_pos, line->length - cursor_pos);
+  memmove(
+      line->data + cursor_pos + src_len,
+      line->data + cursor_pos,
+      line->length - cursor_pos
+  );
 
   // copy new data in
   for (size_t i = 0; i < src_len; i++) {

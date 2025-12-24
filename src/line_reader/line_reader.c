@@ -14,6 +14,7 @@
 #include "modify_line.h"
 #include "prompt.h"
 #include "utils.h"
+#include "../interpreter/preprocess.h"
 
 #ifdef static_assert
 static_assert(
@@ -404,6 +405,14 @@ const uint8_t *readline(void *_) {
           printf("\r\033[%zuC", line_len % width);
           fflush(stdout);
           continue;
+        }
+
+        case 'Z': {
+          VECTOR_PUSH(*line_to_read, '\0');
+          uint8_t *buf = preprocess(line_to_read->data);
+          free(line_to_read->data);
+          line_to_read->data = buf;
+          goto draw_line;
         }
 
         default:

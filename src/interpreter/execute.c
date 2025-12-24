@@ -70,7 +70,7 @@ int execute(const execution_context context) {
     int status = execve(context.argv[0], context.argv, environ);
 
     if (status == -1) {
-      
+
       if (errno != ENOENT) {
         fprintf(stderr, "rash: execve: %s\n", strerror(errno));
       } else {
