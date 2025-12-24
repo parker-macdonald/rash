@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "../ansi.h"
+#include "../interpreter/preprocess.h"
 #include "../shell_vars.h"
 #include "../utf_8.h"
 #include "../vector.h"
@@ -14,7 +15,6 @@
 #include "modify_line.h"
 #include "prompt.h"
 #include "utils.h"
-#include "../interpreter/preprocess.h"
 
 #ifdef static_assert
 static_assert(
@@ -27,7 +27,7 @@ typedef struct line_node {
   struct line_node *p_next;
   struct line_node *p_prev;
   // line that can be mutated by using the up and down arrows
-  line_t mut_line;
+  buf_t mut_line;
   // line thats used for displaying history
   uint8_t *const_line;
   size_t const_line_len;
@@ -172,7 +172,7 @@ const uint8_t *readline(void *_) {
 
   line_node_t *node = NULL;
 
-  line_t line;
+  buf_t line;
   VECTOR_INIT(line);
 
   size_t cursor_pos = 0;
@@ -207,7 +207,7 @@ const uint8_t *readline(void *_) {
     }
 
     // the current line for editing
-    line_t *current_line = node == NULL ? &line : &node->mut_line;
+    buf_t *current_line = node == NULL ? &line : &node->mut_line;
 
     if (curr_byte == '\n' || curr_byte == '\r') {
       if (current_line->length != 0) {
@@ -404,13 +404,26 @@ const uint8_t *readline(void *_) {
           fflush(stdout);
           continue;
         }
-
+        // shift+tab
         case 'Z': {
           VECTOR_PUSH(*current_line, '\0');
-          uint8_t *buf = preprocess(current_line->data);
+          buf_t *buf = preprocess(current_line->data);
           free(current_line->data);
-          current_line->data = buf;
-          goto draw_line;
+          *current_line = *buf;
+          cursor_pos = current_line->length;
+          displayed_cursor_pos =
+              strlen_utf8(current_line->data, current_line->length) +
+              prompt_length;
+
+          width = get_terminal_width();
+          size_t moves_up = characters_printed / width;
+          if (moves_up) {
+            printf("\033[%zuA", moves_up);
+          }
+          characters_printed = displayed_cursor_pos;
+          DRAW_LINE(*current_line);
+          fflush(stdout);
+          continue;
         }
 
         default:

@@ -1,6 +1,5 @@
 #include "glob.h"
 
-#include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -9,7 +8,6 @@
 #include <string.h>
 
 #include "../vector.h"
-#include "evaluate.h"
 
 struct queue_node {
   struct queue_node *p_next;
@@ -71,10 +69,13 @@ static bool match(const char *str, const char *pattern) {
   return true;
 }
 
-int glob(argv_t *argv, const char *pattern) {
+static strings_t matches;
+
+strings_t *glob(const char *pattern) {
+  VECTOR_INIT(matches, 0);
+
   struct queue_node *head = malloc(sizeof(struct queue_node));
   struct queue_node *tail = head;
-  int args_added = 0;
 
   head->p_next = NULL;
   head->path = malloc(sizeof(char) * 2);
@@ -94,15 +95,7 @@ int glob(argv_t *argv, const char *pattern) {
     struct dirent *ent;
 
     if (dir == NULL) {
-      if (errno == ENOTDIR) {
-        struct queue_node *temp = head->p_next;
-        free(head->path);
-        free(head);
-        head = temp;
-        continue;
-      }
-
-      if (errno == EACCES) {
+      if (errno == ENOTDIR || errno == EACCES) {
         struct queue_node *temp = head->p_next;
         free(head->path);
         free(head);
@@ -120,7 +113,7 @@ int glob(argv_t *argv, const char *pattern) {
         node = temp;
       }
 
-      return -1;
+      return NULL;
     }
 
     bool end = false;
@@ -153,8 +146,7 @@ int glob(argv_t *argv, const char *pattern) {
         new_path[new_path_len] = '\0';
 
         if (end) {
-          VECTOR_PUSH(*argv, new_path);
-          args_added++;
+          VECTOR_PUSH(matches, new_path);
           continue;
         }
 
@@ -177,5 +169,5 @@ int glob(argv_t *argv, const char *pattern) {
     head = temp;
   }
 
-  return args_added;
+  return &matches;
 }

@@ -3,8 +3,8 @@
 
 #include <stddef.h>
 
-#include "line_reader.h"
+#include "../vec_types.h"
 
-size_t auto_complete(line_t *line, size_t cursor_pos);
+size_t auto_complete(buf_t *line, size_t cursor_pos);
 
 #endif

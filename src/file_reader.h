@@ -5,11 +5,12 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "vec_types.h"
 #include "vector.h"
 
 struct file_reader {
   FILE *file;
-  VECTOR(uint8_t) line;
+  buf_t line;
   bool eof;
 };
 

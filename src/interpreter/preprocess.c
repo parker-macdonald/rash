@@ -1,15 +1,17 @@
 #include "preprocess.h"
 
-#include <stdio.h>
 #include <ctype.h>
+#include <pwd.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
 
 #include "../shell_vars.h"
+#include "../vec_types.h"
 #include "../vector.h"
-
-typedef VECTOR(uint8_t) buffer_t;
+#include "glob.h"
 
 enum pp_state {
   DEFAULT,
@@ -19,7 +21,7 @@ enum pp_state {
   SINGLE_LITERAL
 };
 
-void insert_string(buffer_t *buffer, const char *str) {
+void insert_string(buf_t *buffer, const char *str) {
   bool needs_quoting = false;
 
   for (size_t i = 0; str[i] != '\0'; i++) {
@@ -150,11 +152,150 @@ void insert_string(buffer_t *buffer, const char *str) {
   }
 }
 
-uint8_t *preprocess(const uint8_t *source) {
-  buffer_t buffer;
+char *to_pattern(buf_t *buffer, size_t word_start) {
+  VECTOR(char) pattern;
+  VECTOR_INIT(pattern);
+
+  enum pp_state state = DEFAULT;
+
+  for (size_t i = word_start; i < buffer->length; i++) {
+    switch (state) {
+      case DEFAULT:
+        if (buffer->data[i] == '"') {
+          state = DOUBLE_QUOTE;
+          break;
+        }
+
+        if (buffer->data[i] == '\'') {
+          state = SINGLE_QUOTE;
+          break;
+        }
+
+        if (buffer->data[i] == '\\') {
+          state = SINGLE_LITERAL;
+          break;
+        }
+
+        // stdin redirection
+        if (buffer->data[i] == '<') {
+          if (buffer->data[i + 1] == '<' && buffer->data[i + 2] == '<') {
+            goto success;
+          } else {
+            goto success;
+          }
+        }
+
+        // stdout redirection
+        if (buffer->data[i] == '>') {
+          if (buffer->data[i + 1] == '>') {
+            goto success;
+          }
+          goto success;
+        }
+
+        if (buffer->data[i] == '2') {
+          if (buffer->data[i + 1] == '>') {
+            if (buffer->data[i + 2] == '>') {
+              goto success;
+            }
+            goto success;
+          }
+        }
+
+        if (buffer->data[i] == '|') {
+          if (buffer->data[i + 1] == '|') {
+            goto success;
+          }
+          goto success;
+        }
+
+        if (buffer->data[i] == ';') {
+          goto success;
+        }
+
+        if (buffer->data[i] == '&') {
+          if (buffer->data[i + 1] == '&') {
+            goto success;
+          }
+          goto success;
+        }
+
+        if (buffer->data[i] == '#') {
+          goto success;
+        }
+
+        VECTOR_PUSH(pattern, (char)buffer->data[i]);
+        break;
+
+      case DOUBLE_QUOTE:
+        if (buffer->data[i] == '"') {
+          state = DEFAULT;
+          break;
+        }
+
+        if (buffer->data[i] == '\\') {
+          if (buffer->data[i + 1] == '\\') {
+            VECTOR_PUSH(pattern, '\\');
+            i++;
+            break;
+          }
+          if (buffer->data[i + 1] == '\"') {
+            VECTOR_PUSH(pattern, '\"');
+            i++;
+            break;
+          }
+        }
+
+        VECTOR_PUSH(pattern, (char)buffer->data[i]);
+        break;
+
+      case SINGLE_QUOTE:
+        if (buffer->data[i] == '\'') {
+          state = DEFAULT;
+          break;
+        }
+
+        if (buffer->data[i] == '\\') {
+          if (buffer->data[i + 1] == '\\') {
+            VECTOR_PUSH(pattern, '\\');
+            i++;
+            break;
+          }
+          if (buffer->data[i + 1] == '\'') {
+            VECTOR_PUSH(pattern, '\'');
+            i++;
+            break;
+          }
+        }
+
+        VECTOR_PUSH(pattern, (char)buffer->data[i]);
+        break;
+
+      case SINGLE_LITERAL:
+        VECTOR_PUSH(pattern, (char)buffer->data[i]);
+        state = DEFAULT;
+        break;
+
+      // this will never happen, just silencing a compiler error
+      case WHITESPACE:
+        break;
+    }
+  }
+
+success:
+  VECTOR_PUSH(pattern, '\0');
+  return pattern.data;
+}
+
+static buf_t buffer;
+
+buf_t *preprocess(const uint8_t *source) {
   VECTOR_INIT(buffer);
 
   enum pp_state state = WHITESPACE;
+
+  size_t word_start = 0;
+  bool needs_globbing = false;
 
   for (size_t i = 0; source[i] != '\0'; i++) {
     const uint8_t curr = source[i];
@@ -162,6 +303,20 @@ uint8_t *preprocess(const uint8_t *source) {
     switch (state) {
       case DEFAULT:
         if (isspace((int)curr)) {
+          if (needs_globbing) {
+            char* pattern = to_pattern(&buffer, word_start);
+            strings_t *matches = glob(pattern);
+            free(pattern);
+
+            buffer.length = word_start - 1;
+            for (size_t j = 0; j < matches->length; j++) {
+              VECTOR_PUSH(buffer, ' ');
+              insert_string(&buffer, matches->data[j]);
+              free(matches->data[j]);
+            }
+
+            VECTOR_DESTROY(*matches);
+          }
           state = WHITESPACE;
           break;
         }
@@ -240,9 +395,11 @@ uint8_t *preprocess(const uint8_t *source) {
                 "rash: environment variable ‘%s’ does not exist.\n",
                 env_name
             );
+            free(env_name);
             goto error;
           }
 
+          free(env_name);
           insert_string(&buffer, env_value);
           continue;
         }
@@ -280,16 +437,61 @@ uint8_t *preprocess(const uint8_t *source) {
             fprintf(
                 stderr, "rash: shell variable ‘%s’ does not exist.\n", var_name
             );
+            free(var_name);
             goto error;
           }
 
+          free(var_name);
           insert_string(&buffer, var_value);
+          continue;
+        }
+
+        if (curr == '*') {
+          needs_globbing = true;
+          VECTOR_PUSH(buffer, '\033');
           continue;
         }
 
         break;
       case WHITESPACE:
+        if (curr == '~') {
+          i++;
+          const uint8_t *user_start = source + i;
+          size_t user_len = 0;
+
+          for (;;) {
+            if (source[i] == '/' || source[i] == '\0') {
+              break;
+            }
+            user_len++;
+            i++;
+          }
+
+          if (user_len == 0) {
+            char *home = getenv("HOME");
+            if (home != NULL) {
+              insert_string(&buffer, home);
+            } else {
+              fprintf(stderr, "rash: cannot expand ‘~’, HOME is not set.\n");
+              goto error;
+            }
+          } else {
+            char *user = malloc(user_len + 1);
+            memcpy(user, user_start, user_len);
+            user[user_len] = '\0';
+
+            struct passwd *pw = getpwnam(user);
+            if (pw == NULL || pw->pw_dir == NULL) {
+              fprintf(stderr, "rash: cannot access user ‘%s’.\n", user);
+              goto error;
+            }
+
+            insert_string(&buffer, pw->pw_dir);
+          }
+        }
+
         if (!isspace((int)curr)) {
+          word_start = i;
           i--;
           state = DEFAULT;
           continue;
@@ -298,26 +500,18 @@ uint8_t *preprocess(const uint8_t *source) {
       case SINGLE_QUOTE:
         if (curr == '\'') {
           state = DEFAULT;
-          continue;
+          break;
         }
 
-        if (curr == '\\') {
-          if (source[i + 1] == '\\') {
-            VECTOR_PUSH(buffer, '\\');
-            i++;
-            continue;
-          }
-          if (source[i + 1] == '\'') {
-            VECTOR_PUSH(buffer, '\'');
-            i++;
-            continue;
-          }
+        if (curr == '\\' && source[i + 1] == '\'') {
+          VECTOR_PUSH(buffer, '\\');
+          i++;
         }
         break;
       case DOUBLE_QUOTE:
         if (curr == '"') {
           state = DOUBLE_QUOTE;
-          continue;
+          break;
         }
         if (curr == '\\') {
           if (source[i + 1] == '\\') {
@@ -337,12 +531,29 @@ uint8_t *preprocess(const uint8_t *source) {
         break;
     }
 
-    VECTOR_PUSH(buffer, curr);
+    VECTOR_PUSH(buffer, source[i]);
   }
 
-  return buffer.data;
+  if (needs_globbing) {
+    char* pattern = to_pattern(&buffer, word_start);
+    strings_t *matches = glob(pattern);
+    free(pattern);
 
-  error:
+    buffer.length = word_start;
+    for (size_t j = 0; j < matches->length; j++) {
+      VECTOR_PUSH(buffer, ' ');
+      insert_string(&buffer, matches->data[j]);
+      free(matches->data[j]);
+    }
+
+    VECTOR_DESTROY(*matches);
+  }
+
+  VECTOR_PUSH(buffer, '\0');
+
+  return &buffer;
+
+error:
   VECTOR_DESTROY(buffer);
   return NULL;
 }

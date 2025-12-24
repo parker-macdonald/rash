@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
-uint8_t *preprocess(const uint8_t *source);
+#include "../vec_types.h"
+
+buf_t *preprocess(const uint8_t *source);
 
 #endif

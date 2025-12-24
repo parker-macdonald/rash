@@ -22,14 +22,14 @@ int repl(const uint8_t *(*reader)(void *), void *reader_data) {
       break;
     }
 
-    uint8_t *processed_line = preprocess(line);
+    buf_t *processed_line = preprocess(line);
     if (processed_line == NULL) {
       status = EXIT_FAILURE;
       goto stop_evaluating;
     }
 
-    token_t *tokens = lex(processed_line);
-    free(processed_line);
+    token_t *tokens = lex(processed_line->data);
+    VECTOR_DESTROY(*processed_line);
 
     if (tokens == NULL) {
       status = EXIT_FAILURE;

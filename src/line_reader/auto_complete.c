@@ -3,10 +3,10 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include "line_reader.h"
+#include "../vec_types.h"
 #include "modify_line.h"
 
-size_t auto_complete(line_t *line, size_t cursor_pos) {
+size_t auto_complete(buf_t *line, size_t cursor_pos) {
   size_t word_start = cursor_pos;
   size_t last_slash = (size_t)-1;
 

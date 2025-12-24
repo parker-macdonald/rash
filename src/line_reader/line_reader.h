@@ -5,8 +5,6 @@
 
 #include "../vector.h"
 
-typedef VECTOR(uint8_t) line_t;
-
 /**
  * @brief reads a line interactively from stdin, the returned buffer does not
  * include the '\n' and is null-terminated.
