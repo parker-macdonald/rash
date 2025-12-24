@@ -7,7 +7,7 @@
 #include "modify_line.h"
 
 size_t auto_complete(buf_t *line, size_t cursor_pos) {
-  size_t word_start = cursor_pos;
+  size_t word_start = cursor_pos - 1;
   size_t last_slash = (size_t)-1;
 
   for (; word_start > 0; word_start--) {

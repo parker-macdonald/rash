@@ -287,6 +287,30 @@ success:
   return pattern.data;
 }
 
+#define PREFORM_GLOB                                                           \
+  if (needs_globbing) {                                                        \
+    char *pattern = to_pattern(&buffer, word_start);                           \
+    strings_t *matches = glob(pattern);                                        \
+    free(pattern);                                                             \
+                                                                               \
+    buffer.length = word_start == 0 ? 0 : word_start - 1;                      \
+    for (size_t j = 0; j < matches->length; j++) {                             \
+      VECTOR_PUSH(buffer, ' ');                                                \
+      insert_string(&buffer, matches->data[j]);                                \
+      free(matches->data[j]);                                                  \
+    }                                                                          \
+                                                                               \
+    VECTOR_DESTROY(*matches);                                                  \
+    needs_globbing = false;                                                    \
+  }
+
+#define PUSH_STRING(buffer, str)                                               \
+  do {                                                                         \
+    for (size_t j = 0; str[j] != '\0'; j++) {                                  \
+      VECTOR_PUSH(buffer, str[i]);                                             \
+    }                                                                          \
+  } while (0)
+
 static buf_t buffer;
 
 buf_t *preprocess(const uint8_t *source) {
@@ -303,20 +327,7 @@ buf_t *preprocess(const uint8_t *source) {
     switch (state) {
       case DEFAULT:
         if (isspace((int)curr)) {
-          if (needs_globbing) {
-            char* pattern = to_pattern(&buffer, word_start);
-            strings_t *matches = glob(pattern);
-            free(pattern);
-
-            buffer.length = word_start - 1;
-            for (size_t j = 0; j < matches->length; j++) {
-              VECTOR_PUSH(buffer, ' ');
-              insert_string(&buffer, matches->data[j]);
-              free(matches->data[j]);
-            }
-
-            VECTOR_DESTROY(*matches);
-          }
+          PREFORM_GLOB
           state = WHITESPACE;
           break;
         }
@@ -328,6 +339,72 @@ buf_t *preprocess(const uint8_t *source) {
 
         if (curr == '\'') {
           state = SINGLE_QUOTE;
+          break;
+        }
+
+        // stdin redirection
+        if (curr == '<') {
+          if (source[i + 1] == '<' && source[i + 2] == '<') {
+            PREFORM_GLOB;
+            word_start = buffer.length + 4;
+            break;
+          } else {
+            PREFORM_GLOB;
+            word_start = buffer.length + 3;
+            break;
+          }
+        }
+
+        // stdout redirection
+        if (curr == '>') {
+          if (source[i + 1] == '>') {
+            PREFORM_GLOB;
+            word_start = buffer.length + 3;
+            break;
+          }
+          PREFORM_GLOB;
+          word_start = buffer.length + 2;
+          break;
+        }
+
+        if (curr == '2') {
+          if (source[i + 1] == '>') {
+            if (source[i + 2] == '>') {
+              PREFORM_GLOB;
+              word_start = buffer.length + 4;
+              break;
+            }
+            PREFORM_GLOB;
+            word_start = buffer.length + 3;
+            break;
+          }
+        }
+
+        if (curr == '|') {
+          if (source[i + 1] == '|') {
+            PREFORM_GLOB;
+            word_start = buffer.length + 3;
+            break;
+          }
+          PREFORM_GLOB;
+          word_start = buffer.length + 2;
+          break;
+        }
+
+        if (curr == ';') {
+          PREFORM_GLOB;
+          word_start = buffer.length + 2;
+          break;
+        }
+
+        if (curr == '&') {
+          if (source[i + 1] == '&') {
+            PREFORM_GLOB;
+            word_start = buffer.length + 3;
+            break;
+          }
+          PREFORM_GLOB;
+          word_start = buffer.length + 2;
           break;
         }
 
@@ -491,7 +568,7 @@ buf_t *preprocess(const uint8_t *source) {
         }
 
         if (!isspace((int)curr)) {
-          word_start = i;
+          word_start = buffer.length;
           i--;
           state = DEFAULT;
           continue;
@@ -534,20 +611,7 @@ buf_t *preprocess(const uint8_t *source) {
     VECTOR_PUSH(buffer, source[i]);
   }
 
-  if (needs_globbing) {
-    char* pattern = to_pattern(&buffer, word_start);
-    strings_t *matches = glob(pattern);
-    free(pattern);
-
-    buffer.length = word_start;
-    for (size_t j = 0; j < matches->length; j++) {
-      VECTOR_PUSH(buffer, ' ');
-      insert_string(&buffer, matches->data[j]);
-      free(matches->data[j]);
-    }
-
-    VECTOR_DESTROY(*matches);
-  }
+  PREFORM_GLOB;
 
   VECTOR_PUSH(buffer, '\0');
 
