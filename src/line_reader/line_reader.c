@@ -10,6 +10,7 @@
 #include "../shell_vars.h"
 #include "../utf_8.h"
 #include "../vector.h"
+#include "auto_complete.h"
 #include "modify_line.h"
 #include "prompt.h"
 #include "utils.h"
@@ -123,6 +124,28 @@ void print_history(int count) {
     } else {                                                                   \
       fputs(ANSI_CURSOR_LEFT, stdout);                                         \
     }                                                                          \
+  } while (0)
+
+#define CURSOR_RIGHT_N(n)                                                      \
+  do {                                                                         \
+    size_t moves_down =                                                        \
+        (displayed_cursor_pos + n) / width - displayed_cursor_pos / width;     \
+    displayed_cursor_pos += n;                                                 \
+    if (moves_down > 0) {                                                      \
+      printf("\033[%zuB", moves_down);                                         \
+    }                                                                          \
+    printf("\r\033[%zuC", displayed_cursor_pos % width);                       \
+  } while (0)
+
+#define CURSOR_LEFT_N(n)                                                       \
+  do {                                                                         \
+    size_t moves_up =                                                          \
+        displayed_cursor_pos / width - (displayed_cursor_pos - n) / width;     \
+    displayed_cursor_pos -= n;                                                 \
+    if (moves_up > 0) {                                                        \
+      printf("\033[%zuA", moves_up);                                           \
+    }                                                                          \
+    printf("\r\033[%zuC", displayed_cursor_pos);                               \
   } while (0)
 
 #define DRAW_LINE(line)                                                        \
@@ -298,7 +321,7 @@ const uint8_t *readline(void *_) {
           if (getch() == ';') {
             if (getch() == '5') {
               const uint8_t arrow_char = (uint8_t)getch();
-              // shift right arrow
+              // ctrl right arrow
               if (arrow_char == 'C') {
                 if (cursor_pos < line_to_read->length) {
                   cursor_pos += traverse_forward_utf8(
@@ -319,7 +342,7 @@ const uint8_t *readline(void *_) {
 
                 continue;
               }
-              // shift left arrow
+              // ctrl left arrow
               if (arrow_char == 'D') {
                 if (cursor_pos > 0) {
                   cursor_pos -=
@@ -398,6 +421,19 @@ const uint8_t *readline(void *_) {
         goto draw_line;
       }
 
+      continue;
+    }
+
+    if (curr_byte == '\t') {
+      size_t bytes_added = auto_complete(line_to_read, cursor_pos);
+      if (bytes_added) {
+        const size_t n =
+            strlen_utf8(line_to_read->data + cursor_pos, bytes_added);
+        CURSOR_RIGHT_N(n);
+        cursor_pos += bytes_added;
+
+        goto draw_line;
+      }
       continue;
     }
 

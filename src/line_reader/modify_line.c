@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "../utf_8.h"
 #include "../vector.h"
@@ -72,4 +73,70 @@ void line_copy(line_t *dest, const line_t *const src) {
   for (size_t i = 0; i < src->length; i++) {
     VECTOR_PUSH(*dest, src->data[i]);
   }
+}
+
+// calculate the next power of 2 given a number n, this is optimized for 64 bit
+// and 32 bit cpus, before falling back onto a generic implementation
+static inline size_t next_pow_2(size_t n) {
+  if (sizeof(size_t) == 8) {
+    n--;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    n |= n >> 32;
+    n++;
+    return n;
+  }
+  if (sizeof(size_t) == 4) {
+    n--;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    n++;
+    return n;
+  }
+  size_t p = 1;
+  while (p < n) {
+    p *= 2;
+  }
+  return p;
+}
+
+void line_insert_bulk(
+    line_t *line, size_t cursor_pos, uint8_t *src, size_t src_len
+) {
+  size_t new_length = src_len + line->length;
+
+  if (line->_capacity < new_length) {
+    line->_capacity = next_pow_2(new_length);
+    line->data = realloc(line->data, line->_capacity);
+  }
+
+  if (cursor_pos == line->length) {
+    uint8_t *line_end = line->data + line->length;
+
+    for (size_t i = 0; i < src_len; i++) {
+      *line_end = src[i];
+      line_end++;
+    }
+
+    line->length = new_length;
+    return;
+  }
+
+  // move previous data over
+  // i think this is the first feature newer than c99 i've used so far (besides
+  // static_assert)
+  memmove(line->data + cursor_pos + src_len, line->data + cursor_pos, line->length - cursor_pos);
+
+  // copy new data in
+  for (size_t i = 0; i < src_len; i++) {
+    line->data[i + cursor_pos] = src[i];
+  }
+
+  line->length = new_length;
 }

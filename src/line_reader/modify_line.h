@@ -38,4 +38,16 @@ size_t line_delete(line_t *const line, const size_t cursor_pos);
  */
 void line_copy(line_t *dest, const line_t *const src);
 
+/**
+ * @brief insert src_len bytes from src into line at index cursor_pos
+ * @param line the line to modify
+ * @param cursor_pos where to insert data into line, line->data[cursor_pos]
+ * contains the first new character
+ * @param src buffer containing the bytes to write to line
+ * @param src_len the amount of bytes to read from src
+ */
+void line_insert_bulk(
+    line_t *line, size_t cursor_pos, uint8_t *src, size_t src_len
+);
+
 #endif
