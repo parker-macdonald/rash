@@ -176,54 +176,6 @@ char *to_pattern(buf_t *buffer, size_t word_start) {
           break;
         }
 
-        // stdin redirection
-        if (buffer->data[i] == '<') {
-          if (buffer->data[i + 1] == '<' && buffer->data[i + 2] == '<') {
-            goto success;
-          } else {
-            goto success;
-          }
-        }
-
-        // stdout redirection
-        if (buffer->data[i] == '>') {
-          if (buffer->data[i + 1] == '>') {
-            goto success;
-          }
-          goto success;
-        }
-
-        if (buffer->data[i] == '2') {
-          if (buffer->data[i + 1] == '>') {
-            if (buffer->data[i + 2] == '>') {
-              goto success;
-            }
-            goto success;
-          }
-        }
-
-        if (buffer->data[i] == '|') {
-          if (buffer->data[i + 1] == '|') {
-            goto success;
-          }
-          goto success;
-        }
-
-        if (buffer->data[i] == ';') {
-          goto success;
-        }
-
-        if (buffer->data[i] == '&') {
-          if (buffer->data[i + 1] == '&') {
-            goto success;
-          }
-          goto success;
-        }
-
-        if (buffer->data[i] == '#') {
-          goto success;
-        }
-
         VECTOR_PUSH(pattern, (char)buffer->data[i]);
         break;
 
@@ -282,7 +234,6 @@ char *to_pattern(buf_t *buffer, size_t word_start) {
     }
   }
 
-success:
   VECTOR_PUSH(pattern, '\0');
   return pattern.data;
 }
@@ -291,15 +242,31 @@ success:
   if (needs_globbing) {                                                        \
     char *pattern = to_pattern(&buffer, word_start);                           \
     strings_t *matches = glob(pattern);                                        \
-    free(pattern);                                                             \
-                                                                               \
-    buffer.length = word_start == 0 ? 0 : word_start - 1;                      \
-    for (size_t j = 0; j < matches->length; j++) {                             \
-      VECTOR_PUSH(buffer, ' ');                                                \
-      insert_string(&buffer, matches->data[j]);                                \
-      free(matches->data[j]);                                                  \
+    if (matches == NULL) {                                                     \
+      free(pattern);                                                           \
+      goto error;                                                              \
+    }                                                                          \
+    buffer.length = word_start;                                                \
+    if (matches->length == 0) {                                                \
+      for (size_t j = 0; pattern[j] != '\0'; j++) {                            \
+        if (pattern[j] == '\033') {                                            \
+          VECTOR_PUSH(buffer, '*');                                            \
+          continue;                                                            \
+        }                                                                      \
+        VECTOR_PUSH(buffer, (uint8_t)pattern[j]);                              \
+      }                                                                        \
+      VECTOR_DESTROY(*matches);                                                \
+    } else {                                                                   \
+      for (size_t j = 0; j < matches->length; j++) {                           \
+        if (j != 0) {                                                          \
+          VECTOR_PUSH(buffer, ' ');                                            \
+        }                                                                      \
+        insert_string(&buffer, matches->data[j]);                              \
+        free(matches->data[j]);                                                \
+      }                                                                        \
     }                                                                          \
                                                                                \
+    free(pattern);                                                             \
     VECTOR_DESTROY(*matches);                                                  \
     needs_globbing = false;                                                    \
   }
@@ -307,7 +274,7 @@ success:
 #define PUSH_STRING(buffer, str)                                               \
   do {                                                                         \
     for (size_t j = 0; str[j] != '\0'; j++) {                                  \
-      VECTOR_PUSH(buffer, str[i]);                                             \
+      VECTOR_PUSH(buffer, (uint8_t)str[j]);                                    \
     }                                                                          \
   } while (0)
 
@@ -327,7 +294,7 @@ buf_t *preprocess(const uint8_t *source) {
     switch (state) {
       case DEFAULT:
         if (isspace((int)curr)) {
-          PREFORM_GLOB
+          PREFORM_GLOB;
           state = WHITESPACE;
           break;
         }
@@ -346,12 +313,15 @@ buf_t *preprocess(const uint8_t *source) {
         if (curr == '<') {
           if (source[i + 1] == '<' && source[i + 2] == '<') {
             PREFORM_GLOB;
-            word_start = buffer.length + 4;
-            break;
+            PUSH_STRING(buffer, "<<<");
+            word_start = buffer.length;
+            i += 2;
+            continue;
           } else {
             PREFORM_GLOB;
-            word_start = buffer.length + 3;
-            break;
+            VECTOR_PUSH(buffer, '<');
+            word_start = buffer.length;
+            continue;
           }
         }
 
@@ -359,53 +329,67 @@ buf_t *preprocess(const uint8_t *source) {
         if (curr == '>') {
           if (source[i + 1] == '>') {
             PREFORM_GLOB;
-            word_start = buffer.length + 3;
-            break;
+            PUSH_STRING(buffer, ">>");
+            word_start = buffer.length;
+            i += 1;
+            continue;
           }
           PREFORM_GLOB;
-          word_start = buffer.length + 2;
-          break;
+          VECTOR_PUSH(buffer, '>');
+          word_start = buffer.length;
+          continue;
         }
 
         if (curr == '2') {
           if (source[i + 1] == '>') {
             if (source[i + 2] == '>') {
               PREFORM_GLOB;
-              word_start = buffer.length + 4;
-              break;
+              PUSH_STRING(buffer, "2>>");
+              word_start = buffer.length;
+              i += 2;
+              continue;
             }
             PREFORM_GLOB;
-            word_start = buffer.length + 3;
-            break;
+            PUSH_STRING(buffer, "2>");
+            word_start = buffer.length;
+            i += 1;
+            continue;
           }
         }
 
         if (curr == '|') {
           if (source[i + 1] == '|') {
             PREFORM_GLOB;
-            word_start = buffer.length + 3;
-            break;
+            PUSH_STRING(buffer, "||");
+            word_start = buffer.length;
+            i += 1;
+            continue;
           }
           PREFORM_GLOB;
-          word_start = buffer.length + 2;
-          break;
+          VECTOR_PUSH(buffer, '|');
+          word_start = buffer.length;
+          continue;
         }
 
         if (curr == ';') {
           PREFORM_GLOB;
-          word_start = buffer.length + 2;
-          break;
+          VECTOR_PUSH(buffer, ';');
+          word_start = buffer.length;
+          continue;
         }
 
         if (curr == '&') {
           if (source[i + 1] == '&') {
             PREFORM_GLOB;
-            word_start = buffer.length + 3;
-            break;
+            PUSH_STRING(buffer, "&&");
+            word_start = buffer.length;
+            i += 1;
+            continue;
           }
           PREFORM_GLOB;
-          word_start = buffer.length + 2;
-          break;
+          VECTOR_PUSH(buffer, '&');
+          word_start = buffer.length;
+          continue;
         }
 
         // crazy logic for enviroment variables
@@ -527,6 +511,17 @@ buf_t *preprocess(const uint8_t *source) {
           needs_globbing = true;
           VECTOR_PUSH(buffer, '\033');
           continue;
+        }
+
+        if (curr == '#') {
+          for (;;) {
+            VECTOR_PUSH(buffer, source[i]);
+            if (source[i] == '\0') {
+              break;
+            }
+            i++;
+          }
+          return &buffer;
         }
 
         break;
