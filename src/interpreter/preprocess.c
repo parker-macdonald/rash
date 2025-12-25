@@ -248,14 +248,20 @@ char *to_pattern(buf_t *buffer, size_t word_start) {
     }                                                                          \
     buffer.length = word_start;                                                \
     if (matches->length == 0) {                                                \
-      for (size_t j = 0; pattern[j] != '\0'; j++) {                            \
-        if (pattern[j] == '\033') {                                            \
-          VECTOR_PUSH(buffer, '*');                                            \
-          continue;                                                            \
+      if (print_errors) {                                                      \
+        for (size_t j = 0; pattern[j] != '\0'; j++) {                          \
+          if (pattern[j] == '\033') {                                          \
+            pattern[j] = '*';                                                  \
+          }                                                                    \
         }                                                                      \
-        VECTOR_PUSH(buffer, (uint8_t)pattern[j]);                              \
+        fprintf(                                                               \
+            stderr, "rash: nothing matched glob pattern ‘%s’.\n", pattern      \
+        );                                                                     \
       }                                                                        \
+                                                                               \
+      free(pattern);                                                           \
       VECTOR_DESTROY(*matches);                                                \
+      goto error;                                                              \
     } else {                                                                   \
       for (size_t j = 0; j < matches->length; j++) {                           \
         if (j != 0) {                                                          \
@@ -280,7 +286,7 @@ char *to_pattern(buf_t *buffer, size_t word_start) {
 
 static buf_t buffer;
 
-buf_t *preprocess(const uint8_t *source) {
+buf_t *preprocess(const uint8_t *source, bool print_errors) {
   VECTOR_INIT(buffer);
 
   enum pp_state state = WHITESPACE;
@@ -409,7 +415,9 @@ buf_t *preprocess(const uint8_t *source) {
               }
 
               if (source[i] == '\0') {
-                fprintf(stderr, "rash: expected closing ‘}’ character.\n");
+                if (print_errors) {
+                  fprintf(stderr, "rash: expected closing ‘}’ character.\n");
+                }
                 goto error;
               }
 
@@ -418,9 +426,11 @@ buf_t *preprocess(const uint8_t *source) {
             }
 
             if (env_len == 0) {
-              fprintf(
-                  stderr, "rash: cannot expand empty enviroment variable.\n"
-              );
+              if (print_errors) {
+                fprintf(
+                    stderr, "rash: cannot expand empty enviroment variable.\n"
+                );
+              }
               goto error;
             }
 
@@ -451,11 +461,13 @@ buf_t *preprocess(const uint8_t *source) {
           char *env_value = getenv(env_name);
 
           if (env_name == NULL) {
-            fprintf(
-                stderr,
-                "rash: environment variable ‘%s’ does not exist.\n",
-                env_name
-            );
+            if (print_errors) {
+              fprintf(
+                  stderr,
+                  "rash: environment variable ‘%s’ does not exist.\n",
+                  env_name
+              );
+            }
             free(env_name);
             goto error;
           }
@@ -476,7 +488,9 @@ buf_t *preprocess(const uint8_t *source) {
             }
 
             if (source[i] == '\0') {
-              fprintf(stderr, "rash: expected closing ‘}’ character.\n");
+              if (print_errors) {
+                fprintf(stderr, "rash: expected closing ‘}’ character.\n");
+              }
               goto error;
             }
 
@@ -485,7 +499,10 @@ buf_t *preprocess(const uint8_t *source) {
           }
 
           if (var_len == 0) {
-            fprintf(stderr, "rash: cannot expand empty shell variable.\n");
+            if (print_errors) {
+              fprintf(stderr, "rash: cannot expand empty shell variable.\n");
+            }
+
             goto error;
           }
 
@@ -495,9 +512,14 @@ buf_t *preprocess(const uint8_t *source) {
 
           const char *var_value = var_get(var_name);
           if (var_value == NULL) {
-            fprintf(
-                stderr, "rash: shell variable ‘%s’ does not exist.\n", var_name
-            );
+            if (print_errors) {
+              fprintf(
+                  stderr,
+                  "rash: shell variable ‘%s’ does not exist.\n",
+                  var_name
+              );
+            }
+
             free(var_name);
             goto error;
           }
@@ -544,7 +566,9 @@ buf_t *preprocess(const uint8_t *source) {
             if (home != NULL) {
               insert_string(&buffer, home);
             } else {
-              fprintf(stderr, "rash: cannot expand ‘~’, HOME is not set.\n");
+              if (print_errors) {
+                fprintf(stderr, "rash: cannot expand ‘~’, HOME is not set.\n");
+              }
               goto error;
             }
           } else {
@@ -554,7 +578,10 @@ buf_t *preprocess(const uint8_t *source) {
 
             struct passwd *pw = getpwnam(user);
             if (pw == NULL || pw->pw_dir == NULL) {
-              fprintf(stderr, "rash: cannot access user ‘%s’.\n", user);
+              if (print_errors) {
+                fprintf(stderr, "rash: cannot access user ‘%s’.\n", user);
+              }
+              free(user);
               goto error;
             }
 

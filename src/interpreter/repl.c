@@ -22,7 +22,7 @@ int repl(const uint8_t *(*reader)(void *), void *reader_data) {
       break;
     }
 
-    buf_t *processed_line = preprocess(line);
+    buf_t *processed_line = preprocess(line, true);
     if (processed_line == NULL) {
       status = EXIT_FAILURE;
       goto stop_evaluating;

@@ -407,7 +407,13 @@ const uint8_t *readline(void *_) {
         // shift+tab
         case 'Z': {
           VECTOR_PUSH(*current_line, '\0');
-          buf_t *buf = preprocess(current_line->data);
+          buf_t *buf = preprocess(current_line->data, false);
+          
+          if (buf == NULL) {
+            current_line->length--;
+            continue;
+          }
+
           free(current_line->data);
           *current_line = *buf;
           cursor_pos = current_line->length;
