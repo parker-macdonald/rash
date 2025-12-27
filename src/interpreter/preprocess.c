@@ -47,81 +47,66 @@ void insert_string(buf_t *buffer, const char *str) {
 
     // stdin redirection
     if (str[i] == '<') {
-      if (str[i + 1] == '<' && str[i + 2] == '<') {
-        needs_quoting = true;
-        break;
-      } else {
-        needs_quoting = true;
-        break;
-      }
+      needs_quoting = true;
+      break;
     }
 
     // stdout redirection
     if (str[i] == '>') {
-      if (str[i + 1] == '>') {
-        needs_quoting = true;
-        break;
-      }
       needs_quoting = true;
       break;
     }
 
+    // stderr redirection
     if (str[i] == '2') {
       if (str[i + 1] == '>') {
-        if (str[i + 2] == '>') {
-          needs_quoting = true;
-          i += 2;
-          break;
-        }
         needs_quoting = true;
         break;
       }
     }
 
+    // pipe and logical or
     if (str[i] == '|') {
-      if (str[i + 1] == '|') {
-        needs_quoting = true;
-        break;
-      }
       needs_quoting = true;
       break;
     }
 
+    // semi
     if (str[i] == ';') {
       needs_quoting = true;
       break;
     }
 
+    // amp and logical and
     if (str[i] == '&') {
-      if (str[i + 1] == '&') {
-        needs_quoting = true;
-        break;
-      }
       needs_quoting = true;
       break;
     }
 
-    // crazy logic for enviroment variables
+    // environment vars
     if (str[i] == '$') {
       needs_quoting = true;
       break;
     }
 
+    // shell vars
     if (str[i] == '{') {
       needs_quoting = true;
       break;
     }
 
+    // globs
     if (str[i] == '*') {
       needs_quoting = true;
       break;
     }
 
+    // comments
     if (str[i] == '#') {
       needs_quoting = true;
     }
 
-    // crude tilde expansion
+    // tilde expansion
     if (str[i] == '~') {
       needs_quoting = true;
       break;
