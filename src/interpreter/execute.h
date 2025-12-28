@@ -7,8 +7,8 @@
 // the registered jobs
 #define EC_BACKGROUND_JOB (1)
 // this flag tells execute not to wait for the program to finish and instead
-// return the pid (thank god pids and ints are the same size). for obvious
-// reasons this is mutually exclusive with EC_BACKGROUND_JOB
+// return the pid (pids and ints are the same size). this flag is mutually
+// exclusive with EC_BACKGROUND_JOB
 #define EC_NO_WAIT (1 << 1)
 
 typedef struct {

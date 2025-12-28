@@ -22,7 +22,13 @@ int execute(const execution_context context) {
 
   builtin_t builtin = find_builtin(context.argv[0]);
 
-  if (builtin != NULL) {
+  bool is_io_redirected = context.stderr_fd != -1 || context.stdin_fd != -1 ||
+                          context.stdout_fd != -1;
+
+  // no need to fork if the command is builtin and i/o isn't redirected. this
+  // also is needed so that commands like export and cd change the state of
+  // rash, and not the child process
+  if (!is_io_redirected && builtin != NULL) {
     return builtin(context.argv);
   }
 
@@ -52,6 +58,10 @@ int execute(const execution_context context) {
       int new_fd = dup(context.stdin_fd);
 
       assert(new_fd == STDIN_FILENO);
+    }
+
+    if (builtin != NULL) {
+      _exit(builtin(context.argv));
     }
 
     // search path for executable

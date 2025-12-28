@@ -541,7 +541,8 @@ buf_t *preprocess(const uint8_t *source, bool print_errors) {
           size_t user_len = 0;
 
           for (;;) {
-            if (source[i] == '/' || source[i] == '\0') {
+            if (source[i] == '/' || source[i] == '\0' ||
+                isspace((int)source[i])) {
               break;
             }
             user_len++;
