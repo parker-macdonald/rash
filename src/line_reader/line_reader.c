@@ -146,7 +146,7 @@ void print_history(int count) {
     if (moves_up > 0) {                                                        \
       printf("\033[%zuA", moves_up);                                           \
     }                                                                          \
-    printf("\r\033[%zuC", displayed_cursor_pos);                               \
+    printf("\r\033[%zuC", displayed_cursor_pos % width);                       \
   } while (0)
 
 #define DRAW_LINE(line)                                                        \
@@ -412,7 +412,7 @@ const uint8_t *readline(void *_) {
         case 'Z': {
           VECTOR_PUSH(*current_line, '\0');
           buf_t *buf = preprocess(current_line->data, false);
-          
+
           if (buf == NULL) {
             current_line->length--;
             continue;
