@@ -420,6 +420,7 @@ const uint8_t *readline(void *_) {
 
           free(current_line->data);
           *current_line = *buf;
+          current_line->length--;
           cursor_pos = current_line->length;
           displayed_cursor_pos =
               strlen_utf8(current_line->data, current_line->length) +

@@ -1,3 +1,5 @@
+#include "auto_complete.h"
+
 #include <dirent.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -9,9 +11,8 @@
 #include "../vec_types.h"
 #include "modify_line.h"
 
-#include "auto_complete.h"
-
-static void get_file_matches(strings_t *matches, const char *word, size_t word_len) {
+static void
+get_file_matches(strings_t *matches, const char *word, size_t word_len) {
   DIR *dir;
   const char *basename;
   size_t basename_len;
@@ -68,37 +69,39 @@ static void get_file_matches(strings_t *matches, const char *word, size_t word_l
     }
 
     size_t file_len = strlen(ent->d_name);
-    char *file = malloc(file_len + 2);
+    char *file_path = malloc(last_slash + file_len + 3);
 
-    memcpy(file, ent->d_name, file_len);
+    memcpy(file_path, word, last_slash + 1);
+    memcpy(file_path + last_slash + 1, ent->d_name, file_len);
+
 #ifdef _DIRENT_HAVE_D_TYPE
     if (ent->d_type == DT_DIR) {
-      file[file_len] = '/';
+      file_path[last_slash + file_len + 1] = '/';
     } else {
-      file[file_len] = ' ';
+      file_path[last_slash + file_len + 1] = ' ';
     }
 #else
     {
       struct stat sb = {0};
       if (fstatat(fd, ent->d_name, &sb, AT_SYMLINK_NOFOLLOW) == 0 &&
           S_ISDIR(sb.st_mode)) {
-        file[file_len] = '/';
+        file_path[last_slash + file_len + 1] = '/';
       } else {
-        file[file_len] = ' ';
+        file_path[last_slash + file_len + 1] = ' ';
       }
     }
 #endif
 
-    file[file_len + 1] = '\0';
-    VECTOR_PUSH(*matches, file);
+    file_path[last_slash + file_len + 2] = '\0';
+    VECTOR_PUSH(*matches, file_path);
   }
 
+  closedir(dir);
   return;
 }
 
-static void get_command_matches(
-    strings_t *matches, const char *word, size_t word_len
-) {
+static void
+get_command_matches(strings_t *matches, const char *word, size_t word_len) {
   find_matching_builtins(word, word_len, matches);
   const char *path = getenv("PATH");
 
@@ -183,11 +186,15 @@ size_t auto_complete(buf_t *line, size_t cursor_pos) {
 
   if (matches.length == 1) {
     size_t match_len = strlen(matches.data[0]);
-    size_t bytes_written = match_len - word_len;
+    size_t bytes_written = 0;
 
-    line_insert_bulk(
-        line, cursor_pos, (uint8_t *)matches.data[0] + word_len, bytes_written
-    );
+    if (match_len > word_len) {
+      bytes_written = match_len - word_len;
+
+      line_insert_bulk(
+          line, cursor_pos, (uint8_t *)matches.data[0] + word_len, bytes_written
+      );
+    }
 
     free(matches.data[0]);
     VECTOR_DESTROY(matches);
@@ -208,8 +215,9 @@ size_t auto_complete(buf_t *line, size_t cursor_pos) {
   }
 
 leave: {
-  size_t bytes_written = i - word_len;
-  if (bytes_written != 0) {
+  size_t bytes_written = 0;
+  if (i > word_len) {
+    bytes_written = i - word_len;
     line_insert_bulk(
         line, cursor_pos, (uint8_t *)matches.data[0] + word_len, bytes_written
     );
