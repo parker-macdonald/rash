@@ -23,6 +23,13 @@ int builtin_unsetenv(char **argv) {
     return EXIT_FAILURE;
   }
 
+  if (getenv(argv[1]) == NULL) {
+    fprintf(
+        stderr, "unsetenv: environment variable ‘%s’ was not set.\n", argv[1]
+    );
+    return EXIT_FAILURE;
+  }
+
   unsetenv(argv[1]);
 
   return EXIT_SUCCESS;

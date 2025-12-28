@@ -11,14 +11,12 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "../shell_vars.h"
 #include "../vector.h"
 #include "execute.h"
-#include "glob.h"
 #include "lex.h"
 
 static bool bad_syntax(const token_t *const tokens) {
-  if (!(tokens[0].type & ARGUMENT_TOKENS)) {
+  if (tokens[0].type != STRING) {
     fprintf(stderr, "rash: invalid first token.\n");
     return true;
   }
@@ -98,7 +96,7 @@ static bool bad_syntax(const token_t *const tokens) {
         return true;
       }
 
-      if (tokens[i - 1].type != END_ARG) {
+      if (tokens[i - 1].type != STRING) {
         fprintf(stderr, "rash: bad placement of ‘|’.\n");
         return true;
       }
@@ -135,7 +133,7 @@ static bool bad_syntax(const token_t *const tokens) {
         return true;
       }
 
-      if (tokens[i - 1].type != END_ARG) {
+      if (tokens[i - 1].type != STRING) {
         fprintf(stderr, "rash: bad placement of ‘||’.\n");
         return true;
       }
@@ -151,7 +149,7 @@ static bool bad_syntax(const token_t *const tokens) {
         return true;
       }
 
-      if (tokens[i - 1].type != END_ARG) {
+      if (tokens[i - 1].type != STRING) {
         fprintf(stderr, "rash: bad placement of ‘&&’.\n");
         return true;
       }
@@ -162,7 +160,7 @@ static bool bad_syntax(const token_t *const tokens) {
     }
 
     if (tokens[i].type == SEMI) {
-      if (tokens[i - 1].type != END_ARG) {
+      if (tokens[i - 1].type != STRING) {
         fprintf(stderr, "rash: bad placement of ‘;’.\n");
         return true;
       }
@@ -173,7 +171,7 @@ static bool bad_syntax(const token_t *const tokens) {
     }
 
     if (tokens[i].type == AMP) {
-      if (tokens[i - 1].type != END_ARG) {
+      if (tokens[i - 1].type != STRING) {
         fprintf(stderr, "rash: bad placement of ‘&’.\n");
         return true;
       }
@@ -208,8 +206,6 @@ int evaluate(const token_t *tokens) {
   // this doesn't compile on gcc :(
   // VECTOR_INIT(wait_for_me, 0);
 
-  bool needs_globbing = false;
-
   execution_context ec = {NULL, -1, -1, -1, 0};
 
   for (;; tokens++) {
@@ -217,82 +213,8 @@ int evaluate(const token_t *tokens) {
       for (size_t i = 0; ((char *)(tokens->data))[i] != '\0'; i++) {
         VECTOR_PUSH(buffer, ((char *)(tokens->data))[i]);
       }
-
-      continue;
-    }
-
-    if (tokens->type == ENV_EXPANSION) {
-      const char *value = getenv((char *)tokens->data);
-
-      if (value == NULL) {
-        fprintf(
-            stderr,
-            "rash: environment variable ‘%s’ does not exist.\n",
-            (char *)tokens->data
-        );
-        goto error;
-      }
-
-      for (size_t i = 0; value[i] != '\0'; i++) {
-        VECTOR_PUSH(buffer, value[i]);
-      }
-
-      continue;
-    }
-
-    if (tokens->type == VAR_EXPANSION) {
-      const char *value = var_get((char *)tokens->data);
-
-      if (value == NULL) {
-        fprintf(
-            stderr,
-            "rash: shell variable ‘%s’ does not exist.\n",
-            (char *)tokens->data
-        );
-        goto error;
-      }
-
-      for (size_t i = 0; value[i] != '\0'; i++) {
-        VECTOR_PUSH(buffer, value[i]);
-      }
-
-      continue;
-    }
-
-    if (tokens->type == GLOB_WILDCARD) {
-      // this is a really dumb solution to this problem, but the line reader
-      // assures that '\033' never be in the string, so it's not bad unless i
-      // forget to strip out '\033' when i implement shell scripts. also if
-      // futures globs besides the wildcard are added, this will need to be
-      // reworked
-      VECTOR_PUSH(buffer, '\033');
-      needs_globbing = true;
-      continue;
-    }
-
-    if (tokens->type == END_ARG) {
       VECTOR_PUSH(buffer, '\0');
-      if (needs_globbing) {
-        int args_added = glob(&argv, buffer.data);
-        if (args_added == 0) {
-          for (size_t i = 0; i < buffer.length; i++) {
-            if (buffer.data[i] == '\033') {
-              buffer.data[i] = '*';
-            }
-          }
-          fprintf(
-              stderr, "rash: nothing matched glob pattern ‘%s’.\n", buffer.data
-          );
-          goto error;
-        }
-        if (args_added == -1) {
-          goto error;
-        }
-        VECTOR_DESTROY(buffer);
-        needs_globbing = false;
-      } else {
-        VECTOR_PUSH(argv, buffer.data);
-      }
+      VECTOR_PUSH(argv, buffer.data);
       VECTOR_INIT(buffer);
 
       continue;
@@ -484,7 +406,7 @@ int evaluate(const token_t *tokens) {
 
     if (tokens->type == LOGICAL_AND) {
       if (last_status != 0) {
-        while ((tokens + 1)->type == END_ARG) {
+        while ((tokens + 1)->type == STRING) {
           tokens++;
         }
       }
@@ -494,7 +416,7 @@ int evaluate(const token_t *tokens) {
 
     if (tokens->type == LOGICAL_OR) {
       if (last_status == 0) {
-        while ((tokens + 1)->type == END_ARG) {
+        while ((tokens + 1)->type == STRING) {
           tokens++;
         }
       }

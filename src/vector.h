@@ -156,7 +156,7 @@ printf("%s", string.data);
 
 // no length checks are done for this macro, always check the length is not zero
 // before using vector_pop
-#define VECTOR_POP(vector) (vector).data[--(vector).length]
+#define VECTOR_POP(vector) ((vector).length == 0 ? NULL : (vector).data[--(vector).length])
 
 #define VECTOR_AT(vector, index) (vector).data[index]
 

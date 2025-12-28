@@ -4,13 +4,17 @@
 #include <ctype.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 
+#include "../vec_types.h"
+#include "../vector.h"
 #include "./builtins.h"
 
 #define ALPHABET_SIZE 26
 
 typedef struct trie_node_t {
   builtin_t function;
+  const char *name;
   struct trie_node_t *nodes[ALPHABET_SIZE];
 } TrieNode;
 
@@ -36,6 +40,7 @@ static void trie_insert(const char *const str, const builtin_t function) {
     node = new_node;
   }
 
+  node->name = str;
   node->function = function;
 }
 
@@ -82,9 +87,9 @@ void trie_init(void) {
   trie_insert("unsetenv", &builtin_unsetenv);
 }
 
-builtin_t find_builtin(const char *const str) {
+static TrieNode *find_node(const char *str, size_t str_len) {
   TrieNode *node = &root;
-  for (size_t i = 0; str[i] != '\0'; i++) {
+  for (size_t i = 0; i < str_len; i++) {
     char curr_char = str[i];
 
     if (curr_char < 'a' || curr_char > 'z') {
@@ -101,5 +106,48 @@ builtin_t find_builtin(const char *const str) {
     }
   }
 
+  return node;
+}
+
+builtin_t find_builtin(const char *const str) {
+  size_t str_len = strlen(str);
+  TrieNode *node = find_node(str, str_len);
+
+  if (node == NULL) {
+    return NULL;
+  }
+
   return node->function;
+}
+
+void find_matching_builtins(
+    const char *prefix, size_t prefix_len, strings_t *vec
+) {
+  TrieNode *node = find_node(prefix, prefix_len);
+
+  if (node == NULL) {
+    return;
+  }
+
+  VECTOR(TrieNode *) stack;
+  VECTOR_INIT(stack);
+
+  do {
+    if (node->function != NULL) {
+      size_t name_len = strlen(node->name);
+      char *name = malloc(name_len + 2);
+      memcpy(name, node->name, name_len);
+      name[name_len] = ' ';
+      name[name_len + 1] = '\0';
+
+      VECTOR_PUSH(*vec, name);
+      continue;
+    }
+    for (size_t i = 0; i < ALPHABET_SIZE; i++) {
+      if (node->nodes[i] != NULL) {
+        VECTOR_PUSH(stack, node->nodes[i]);
+      }
+    }
+
+  } while ((node = VECTOR_POP(stack)));
 }

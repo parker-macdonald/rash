@@ -29,7 +29,7 @@ int builtin_export(char **const argv) {
       continue;
     }
 
-    char* separator = strchr(argv[i], '=');
+    char *separator = strchr(argv[i], '=');
 
     if (separator) {
       *separator = '\0';

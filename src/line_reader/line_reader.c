@@ -7,9 +7,11 @@
 #include <string.h>
 
 #include "../ansi.h"
+#include "../interpreter/preprocess.h"
 #include "../shell_vars.h"
 #include "../utf_8.h"
 #include "../vector.h"
+#include "auto_complete.h"
 #include "modify_line.h"
 #include "prompt.h"
 #include "utils.h"
@@ -25,7 +27,7 @@ typedef struct line_node {
   struct line_node *p_next;
   struct line_node *p_prev;
   // line that can be mutated by using the up and down arrows
-  line_t mut_line;
+  buf_t mut_line;
   // line thats used for displaying history
   uint8_t *const_line;
   size_t const_line_len;
@@ -125,6 +127,28 @@ void print_history(int count) {
     }                                                                          \
   } while (0)
 
+#define CURSOR_RIGHT_N(n)                                                      \
+  do {                                                                         \
+    size_t moves_down =                                                        \
+        (displayed_cursor_pos + n) / width - displayed_cursor_pos / width;     \
+    displayed_cursor_pos += n;                                                 \
+    if (moves_down > 0) {                                                      \
+      printf("\033[%zuB", moves_down);                                         \
+    }                                                                          \
+    printf("\r\033[%zuC", displayed_cursor_pos % width);                       \
+  } while (0)
+
+#define CURSOR_LEFT_N(n)                                                       \
+  do {                                                                         \
+    size_t moves_up =                                                          \
+        displayed_cursor_pos / width - (displayed_cursor_pos - n) / width;     \
+    displayed_cursor_pos -= n;                                                 \
+    if (moves_up > 0) {                                                        \
+      printf("\033[%zuA", moves_up);                                           \
+    }                                                                          \
+    printf("\r\033[%zuC", displayed_cursor_pos % width);                       \
+  } while (0)
+
 #define DRAW_LINE(line)                                                        \
   printf("\r\033[0J%s%.*s", prompt, (int)(line).length, (char *)(line).data)
 
@@ -148,7 +172,7 @@ const uint8_t *readline(void *_) {
 
   line_node_t *node = NULL;
 
-  line_t line;
+  buf_t line;
   VECTOR_INIT(line);
 
   size_t cursor_pos = 0;
@@ -182,13 +206,11 @@ const uint8_t *readline(void *_) {
       return NULL;
     }
 
-    // readonly line to get length or data info from. when the user is going
-    // through history, node contains the line they are viewing whereas line
-    // contains the buffer the user is currently editting
-    line_t *line_to_read = node == NULL ? &line : &node->mut_line;
+    // the current line for editing
+    buf_t *current_line = node == NULL ? &line : &node->mut_line;
 
     if (curr_byte == '\n' || curr_byte == '\r') {
-      if (line_to_read->length != 0) {
+      if (current_line->length != 0) {
         break;
       }
 
@@ -276,9 +298,9 @@ const uint8_t *readline(void *_) {
           continue;
         // right arrow
         case 'C':
-          if (cursor_pos < line_to_read->length) {
+          if (cursor_pos < current_line->length) {
             cursor_pos += traverse_forward_utf8(
-                line_to_read->data, line_to_read->length, cursor_pos
+                current_line->data, current_line->length, cursor_pos
             );
 
             CURSOR_RIGHT;
@@ -288,7 +310,7 @@ const uint8_t *readline(void *_) {
         // left arrow
         case 'D':
           if (cursor_pos > 0) {
-            cursor_pos -= traverse_back_utf8(line_to_read->data, cursor_pos);
+            cursor_pos -= traverse_back_utf8(current_line->data, cursor_pos);
 
             CURSOR_LEFT;
             fflush(stdout);
@@ -298,41 +320,45 @@ const uint8_t *readline(void *_) {
           if (getch() == ';') {
             if (getch() == '5') {
               const uint8_t arrow_char = (uint8_t)getch();
-              // shift right arrow
+              // ctrl right arrow
               if (arrow_char == 'C') {
-                if (cursor_pos < line_to_read->length) {
-                  cursor_pos += traverse_forward_utf8(
-                      line_to_read->data, line_to_read->length, cursor_pos
-                  );
-                  CURSOR_RIGHT;
+                if (cursor_pos < current_line->length) {
+                  size_t move_right = 1;
 
-                  while (cursor_pos <= line_to_read->length - 1 &&
-                         line_to_read->data[cursor_pos] != ' ') {
+                  cursor_pos += traverse_forward_utf8(
+                      current_line->data, current_line->length, cursor_pos
+                  );
+
+                  while (cursor_pos <= current_line->length - 1 &&
+                         current_line->data[cursor_pos] != ' ') {
                     cursor_pos += traverse_forward_utf8(
-                        line_to_read->data, line_to_read->length, cursor_pos
+                        current_line->data, current_line->length, cursor_pos
                     );
-                    CURSOR_RIGHT;
+                    move_right++;
                   }
 
+                  CURSOR_RIGHT_N(move_right);
                   fflush(stdout);
                 }
 
                 continue;
               }
-              // shift left arrow
+              // ctrl left arrow
               if (arrow_char == 'D') {
                 if (cursor_pos > 0) {
+                  size_t move_left = 1;
+
                   cursor_pos -=
-                      traverse_back_utf8(line_to_read->data, cursor_pos);
-                  CURSOR_LEFT;
+                      traverse_back_utf8(current_line->data, cursor_pos);
 
                   while (cursor_pos > 0 &&
-                         line_to_read->data[cursor_pos - 1] != ' ') {
+                         current_line->data[cursor_pos - 1] != ' ') {
                     cursor_pos -=
-                        traverse_back_utf8(line_to_read->data, cursor_pos);
-                    CURSOR_LEFT;
+                        traverse_back_utf8(current_line->data, cursor_pos);
+                    move_left++;
                   }
 
+                  CURSOR_LEFT_N(move_left);
                   fflush(stdout);
                 }
 
@@ -344,8 +370,8 @@ const uint8_t *readline(void *_) {
         case '3':
           // delete key
           if (getch() == '~') {
-            if (cursor_pos < line_to_read->length) {
-              line_delete(line_to_read, cursor_pos);
+            if (cursor_pos < current_line->length) {
+              line_delete(current_line, cursor_pos);
               characters_printed--;
             }
             // should probably refactor to not use goto, but, i mean, it
@@ -367,10 +393,10 @@ const uint8_t *readline(void *_) {
         }
         // end key
         case 'F': {
-          cursor_pos = line_to_read->length;
+          cursor_pos = current_line->length;
           // eol is end of line
           size_t line_len =
-              strlen_utf8(line_to_read->data, line_to_read->length) +
+              strlen_utf8(current_line->data, current_line->length) +
               prompt_length;
           // this is real code written by sane individuals
           size_t moves_down = (line_len - displayed_cursor_pos) / width;
@@ -379,6 +405,34 @@ const uint8_t *readline(void *_) {
             printf("\033[%zuB", moves_down);
           }
           printf("\r\033[%zuC", line_len % width);
+          fflush(stdout);
+          continue;
+        }
+        // shift+tab
+        case 'Z': {
+          VECTOR_PUSH(*current_line, '\0');
+          buf_t *buf = preprocess(current_line->data, false);
+
+          if (buf == NULL) {
+            current_line->length--;
+            continue;
+          }
+
+          free(current_line->data);
+          *current_line = *buf;
+          current_line->length--;
+          cursor_pos = current_line->length;
+          displayed_cursor_pos =
+              strlen_utf8(current_line->data, current_line->length) +
+              prompt_length;
+
+          width = get_terminal_width();
+          size_t moves_up = characters_printed / width;
+          if (moves_up) {
+            printf("\033[%zuA", moves_up);
+          }
+          characters_printed = displayed_cursor_pos;
+          DRAW_LINE(*current_line);
           fflush(stdout);
           continue;
         }
@@ -391,7 +445,7 @@ const uint8_t *readline(void *_) {
     // backspace
     if (curr_byte == ASCII_DEL) {
       if (cursor_pos > 0) {
-        const size_t bytes_removed = line_backspace(line_to_read, cursor_pos);
+        const size_t bytes_removed = line_backspace(current_line, cursor_pos);
         cursor_pos -= bytes_removed;
         characters_printed--;
         CURSOR_LEFT;
@@ -401,8 +455,21 @@ const uint8_t *readline(void *_) {
       continue;
     }
 
+    if (curr_byte == '\t') {
+      size_t bytes_added = auto_complete(current_line, cursor_pos);
+      if (bytes_added) {
+        const size_t n =
+            strlen_utf8(current_line->data + cursor_pos, bytes_added);
+        CURSOR_RIGHT_N(n);
+        cursor_pos += bytes_added;
+
+        goto draw_line;
+      }
+      continue;
+    }
+
     if (curr_byte != 0) {
-      line_insert(line_to_read, curr_byte, cursor_pos);
+      line_insert(current_line, curr_byte, cursor_pos);
       cursor_pos++;
 
       if (!is_continuation_byte_utf8(curr_byte)) {
@@ -422,7 +489,7 @@ const uint8_t *readline(void *_) {
       printf("\033[%zuA", moves_up);
     }
 
-    DRAW_LINE(*line_to_read);
+    DRAW_LINE(*current_line);
 
     fputs(ANSI_CURSOR_POS_RESTORE, stdout);
 

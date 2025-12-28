@@ -1,8 +1,9 @@
 #ifndef GLOB_H
 #define GLOB_H
 
-#include "evaluate.h"
+#include "../vector.h"
+#include "../vec_types.h"
 
-int glob(argv_t *argv, const char *pattern);
+strings_t *glob(const char *pattern);
 
 #endif

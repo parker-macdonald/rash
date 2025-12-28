@@ -10,13 +10,6 @@
 
 #include "../vector.h"
 
-#ifdef static_assert
-static_assert(
-    sizeof(token_type_t) >= 3,
-    "token type is not large enough for all enumerations."
-);
-#endif
-
 enum lexer_state {
   DEFAULT,
   WHITESPACE,
@@ -32,10 +25,6 @@ enum lexer_state {
       VECTOR_PUSH(tokens, ((token_t){.type = STRING, .data = buffer.data}));   \
       VECTOR_INIT(buffer);                                                     \
     }                                                                          \
-    if (has_arguments) {                                                       \
-      VECTOR_PUSH(tokens, ((token_t){.type = END_ARG}));                       \
-      has_arguments = false;                                                   \
-    }                                                                          \
     VECTOR_PUSH(tokens, (token_t){.type = token_type});                        \
   } while (0)
 
@@ -46,8 +35,6 @@ token_t *lex(const uint8_t *source) {
   VECTOR(uint8_t) buffer;
   VECTOR_INIT(buffer);
 
-  bool has_arguments = false;
-
   enum lexer_state state = WHITESPACE;
 
   for (size_t i = 0; source[i] != '\0'; i++) {
@@ -56,19 +43,16 @@ token_t *lex(const uint8_t *source) {
     switch (state) {
       case DEFAULT:
         if (curr == '"') {
-          has_arguments = true;
           state = DOUBLE_QUOTE;
           break;
         }
 
         if (curr == '\'') {
-          has_arguments = true;
           state = SINGLE_QUOTE;
           break;
         }
 
         if (curr == '\\') {
-          has_arguments = true;
           state = SINGLE_LITERAL;
           break;
         }
@@ -82,10 +66,6 @@ token_t *lex(const uint8_t *source) {
             );
 
             VECTOR_INIT(buffer);
-          }
-          if (has_arguments) {
-            VECTOR_PUSH(tokens, ((token_t){.type = END_ARG}));
-            has_arguments = false;
           }
 
           break;
@@ -152,168 +132,10 @@ token_t *lex(const uint8_t *source) {
           break;
         }
 
-        // crazy logic for enviroment variables
-        if (curr == '$') {
-          has_arguments = true;
-
-          i++;
-          size_t env_len = 0;
-          const uint8_t *env_start = source + i;
-
-          if (source[i] == '{') {
-            i++;
-            env_start++;
-
-            for (;;) {
-              if (source[i] == '}') {
-                break;
-              }
-
-              if (source[i] == '\0') {
-                fprintf(stderr, "rash: expected closing ‘}’ character.\n");
-                goto error;
-              }
-
-              i++;
-              env_len++;
-            }
-
-            if (env_len == 0) {
-              fprintf(
-                  stderr, "rash: cannot expand empty enviroment variable.\n"
-              );
-              goto error;
-            }
-
-            char *env_name = malloc(env_len + 1);
-            memcpy(env_name, env_start, env_len);
-            env_name[env_len] = '\0';
-
-            if (buffer.length != 0) {
-              VECTOR_PUSH(buffer, '\0');
-              VECTOR_PUSH(
-                  tokens, ((token_t){.type = STRING, .data = buffer.data})
-              );
-              VECTOR_INIT(buffer);
-            }
-
-            VECTOR_PUSH(
-                tokens, ((token_t){.type = ENV_EXPANSION, .data = env_name})
-            );
-            break;
-          }
-
-          for (;;) {
-            if (!isalnum((int)source[i]) || source[i] == '\0') {
-              i--;
-              break;
-            }
-
-            i++;
-            env_len++;
-          }
-
-          if (env_len == 0) {
-            VECTOR_PUSH(buffer, '$');
-            break;
-          }
-
-          char *env_name = malloc(env_len + 1);
-          memcpy(env_name, env_start, env_len);
-          env_name[env_len] = '\0';
-
-          if (buffer.length != 0) {
-            VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(
-                tokens, ((token_t){.type = STRING, .data = buffer.data})
-            );
-            VECTOR_INIT(buffer);
-          }
-
-          VECTOR_PUSH(
-              tokens, ((token_t){.type = ENV_EXPANSION, .data = env_name})
-          );
-          break;
-        }
-
-        if (curr == '{') {
-          has_arguments = true;
-          i++;
-          const uint8_t *var_start = source + i;
-          size_t var_len = 0;
-
-          for (;;) {
-            if (source[i] == '}') {
-              break;
-            }
-
-            if (source[i] == '\0') {
-              fprintf(stderr, "rash: expected closing ‘}’ character.\n");
-              goto error;
-            }
-
-            i++;
-            var_len++;
-          }
-
-          if (var_len == 0) {
-            fprintf(stderr, "rash: cannot expand empty shell variable.\n");
-            goto error;
-          }
-
-          char *var_name = malloc(var_len + 1);
-          memcpy(var_name, var_start, var_len);
-          var_name[var_len] = '\0';
-
-          if (buffer.length != 0) {
-            VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(
-                tokens, ((token_t){.type = STRING, .data = buffer.data})
-            );
-            VECTOR_INIT(buffer);
-          }
-
-          VECTOR_PUSH(
-              tokens, ((token_t){.type = VAR_EXPANSION, .data = var_name})
-          );
-          break;
-        }
-
-        if (curr == '*') {
-          has_arguments = true;
-          if (buffer.length != 0) {
-            VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(
-                tokens, ((token_t){.type = STRING, .data = buffer.data})
-            );
-            VECTOR_INIT(buffer);
-          }
-          VECTOR_PUSH(tokens, ((token_t){.type = GLOB_WILDCARD}));
-
-          break;
-        }
-
         if (curr == '#') {
           goto success;
         }
 
-        // crude tilde expansion
-        if (curr == '~') {
-          has_arguments = true;
-          const char *home = getenv("HOME");
-
-          if (home == NULL) {
-            VECTOR_PUSH(buffer, '~');
-            break;
-          }
-
-          for (size_t j = 0; home[j] != '\0'; j++) {
-            VECTOR_PUSH(buffer, (uint8_t)home[j]);
-          }
-          break;
-        }
-
-        has_arguments = true;
         VECTOR_PUSH(buffer, curr);
         break;
 
@@ -330,6 +152,19 @@ token_t *lex(const uint8_t *source) {
           break;
         }
 
+        if (curr == '\\') {
+          if (source[i + 1] == '\\') {
+            VECTOR_PUSH(buffer, '\\');
+            i++;
+            break;
+          }
+          if (source[i + 1] == '\"') {
+            VECTOR_PUSH(buffer, '\"');
+            i++;
+            break;
+          }
+        }
+
         VECTOR_PUSH(buffer, curr);
         break;
 
@@ -337,6 +172,19 @@ token_t *lex(const uint8_t *source) {
         if (curr == '\'') {
           state = DEFAULT;
           break;
+        }
+
+        if (curr == '\\') {
+          if (source[i + 1] == '\\') {
+            VECTOR_PUSH(buffer, '\\');
+            i++;
+            break;
+          }
+          if (source[i + 1] == '\'') {
+            VECTOR_PUSH(buffer, '\'');
+            i++;
+            break;
+          }
         }
 
         VECTOR_PUSH(buffer, curr);
@@ -372,10 +220,6 @@ success:
     VECTOR_DESTROY(buffer);
   }
 
-  if (has_arguments) {
-    VECTOR_PUSH(tokens, ((token_t){.type = END_ARG}));
-  }
-
   VECTOR_PUSH(tokens, (token_t){.type = END});
 
   return tokens.data;
@@ -384,8 +228,7 @@ error:
   VECTOR_DESTROY(buffer);
 
   for (size_t i = 0; i < tokens.length; i++) {
-    if (tokens.data[i].type == STRING || tokens.data[i].type == ENV_EXPANSION ||
-        tokens.data[i].type == VAR_EXPANSION) {
+    if (tokens.data[i].type == STRING) {
       free(tokens.data[i].data);
     }
   }
@@ -397,8 +240,7 @@ error:
 
 void free_tokens(token_t **tokens) {
   for (size_t i = 0; (*tokens)[i].type != END; i++) {
-    if ((*tokens)[i].type == STRING || (*tokens)[i].type == ENV_EXPANSION ||
-        (*tokens)[i].type == VAR_EXPANSION) {
+    if ((*tokens)[i].type == STRING) {
       free((*tokens)[i].data);
     }
   }
