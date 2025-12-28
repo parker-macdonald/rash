@@ -21,7 +21,7 @@ enum pp_state {
   SINGLE_LITERAL
 };
 
-void insert_string(buf_t *buffer, const char *str) {
+static void insert_string(buf_t *buffer, const char *str) {
   bool needs_quoting = false;
 
   for (size_t i = 0; str[i] != '\0'; i++) {
@@ -137,7 +137,7 @@ void insert_string(buf_t *buffer, const char *str) {
   }
 }
 
-char *to_pattern(buf_t *buffer, size_t word_start) {
+static char *to_pattern(buf_t *buffer, size_t word_start) {
   VECTOR(char) pattern;
   VECTOR_INIT(pattern);
 
@@ -224,43 +224,45 @@ char *to_pattern(buf_t *buffer, size_t word_start) {
 }
 
 #define PREFORM_GLOB                                                           \
-  if (needs_globbing) {                                                        \
-    char *pattern = to_pattern(&buffer, word_start);                           \
-    strings_t *matches = glob(pattern);                                        \
-    if (matches == NULL) {                                                     \
-      free(pattern);                                                           \
-      goto error;                                                              \
-    }                                                                          \
-    buffer.length = word_start;                                                \
-    if (matches->length == 0) {                                                \
-      if (print_errors) {                                                      \
-        for (size_t j = 0; pattern[j] != '\0'; j++) {                          \
-          if (pattern[j] == '\033') {                                          \
-            pattern[j] = '*';                                                  \
+  do {                                                                         \
+    if (needs_globbing) {                                                      \
+      char *pattern = to_pattern(&buffer, word_start);                         \
+      strings_t *matches = glob(pattern);                                      \
+      if (matches == NULL) {                                                   \
+        free(pattern);                                                         \
+        goto error;                                                            \
+      }                                                                        \
+      buffer.length = word_start;                                              \
+      if (matches->length == 0) {                                              \
+        if (print_errors) {                                                    \
+          for (size_t j = 0; pattern[j] != '\0'; j++) {                        \
+            if (pattern[j] == '\033') {                                        \
+              pattern[j] = '*';                                                \
+            }                                                                  \
           }                                                                    \
+          fprintf(                                                             \
+              stderr, "rash: nothing matched glob pattern ‘%s’.\n", pattern    \
+          );                                                                   \
         }                                                                      \
-        fprintf(                                                               \
-            stderr, "rash: nothing matched glob pattern ‘%s’.\n", pattern      \
-        );                                                                     \
+                                                                               \
+        free(pattern);                                                         \
+        VECTOR_DESTROY(*matches);                                              \
+        goto error;                                                            \
+      } else {                                                                 \
+        for (size_t j = 0; j < matches->length; j++) {                         \
+          if (j != 0) {                                                        \
+            VECTOR_PUSH(buffer, ' ');                                          \
+          }                                                                    \
+          insert_string(&buffer, matches->data[j]);                            \
+          free(matches->data[j]);                                              \
+        }                                                                      \
       }                                                                        \
                                                                                \
       free(pattern);                                                           \
       VECTOR_DESTROY(*matches);                                                \
-      goto error;                                                              \
-    } else {                                                                   \
-      for (size_t j = 0; j < matches->length; j++) {                           \
-        if (j != 0) {                                                          \
-          VECTOR_PUSH(buffer, ' ');                                            \
-        }                                                                      \
-        insert_string(&buffer, matches->data[j]);                              \
-        free(matches->data[j]);                                                \
-      }                                                                        \
+      needs_globbing = false;                                                  \
     }                                                                          \
-                                                                               \
-    free(pattern);                                                             \
-    VECTOR_DESTROY(*matches);                                                  \
-    needs_globbing = false;                                                    \
-  }
+  } while (0)
 
 #define PUSH_STRING(buffer, str)                                               \
   do {                                                                         \

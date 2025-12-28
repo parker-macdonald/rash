@@ -15,7 +15,7 @@
 
 bool interactive = 0;
 
-const char *const HELP_STRING =
+static const char *const HELP_STRING =
     "Usage: %s [-c] [FILENAME]\n"
     "If a filename is specified, rash will run the file as a script.\n"
     "If no filename is specified rash will run in interactive mode.\n"

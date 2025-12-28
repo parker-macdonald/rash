@@ -323,19 +323,21 @@ const uint8_t *readline(void *_) {
               // ctrl right arrow
               if (arrow_char == 'C') {
                 if (cursor_pos < current_line->length) {
+                  size_t move_right = 1;
+
                   cursor_pos += traverse_forward_utf8(
                       current_line->data, current_line->length, cursor_pos
                   );
-                  CURSOR_RIGHT;
 
                   while (cursor_pos <= current_line->length - 1 &&
                          current_line->data[cursor_pos] != ' ') {
                     cursor_pos += traverse_forward_utf8(
                         current_line->data, current_line->length, cursor_pos
                     );
-                    CURSOR_RIGHT;
+                    move_right++;
                   }
 
+                  CURSOR_RIGHT_N(move_right);
                   fflush(stdout);
                 }
 
@@ -344,17 +346,19 @@ const uint8_t *readline(void *_) {
               // ctrl left arrow
               if (arrow_char == 'D') {
                 if (cursor_pos > 0) {
+                  size_t move_left = 1;
+
                   cursor_pos -=
                       traverse_back_utf8(current_line->data, cursor_pos);
-                  CURSOR_LEFT;
 
                   while (cursor_pos > 0 &&
                          current_line->data[cursor_pos - 1] != ' ') {
                     cursor_pos -=
                         traverse_back_utf8(current_line->data, cursor_pos);
-                    CURSOR_LEFT;
+                    move_left++;
                   }
 
+                  CURSOR_LEFT_N(move_left);
                   fflush(stdout);
                 }
 
