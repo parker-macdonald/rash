@@ -171,8 +171,7 @@ size_t auto_complete(buf_t *line, size_t cursor_pos) {
     return 0;
   }
 
-  strings_t matches;
-  VECTOR_INIT(matches, 0);
+  strings_t matches = {0};
 
   if (word_start == 0) {
     get_command_matches(&matches, word, word_len);

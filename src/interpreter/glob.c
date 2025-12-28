@@ -72,7 +72,7 @@ static bool match(const char *str, const char *pattern) {
 static strings_t matches;
 
 strings_t *glob(const char *pattern) {
-  VECTOR_INIT(matches, 0);
+  matches = (strings_t){._capacity = 0, .data = NULL, .length = 0};
 
   struct queue_node *head = malloc(sizeof(struct queue_node));
   struct queue_node *tail = head;
