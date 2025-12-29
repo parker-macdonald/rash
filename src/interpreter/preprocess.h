@@ -6,6 +6,8 @@
 
 #include "../vec_types.h"
 
-buf_t *preprocess(const uint8_t *source, bool print_errors);
+extern char *pp_error_msg;
+
+buf_t *preprocess(const uint8_t *source);
 
 #endif
