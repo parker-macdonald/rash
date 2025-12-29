@@ -3,6 +3,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -78,16 +79,29 @@ strings_t *glob(const char *pattern) {
   struct queue_node *tail = head;
 
   head->p_next = NULL;
-  head->path = malloc(sizeof(char) * 2);
-  head->path_len = 1;
-  head->pattern_index = 0;
 
-  head->path[1] = '\0';
-  if (pattern[0] == '/') {
-    pattern++;
-    head->path[0] = '/';
-  } else {
+  size_t last_slash = (size_t)(-1);
+  for (size_t i = 0;; i++) {
+    if (pattern[i] == '\033') {
+      break;
+    }
+    if (pattern[i] == '/') {
+      last_slash = i;
+    }
+  }
+
+  if (last_slash == (size_t)(-1)) {
+    head->path = malloc(2);
     head->path[0] = '.';
+    head->path[1] = '\0';
+    head->path_len = 0;
+    head->pattern_index = 0;
+  } else {
+    head->path = malloc(last_slash + 2);
+    memcpy(head->path, pattern, last_slash + 1);
+    head->path[last_slash + 1] = '\0';
+    head->path_len = last_slash + 1;
+    head->pattern_index = last_slash + 1;
   }
 
   while (head != NULL) {
@@ -117,9 +131,13 @@ strings_t *glob(const char *pattern) {
     }
 
     bool end = false;
+    bool found_wildcard = false;
     size_t new_pattern_index = head->pattern_index;
     for (;; new_pattern_index++) {
-      if (pattern[new_pattern_index] == '/') {
+      if (pattern[new_pattern_index] == '\033') {
+        found_wildcard = true;
+      }
+      if (found_wildcard && pattern[new_pattern_index] == '/') {
         new_pattern_index++;
         if (pattern[new_pattern_index] == '\0') {
           end = true;
@@ -136,16 +154,18 @@ strings_t *glob(const char *pattern) {
     while ((ent = readdir(dir)) != NULL) {
       if (match(ent->d_name, pattern + head->pattern_index)) {
         const size_t ent_len = strlen(ent->d_name);
-        const size_t path_len = head->path_len;
 
-        const size_t new_path_len = path_len + ent_len + 1;
+        const size_t new_path_len = head->path_len + ent_len + 1;
         char *new_path = malloc(new_path_len + 1);
-        memcpy(new_path, head->path, path_len);
-        new_path[path_len] = '/';
-        memcpy(new_path + path_len + 1, ent->d_name, ent_len);
+
+        // sprintf(new_path, "%s%s/", head->path, ent->d_name);
+        memcpy(new_path, head->path, head->path_len);
+        memcpy(new_path + head->path_len, ent->d_name, ent_len);
+        new_path[new_path_len - 1] = '/';
         new_path[new_path_len] = '\0';
 
         if (end) {
+          new_path[new_path_len - 1] = '\0';
           VECTOR_PUSH(matches, new_path);
           continue;
         }

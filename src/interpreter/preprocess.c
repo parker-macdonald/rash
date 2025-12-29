@@ -539,6 +539,7 @@ buf_t *preprocess(const uint8_t *source, bool print_errors) {
           i++;
           const uint8_t *user_start = source + i;
           size_t user_len = 0;
+          word_start = buffer.length;
 
           for (;;) {
             if (source[i] == '/' || source[i] == '\0' ||
@@ -575,6 +576,10 @@ buf_t *preprocess(const uint8_t *source, bool print_errors) {
 
             insert_string(&buffer, pw->pw_dir);
           }
+
+          i--;
+          state = DEFAULT;
+          continue;
         }
 
         if (!isspace((int)curr)) {
