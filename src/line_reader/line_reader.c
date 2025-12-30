@@ -9,6 +9,7 @@
 #include "../ansi.h"
 #include "../interpreter/preprocess.h"
 #include "../shell_vars.h"
+#include "../sort.h"
 #include "../utf_8.h"
 #include "../vector.h"
 #include "auto_complete.h"
@@ -547,6 +548,7 @@ const uint8_t *readline(void *_) {
               bytes_written
           );
         } else {
+          sort_strings(&matches);
           pretty_print_strings(matches.data, matches.length);
           printf(
               "\033[s%s%.*s\033[u",
