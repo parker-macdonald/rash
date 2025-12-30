@@ -42,7 +42,7 @@ void pretty_print_strings(char *const strings[], const size_t length) {
 
   printf("\n");
 
-  for (unsigned int i = 0; i < length; i++) {
+  for (size_t i = 0; i < length; i++) {
     printf("%-*s", max_len, strings[i]);
 
     if ((i + 1) % col == 0) {

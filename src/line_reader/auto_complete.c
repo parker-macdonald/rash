@@ -9,9 +9,8 @@
 
 #include "../builtins/find_builtin.h"
 #include "../vec_types.h"
-#include "modify_line.h"
 
-static void
+void
 get_file_matches(strings_t *matches, const char *word, size_t word_len) {
   DIR *dir;
   const char *basename;
@@ -100,7 +99,7 @@ get_file_matches(strings_t *matches, const char *word, size_t word_len) {
   return;
 }
 
-static void
+void
 get_command_matches(strings_t *matches, const char *word, size_t word_len) {
   find_matching_builtins(word, word_len, matches);
   const char *path = getenv("PATH");
@@ -154,78 +153,3 @@ get_command_matches(strings_t *matches, const char *word, size_t word_len) {
   free(path2);
 }
 
-size_t auto_complete(buf_t *line, size_t cursor_pos) {
-  size_t word_start = cursor_pos - 1;
-
-  for (; word_start > 0; word_start--) {
-    if (line->data[word_start] == ' ') {
-      word_start++;
-      break;
-    }
-  }
-
-  char *word = (char *)line->data + word_start;
-  size_t word_len = cursor_pos - word_start;
-
-  if (word_len == 0) {
-    return 0;
-  }
-
-  strings_t matches = {0};
-
-  if (word_start == 0) {
-    get_command_matches(&matches, word, word_len);
-  } else {
-    get_file_matches(&matches, word, word_len);
-  }
-
-  if (matches.length == 0) {
-    return 0;
-  }
-
-  if (matches.length == 1) {
-    size_t match_len = strlen(matches.data[0]);
-    size_t bytes_written = 0;
-
-    if (match_len > word_len) {
-      bytes_written = match_len - word_len;
-
-      line_insert_bulk(
-          line, cursor_pos, (uint8_t *)matches.data[0] + word_len, bytes_written
-      );
-    }
-
-    free(matches.data[0]);
-    VECTOR_DESTROY(matches);
-    return bytes_written;
-  }
-
-  size_t i;
-
-  for (i = 0;; i++) {
-    for (size_t j = 0; j < matches.length - 1; j++) {
-      if (matches.data[j][i] != matches.data[j + 1][i]) {
-        goto leave;
-      }
-      if (matches.data[j][i] == '\0' || matches.data[j + 1][i] == '\0') {
-        goto leave;
-      }
-    }
-  }
-
-leave: {
-  size_t bytes_written = 0;
-  if (i > word_len) {
-    bytes_written = i - word_len;
-    line_insert_bulk(
-        line, cursor_pos, (uint8_t *)matches.data[0] + word_len, bytes_written
-    );
-  }
-
-  for (size_t j = 0; j < matches.length; j++) {
-    free(matches.data[j]);
-  }
-  VECTOR_DESTROY(matches);
-  return bytes_written;
-}
-}

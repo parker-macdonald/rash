@@ -478,12 +478,104 @@ const uint8_t *readline(void *_) {
     }
 
     if (curr_byte == '\t') {
-      size_t bytes_added = auto_complete(current_line, cursor_pos);
-      if (bytes_added) {
+      size_t word_start = cursor_pos - 1;
+
+      for (; word_start > 0; word_start--) {
+        if (current_line->data[word_start] == ' ') {
+          word_start++;
+          break;
+        }
+      }
+
+      char *word = (char *)current_line->data + word_start;
+      size_t word_len = cursor_pos - word_start;
+      size_t bytes_written = 0;
+
+      if (word_len == 0) {
+        continue;
+      }
+
+      strings_t matches = {0};
+
+      if (word_start == 0 && memchr(word, '/', word_len) == NULL) {
+        get_command_matches(&matches, word, word_len);
+      } else {
+        get_file_matches(&matches, word, word_len);
+      }
+
+      if (matches.length == 0) {
+        continue;
+      }
+
+      if (matches.length == 1) {
+        size_t match_len = strlen(matches.data[0]);
+
+        if (match_len > word_len) {
+          bytes_written = match_len - word_len;
+
+          line_insert_bulk(
+              current_line,
+              cursor_pos,
+              (uint8_t *)matches.data[0] + word_len,
+              bytes_written
+          );
+        }
+
+        free(matches.data[0]);
+        VECTOR_DESTROY(matches);
+      } else {
+        size_t i;
+
+        for (i = 0;; i++) {
+          for (size_t j = 0; j < matches.length - 1; j++) {
+            if (matches.data[j][i] != matches.data[j + 1][i]) {
+              goto leave;
+            }
+            if (matches.data[j][i] == '\0' || matches.data[j + 1][i] == '\0') {
+              goto leave;
+            }
+          }
+        }
+
+      leave: {
+        if (i > word_len) {
+          bytes_written = i - word_len;
+          line_insert_bulk(
+              current_line,
+              cursor_pos,
+              (uint8_t *)matches.data[0] + word_len,
+              bytes_written
+          );
+        } else {
+          pretty_print_strings(matches.data, matches.length);
+          printf(
+              "\033[s%s%.*s\033[u",
+              prompt,
+              (int)current_line->length,
+              (char *)current_line->data
+          );
+          size_t moves_down =
+              (displayed_cursor_pos + displayed_cursor_pos) / width -
+              displayed_cursor_pos / width;
+          if (moves_down > 0) {
+            printf("\033[%zuB", moves_down);
+          }
+          printf("\r\033[%zuC", displayed_cursor_pos % width);
+          fflush(stdout);
+        }
+
+        for (size_t j = 0; j < matches.length; j++) {
+          free(matches.data[j]);
+        }
+        VECTOR_DESTROY(matches);
+      }
+      }
+
+      if (bytes_written) {
         const size_t n =
-            strlen_utf8(current_line->data + cursor_pos, bytes_added);
+            strlen_utf8(current_line->data + cursor_pos, bytes_written);
         CURSOR_RIGHT_N(n);
-        cursor_pos += bytes_added;
+        cursor_pos += bytes_written;
 
         goto draw_line;
       }
