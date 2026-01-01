@@ -2,10 +2,10 @@
 
 #include <assert.h>
 #include <signal.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #include "interactive.h"
 
@@ -38,7 +38,7 @@ volatile sig_atomic_t recv_sigint = 0;
 
 static void sigint_handler(int sig) {
   if (!interactive) {
-    exit(EXIT_FAILURE);
+    _exit(EXIT_FAILURE);
   }
 
   if (fg_pid != 0) {
@@ -77,6 +77,19 @@ void sig_handler_init(void) {
 
   // Set up SIGTSTP handler using sigaction
   sigaction(SIGTSTP, &sigtstp_act, NULL);
+}
+
+void dont_restart_on_sigint(void) {
+  struct sigaction new_sigint_act;
+  new_sigint_act.sa_handler = sigint_handler;
+  new_sigint_act.sa_flags = 0;
+  sigemptyset(&new_sigint_act.sa_mask);
+
+  sigaction(SIGINT, &new_sigint_act, NULL);
+}
+
+void restart_on_sigint(void) {
+  sigaction(SIGINT, &sigint_act, NULL);
 }
 
 void clean_jobs(void) {

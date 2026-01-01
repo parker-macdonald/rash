@@ -70,4 +70,22 @@ pid_t get_pid_and_remove(int *id);
  */
 void print_jobs(void);
 
+/**
+ * @brief this function re-registers the sigint handler WITHOUT SA_RESTART set
+ * in the flags, this is so you can preform an operation that must be aware a
+ * sigint occured (such as reading a character). pretty much all of rash's code
+ * does not handle the EINTR error, so calling this function, without later
+ * calling restart_on_sigint will cause bugs.
+ */
+void dont_restart_on_sigint(void);
+
+/**
+ * @brief this function re-registers the sigint handler WITH SA_RESTART set
+ * in the flags, this function must be called at some point after a call to
+ * dont_restart_on_sigint since pretty much all of rash's code does not handle
+ * the EINTR error. if you don't call this function after a call to
+ * dont_restart_on_sigint, there WILL be bugs and other unintended consequences.
+ */
+void restart_on_sigint(void);
+
 #endif

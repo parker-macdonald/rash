@@ -64,6 +64,9 @@ int getch(void) {
   newt.c_lflag &= ~(unsigned int)(ICANON | ECHO);
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
+  // this is to allow the read system call to know a sigint occured.
+  dont_restart_on_sigint();
+
   for (;;) {
     errno = 0;
     nread = read(STDIN_FILENO, &byte, sizeof(byte));
@@ -77,12 +80,14 @@ int getch(void) {
     }
     if (recv_sigint == 1) {
       recv_sigint = 0;
+      restart_on_sigint();
       tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // Restore original settings
 
       return SIGINT_ON_READ;
     }
   }
 
+  restart_on_sigint();
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // Restore original settings
 
   if (nread == 0) {
