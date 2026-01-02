@@ -18,8 +18,8 @@ char *search_path(const char *file) {
   VECTOR(char) file_path;
   VECTOR_INIT(file_path);
 
-  for (size_t i = 0; path[i] != '\0'; i++) {
-    if (path[i] == ':') {
+  for (size_t i = 0;; i++) {
+    if (path[i] == ':' || path[i] == '\0') {
       assert(file_path.length != 0);
 
       VECTOR_PUSH(file_path, '/');
@@ -32,6 +32,10 @@ char *search_path(const char *file) {
 
       if (faccessat(AT_FDCWD, file_path.data, X_OK, AT_EACCESS) == 0) {
         return file_path.data;
+      }
+
+      if (path[i] == '\0') {
+        break;
       }
 
       VECTOR_CLEAR(file_path);
