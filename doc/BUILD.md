@@ -36,13 +36,21 @@ OpenBSD comes preinstalled with `clang` as it's default C compiler, so all you h
 doas pkg_add gmake
 ```
 
+## FreeBSD
+
+FreeBSD comes preinstalled with `clang` as it's default C compiler, so all you have to do is install GNU make from the `gmake` package.
+
+```bash
+sudo pkg install gmake
+```
+
 ## Windows
 
-rash relies on *nix (Linux, BSD, or anything vaguely POSIX compliant) system calls, rash cannot be run natively on Windows, but you do have a few options.
+rash relies on *nix (Linux, BSD, or anything vaguely POSIX compliant) system calls, and because of this cannot be run natively on Windows. However, you do have a few options.
 
 ### Cygwin
 
-[Cygwin](https://cygwin.com/) is a project that works to provide *nix system calls on Windows. Once you have it installed, you will have a Cygwin shell from which you can access GNU make and a C compiler.
+[Cygwin](https://cygwin.com/) is a project that works to provide *nix system calls on Windows through a custom library. Once you have Cygwin installed, you will have access to GNU make and a C compiler inside the Cygwin terminal.
 
 ### WSL
 
