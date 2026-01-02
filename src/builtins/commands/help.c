@@ -9,6 +9,7 @@ static const char *const HELP_STRING =
     "  bg: run a paused job in the background.\n"
     "  cd: set the current working directory to the specified path.\n"
     "  env: list all environment variables.\n"
+    "  exec: replace rash with a specified program.\n"
     "  exit: exit rash with an optional status code.\n"
     "  export: set an enviroment variable.\n"
     "  fg: run a paused job in the foreground.\n"
