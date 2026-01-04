@@ -27,8 +27,10 @@ int repl(const uint8_t *(*reader)(void *), void *reader_data) {
     {
       buf_t *processed_line = preprocess(line);
       if (processed_line == NULL) {
+        assert(pp_error_msg != NULL);
         fprintf(stderr, "rash: %s\n", pp_error_msg);
         free(pp_error_msg);
+        pp_error_msg = NULL;
         status = EXIT_FAILURE;
         goto stop_evaluating;
       }
