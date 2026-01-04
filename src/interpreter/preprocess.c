@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sys/types.h>
 
+#include "../dynamic_sprintf.h"
 #include "../shell_vars.h"
 #include "../vec_types.h"
 #include "../vector.h"
@@ -226,34 +227,13 @@ static char *to_pattern(buf_t *buffer, size_t word_start) {
   return pattern.data;
 }
 
-static char *dynamic_sprintf(const char *restrict format, ...) {
-  va_list ap;
-  va_start(ap, format);
-  
-  va_list ap2;
-	va_copy(ap2, ap);
-  int size = vsnprintf(NULL, 0, format, ap2);
-	va_end(ap2);
-
-  if (size == -1) {
-    va_end(ap);
-    return NULL;
-  }
-
-  char *buffer = malloc((size_t)size + 1);
-
-  vsnprintf(buffer, (size_t)size + 1, format, ap);
-  va_end(ap);
-
-  return buffer;
-}
-
 #define PREFORM_GLOB                                                           \
   do {                                                                         \
     if (needs_globbing) {                                                      \
       char *pattern = to_pattern(&buffer, word_start);                         \
       strings_t *matches = glob(pattern);                                      \
       if (matches == NULL) {                                                   \
+        pp_error_msg = glob_err_msg;                                           \
         free(pattern);                                                         \
         goto error;                                                            \
       }                                                                        \
@@ -433,8 +413,7 @@ buf_t *preprocess(const uint8_t *source) {
             }
 
             if (env_len == 0) {
-              pp_error_msg =
-                  strdup("cannot expand empty enviroment variable.");
+              pp_error_msg = strdup("cannot expand empty enviroment variable.");
               goto error;
             }
 
@@ -559,8 +538,7 @@ buf_t *preprocess(const uint8_t *source) {
             if (home != NULL) {
               insert_string(&buffer, home);
             } else {
-              pp_error_msg =
-                  strdup("cannot expand ‘~’, HOME is not set.");
+              pp_error_msg = strdup("cannot expand ‘~’, HOME is not set.");
               goto error;
             }
           } else {
@@ -570,8 +548,7 @@ buf_t *preprocess(const uint8_t *source) {
 
             struct passwd *pw = getpwnam(user);
             if (pw == NULL || pw->pw_dir == NULL) {
-              pp_error_msg =
-                  dynamic_sprintf("cannot access user ‘%s’.", user);
+              pp_error_msg = dynamic_sprintf("cannot access user ‘%s’.", user);
               free(user);
               goto error;
             }

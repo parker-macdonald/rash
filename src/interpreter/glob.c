@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../dynamic_sprintf.h"
 #include "../vector.h"
 
 struct queue_node {
@@ -70,6 +71,7 @@ static bool match(const char *str, const char *pattern) {
   return true;
 }
 
+char *glob_err_msg = NULL;
 static strings_t matches;
 
 strings_t *glob(const char *pattern) {
@@ -117,7 +119,7 @@ strings_t *glob(const char *pattern) {
         continue;
       }
 
-      perror("glob: opendir");
+      glob_err_msg = dynamic_sprintf("glob: opendir: %s", strerror(errno));
       struct queue_node *node = head;
 
       while (node != NULL) {
