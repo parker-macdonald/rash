@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -97,7 +98,8 @@ void clean_jobs(void) {
   job_t *prev = NULL;
 
   for (current = root_job; current != NULL;) {
-    pid_t pid = waitpid(current->pid, NULL, WNOHANG);
+    int status;
+    pid_t pid = waitpid(current->pid, &status, WNOHANG);
 
     if (current->pid == pid) {
       if (prev != NULL) {
@@ -113,7 +115,25 @@ void clean_jobs(void) {
       job_t *temp = current;
       current = current->p_next;
 
-      printf("[%d] PID: %d, State: Exited\n", temp->id, temp->pid);
+      printf("[%d] PID: %d, ", temp->id, temp->pid);
+
+      if (WIFSIGNALED(status)) {
+        int signal = WTERMSIG(status);
+
+        fputs(strsignal(signal), stdout);
+#ifdef WCOREDUMP
+        if (WCOREDUMP(status)) {
+          fputs(" (core dumped)", stdout);
+        }
+#endif
+      } else if (WEXITSTATUS(status) != 0) {
+        printf("Exit %d", WEXITSTATUS(status));
+      } else {
+        printf("Done");
+      }
+
+      fputc('\n', stdout);
+
       free(temp);
 
       continue;
@@ -145,7 +165,7 @@ int register_job(pid_t pid, int state) {
   last_job = new_job;
 
   printf(
-      "\n[%d] PID: %d, State: %s\n",
+      "[%d] PID: %d, State: %s\n",
       new_job->id,
       new_job->pid,
       JOB_STATUSES[new_job->state]

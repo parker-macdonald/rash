@@ -67,8 +67,7 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    // again, undefined behavior with function ptr casting
-    return repl((const uint8_t *(*)(void *))one_shot_reader, argv[2]);
+    return repl(one_shot_reader, argv[2]);
   }
 
   fprintf(stderr, HELP_STRING, argv[0]);

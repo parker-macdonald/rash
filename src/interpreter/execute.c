@@ -28,7 +28,12 @@ int execute(const execution_context context) {
   // no need to fork if the command is builtin and i/o isn't redirected. this
   // also is needed so that commands like export and cd change the state of
   // rash, and not the child process
-  if (!is_io_redirected && builtin != NULL) {
+  if (
+      !is_io_redirected && 
+      builtin != NULL &&
+      !(context.flags & EC_BACKGROUND_JOB) && 
+      !(context.flags & EC_NO_WAIT)
+    ) {
     return builtin(context.argv);
   }
 
@@ -145,9 +150,25 @@ int execute(const execution_context context) {
     if (recv_sigtstp) {
       recv_sigtstp = 0;
 
+      putchar('\n');
+
       register_job(pid, JOB_STOPPED);
 
       return 0;
+    }
+
+    if (WIFSIGNALED(status)) {
+      int signal = WTERMSIG(status);
+
+      fputs(strsignal(signal), stderr);
+
+#ifdef WCOREDUMP
+      if (WCOREDUMP(status)) {
+        fputs(" (core dumped)", stderr);
+      }
+#endif
+
+      fputc('\n', stderr);
     }
 
     return WEXITSTATUS(status);
