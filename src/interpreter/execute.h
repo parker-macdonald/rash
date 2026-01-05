@@ -1,6 +1,8 @@
 #ifndef EXECUTE_H
 #define EXECUTE_H
 
+#include <sys/types.h>
+
 #include "../optional.h"
 
 // this flag tells execute not to wait for the program to finish and add it to
@@ -23,8 +25,15 @@ typedef struct {
   int flags;
 } execution_context;
 
-typedef OPTIONAL(execution_context) optional_exec_context;
-
 int execute(const execution_context context);
+
+/**
+ * @brief this function is called by execute to handle errors and wait on
+ * running processes, if you run a process in the foreground, pretty please call
+ * this function (looking at you fg command).
+ * @param pid the process to do things with
+ * @return the exit status of the program or -1 if waitpid encounters an error.
+ */
+int wait_process(pid_t pid);
 
 #endif

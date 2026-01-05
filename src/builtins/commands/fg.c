@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sys/wait.h>
 
+#include "../../interpreter/execute.h"
 #include "../../jobs.h"
 #include "../builtins.h"
 
@@ -52,7 +53,6 @@ int builtin_fg(char **argv) {
     return EXIT_FAILURE;
   }
 
-  fg_pid = pid;
   if (kill(pid, SIGCONT) != 0) {
     perror("fg: kill");
     return EXIT_FAILURE;
@@ -60,21 +60,5 @@ int builtin_fg(char **argv) {
 
   printf("[%d] PID: %d, continued in foreground\n", job_id, pid);
 
-  int status;
-
-  pid_t id = waitpid(pid, &status, WUNTRACED);
-  // if this waitpid fails, something in rash has gone wrong
-  assert(id != -1);
-
-  fg_pid = 0;
-
-  if (recv_sigtstp) {
-    recv_sigtstp = 0;
-
-    register_job(pid, JOB_STOPPED);
-
-    return 0;
-  }
-
-  return WEXITSTATUS(status);
+  return wait_process(pid);
 }

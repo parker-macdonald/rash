@@ -22,17 +22,11 @@ const char *const JOB_STATUSES[NUM_JOB_STATUSES] = {
     "Exited", "Stopped", "Running"
 };
 
-static struct sigaction sigint_act;
-static struct sigaction sigtstp_act;
-
 static job_t *root_job = NULL;
 static job_t *last_job = NULL;
 
 // pid of the current foreground process
 volatile sig_atomic_t fg_pid = 0;
-
-// whether a sigtstp was recieved.
-volatile sig_atomic_t recv_sigtstp = 0;
 
 // this is used for the line reader to print a ^C on sigint
 volatile sig_atomic_t recv_sigint = 0;
@@ -49,26 +43,22 @@ static void sigint_handler(int sig) {
     // tell the line reader we recieved a sigint
     recv_sigint = 1;
   }
-
-  // re-register sigint handler
-  sigaction(SIGINT, &sigint_act, NULL);
 }
 
 static void sigtstp_handler(int sig) {
   if (fg_pid != 0) {
     kill((pid_t)fg_pid, sig);
-    recv_sigtstp = 1;
+    fg_pid = 0;
   }
-
-  // re-register sigtstp handler
-  sigaction(SIGTSTP, &sigtstp_act, NULL);
 }
 
 void sig_handler_init(void) {
+  struct sigaction sigint_act;
   sigint_act.sa_handler = sigint_handler;
   sigint_act.sa_flags = SA_RESTART;
   sigemptyset(&sigint_act.sa_mask);
 
+  struct sigaction sigtstp_act;
   sigtstp_act.sa_handler = sigtstp_handler;
   sigtstp_act.sa_flags = SA_RESTART;
   sigemptyset(&sigtstp_act.sa_mask);
@@ -81,15 +71,20 @@ void sig_handler_init(void) {
 }
 
 void dont_restart_on_sigint(void) {
-  struct sigaction new_sigint_act;
-  new_sigint_act.sa_handler = sigint_handler;
-  new_sigint_act.sa_flags = 0;
-  sigemptyset(&new_sigint_act.sa_mask);
+  struct sigaction sigint_act;
+  sigint_act.sa_handler = sigint_handler;
+  sigint_act.sa_flags = 0;
+  sigemptyset(&sigint_act.sa_mask);
 
-  sigaction(SIGINT, &new_sigint_act, NULL);
+  sigaction(SIGINT, &sigint_act, NULL);
 }
 
 void restart_on_sigint(void) {
+  struct sigaction sigint_act;
+  sigint_act.sa_handler = sigint_handler;
+  sigint_act.sa_flags = SA_RESTART;
+  sigemptyset(&sigint_act.sa_mask);
+
   sigaction(SIGINT, &sigint_act, NULL);
 }
 
@@ -99,9 +94,42 @@ void clean_jobs(void) {
 
   for (current = root_job; current != NULL;) {
     int status;
-    pid_t pid = waitpid(current->pid, &status, WNOHANG);
+    pid_t pid = waitpid(current->pid, &status, WNOHANG | WUNTRACED);
 
     if (current->pid == pid) {
+      printf("[%d]* PID: %d, ", current->id, pid);
+
+      if (WIFEXITED(status)) {
+        int exit_status = WEXITSTATUS(status);
+
+        if (exit_status == 0) {
+          printf("Done\n");
+        } else {
+          printf("Exit %d\n", exit_status);
+        }
+      } else if (WIFSIGNALED(status)) {
+        int signal = WTERMSIG(status);
+
+        fputs(strsignal(signal), stdout);
+
+// WCOREDUMP is from POSIX.1-2024 so it's pretty new and might not be available
+// everywhere.
+#ifdef WCOREDUMP
+        if (WCOREDUMP(status)) {
+          fputs(" (core dumped)", stdout);
+        }
+#endif
+
+        putchar('\n');
+      } else if (WIFSTOPPED(status)) {
+        printf("Stopped\n");
+
+        current->state = JOB_STOPPED;
+        prev = current;
+        current = current->p_next;
+        continue;
+      }
+
       if (prev != NULL) {
         prev->p_next = current->p_next;
       } else {
@@ -115,27 +143,7 @@ void clean_jobs(void) {
       job_t *temp = current;
       current = current->p_next;
 
-      printf("[%d] PID: %d, ", temp->id, temp->pid);
-
-      if (WIFSIGNALED(status)) {
-        int signal = WTERMSIG(status);
-
-        fputs(strsignal(signal), stdout);
-#ifdef WCOREDUMP
-        if (WCOREDUMP(status)) {
-          fputs(" (core dumped)", stdout);
-        }
-#endif
-      } else if (WEXITSTATUS(status) != 0) {
-        printf("Exit %d", WEXITSTATUS(status));
-      } else {
-        printf("Done");
-      }
-
-      fputc('\n', stdout);
-
       free(temp);
-
       continue;
     }
 

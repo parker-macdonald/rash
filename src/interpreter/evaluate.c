@@ -389,6 +389,9 @@ int evaluate(const token_t *tokens) {
       VECTOR_PUSH(argv, NULL);
       ec.argv = argv.data;
       last_status = execute(ec);
+      if (last_status == -1) {
+        goto error;
+      }
       ec = (execution_context){NULL, -1, -1, -1, 0};
 
       for (size_t i = 0; i < argv.length; i++) {

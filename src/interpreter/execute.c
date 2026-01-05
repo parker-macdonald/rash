@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,12 +29,8 @@ int execute(const execution_context context) {
   // no need to fork if the command is builtin and i/o isn't redirected. this
   // also is needed so that commands like export and cd change the state of
   // rash, and not the child process
-  if (
-      !is_io_redirected && 
-      builtin != NULL &&
-      !(context.flags & EC_BACKGROUND_JOB) && 
-      !(context.flags & EC_NO_WAIT)
-    ) {
+  if (!is_io_redirected && builtin != NULL &&
+      !(context.flags & EC_BACKGROUND_JOB) && !(context.flags & EC_NO_WAIT)) {
     return builtin(context.argv);
   }
 
@@ -41,6 +38,17 @@ int execute(const execution_context context) {
 
   // child
   if (pid == 0) {
+    // this was a huge nightmare of a bug, when forking, the child would inherit
+    // the signal handlers of it's parent, and when someone pressed ctrl-z to
+    // send a sigtstp, the child would send a sigtstp to itself (since the child
+    // was registered as the foreground pid), this caused some sort of infinite
+    // loop and would cause rash hang and be really buggy. the solution? clear
+    // the signal handlers after forking. it's also worth noting that according
+    // to the man page for signal: "The only portable use of signal() is to set
+    // a signal's disposition to SIG_DFL or SIG_IGN."
+    signal(SIGINT, SIG_DFL);
+    signal(SIGTSTP, SIG_DFL);
+
     if (context.stdout_fd != -1) {
       close(STDOUT_FILENO);
 
@@ -138,42 +146,50 @@ int execute(const execution_context context) {
 
       return EXIT_SUCCESS;
     }
+  }
 
-    int status = 0;
-    fg_pid = pid;
+  return wait_process(pid);
+}
 
-    pid_t id = waitpid(pid, &status, WUNTRACED);
-    assert(id != -1);
+int wait_process(pid_t pid) {
+  int status = 0;
+  fg_pid = pid;
 
+  if (waitpid(pid, &status, WUNTRACED) == -1) {
     fg_pid = 0;
+    perror("rash: waitpid");
+    return -1;
+  }
 
-    if (recv_sigtstp) {
-      recv_sigtstp = 0;
+  fg_pid = 0;
 
-      putchar('\n');
-
-      register_job(pid, JOB_STOPPED);
-
-      return 0;
-    }
-
-    if (WIFSIGNALED(status)) {
-      int signal = WTERMSIG(status);
-
-      fputs(strsignal(signal), stderr);
-
-#ifdef WCOREDUMP
-      if (WCOREDUMP(status)) {
-        fputs(" (core dumped)", stderr);
-      }
-#endif
-
-      fputc('\n', stderr);
-    }
-
+  if (WIFEXITED(status)) {
     return WEXITSTATUS(status);
   }
 
-  // will never be reached
-  return EXIT_SUCCESS;
+  if (WIFSIGNALED(status)) {
+    int signal = WTERMSIG(status);
+
+    fputs(strsignal(signal), stderr);
+
+// WCOREDUMP is from POSIX.1-2024 so it's pretty new and might not be available
+// everywhere.
+#ifdef WCOREDUMP
+    if (WCOREDUMP(status)) {
+      fputs(" (core dumped)", stderr);
+    }
+#endif
+
+    fputc('\n', stderr);
+    // exiting with a signal seems like a failure to me
+    return EXIT_FAILURE;
+  }
+
+  if (WIFSTOPPED(status)) {
+    putchar('\n');
+
+    register_job(pid, JOB_STOPPED);
+  }
+
+  return 0;
 }
