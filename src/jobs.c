@@ -1,6 +1,7 @@
 #include "jobs.h"
 
 #include <assert.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,31 +26,20 @@ const char *const JOB_STATUSES[NUM_JOB_STATUSES] = {
 static job_t *root_job = NULL;
 static job_t *last_job = NULL;
 
-// pid of the current foreground process
-volatile sig_atomic_t fg_pid = 0;
+pid_t root_pid;
+int tty_fd;
 
 // this is used for the line reader to print a ^C on sigint
 volatile sig_atomic_t recv_sigint = 0;
 
 static void sigint_handler(int sig) {
+  (void)sig;
   if (!interactive) {
     _exit(EXIT_FAILURE);
   }
 
-  if (fg_pid != 0) {
-    kill((pid_t)fg_pid, sig);
-    fg_pid = 0;
-  } else {
-    // tell the line reader we recieved a sigint
-    recv_sigint = 1;
-  }
-}
-
-static void sigtstp_handler(int sig) {
-  if (fg_pid != 0) {
-    kill((pid_t)fg_pid, sig);
-    fg_pid = 0;
-  }
+  // tell the line reader we recieved a sigint
+  recv_sigint = 1;
 }
 
 void sig_handler_init(void) {
@@ -58,16 +48,30 @@ void sig_handler_init(void) {
   sigint_act.sa_flags = SA_RESTART;
   sigemptyset(&sigint_act.sa_mask);
 
-  struct sigaction sigtstp_act;
-  sigtstp_act.sa_handler = sigtstp_handler;
-  sigtstp_act.sa_flags = SA_RESTART;
-  sigemptyset(&sigtstp_act.sa_mask);
-
   // Set up SIGINT handler using sigaction
   sigaction(SIGINT, &sigint_act, NULL);
+  signal(SIGTSTP, SIG_IGN);
+  signal(SIGTTOU, SIG_IGN);
+  
+  tty_fd = open("/dev/tty", O_RDWR, 0666);
+  root_pid = getpid();
 
-  // Set up SIGTSTP handler using sigaction
-  sigaction(SIGTSTP, &sigtstp_act, NULL);
+  if (tty_fd != -1 && isatty(tty_fd)) {
+    setpgid(0, root_pid);
+    tcsetpgrp(tty_fd, root_pid);
+  } else {
+    tty_fd = -1;
+    fprintf(
+        stderr, "rash: cannot access /dev/tty. Job control is unavailable.\n"
+    );
+  }
+}
+
+void reset_fg_process(void) {
+  if (tty_fd != -1) {
+    setpgid(0, root_pid);
+    tcsetpgrp(tty_fd, root_pid);
+  }
 }
 
 void dont_restart_on_sigint(void) {
@@ -183,10 +187,6 @@ int register_job(pid_t pid, int state) {
 }
 
 job_t *get_job(int id) {
-  // the read/write lock does not need to be set here since the list is not
-  // being modified and the state section is not being read.
-  // jobs_linked_list_lock = 1;
-
   if (root_job == NULL) {
     return NULL;
   }

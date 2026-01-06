@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #include "../../interpreter/execute.h"
 #include "../../jobs.h"
@@ -59,6 +60,11 @@ int builtin_fg(char **argv) {
   }
 
   printf("[%d] PID: %d, continued in foreground\n", job_id, pid);
+
+  if (tty_fd != -1) {
+    int status = tcsetpgrp(tty_fd, pid);
+    assert(status == 0);
+  }
 
   return wait_process(pid);
 }

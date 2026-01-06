@@ -17,11 +17,10 @@ typedef struct job {
   struct job *p_next;
 } job_t;
 
-// pid of the current foreground process
-extern volatile sig_atomic_t fg_pid;
-
-// whether a sigtstp was recieved.
-extern volatile sig_atomic_t recv_sigtstp;
+// the pid of rash (the root process)
+extern pid_t root_pid;
+// the file descriptor of the controlling tty
+extern int tty_fd;
 
 // this is used for the line reader to print a ^C on sigint
 extern volatile sig_atomic_t recv_sigint;
@@ -87,5 +86,7 @@ void dont_restart_on_sigint(void);
  * dont_restart_on_sigint, there WILL be bugs and other unintended consequences.
  */
 void restart_on_sigint(void);
+
+void reset_fg_process(void);
 
 #endif

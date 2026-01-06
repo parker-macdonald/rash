@@ -11,6 +11,7 @@
 #include "line_reader/line_reader.h"
 #include "one_shot.h"
 #include "rashrc.h"
+#include "shlvl.h"
 #include "strings/strings.h"
 
 bool interactive = 0;
@@ -26,8 +27,9 @@ static const char *const HELP_STRING =
     "rash will run 'echo hello', then exit.\n";
 
 int main(int argc, char **argv) {
-  trie_init();
   sig_handler_init();
+  trie_init();
+  set_shlvl();
 
   // no arguments means interactive mode
   if (argc == 1) {

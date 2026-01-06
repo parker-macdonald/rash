@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,16 +37,19 @@ int execute(const execution_context context) {
 
   // child
   if (pid == 0) {
-    // this was a huge nightmare of a bug, when forking, the child would inherit
-    // the signal handlers of it's parent, and when someone pressed ctrl-z to
-    // send a sigtstp, the child would send a sigtstp to itself (since the child
-    // was registered as the foreground pid), this caused some sort of infinite
-    // loop and would cause rash hang and be really buggy. the solution? clear
-    // the signal handlers after forking. it's also worth noting that according
-    // to the man page for signal: "The only portable use of signal() is to set
-    // a signal's disposition to SIG_DFL or SIG_IGN."
-    signal(SIGINT, SIG_DFL);
-    signal(SIGTSTP, SIG_DFL);
+    if (tty_fd != -1 && (!(context.flags & EC_BACKGROUND_JOB) ||
+                         !(context.flags & EC_DONT_REGISTER_FOREGROUND))) {
+      pid_t new_pid = getpid();
+
+      int status = setpgid(new_pid, new_pid);
+      assert(status == 0);
+
+      status = tcsetpgrp(tty_fd, new_pid);
+      assert(status == 0);
+
+      signal(SIGTTOU, SIG_IGN);
+      signal(SIGTSTP, SIG_DFL);
+    }
 
     if (context.stdout_fd != -1) {
       close(STDOUT_FILENO);
@@ -153,15 +155,14 @@ int execute(const execution_context context) {
 
 int wait_process(pid_t pid) {
   int status = 0;
-  fg_pid = pid;
 
-  if (waitpid(pid, &status, WUNTRACED) == -1) {
-    fg_pid = 0;
+  int wait_status = waitpid(pid, &status, WUNTRACED);
+  reset_fg_process();
+
+  if (wait_status == -1) {
     perror("rash: waitpid");
     return -1;
   }
-
-  fg_pid = 0;
 
   if (WIFEXITED(status)) {
     return WEXITSTATUS(status);

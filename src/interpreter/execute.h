@@ -12,6 +12,11 @@
 // return the pid (pids and ints are the same size). this flag is mutually
 // exclusive with EC_BACKGROUND_JOB
 #define EC_NO_WAIT (1 << 1)
+// this flag tells execute to not call tcsetpgrp (sets the process to the
+// foreground process of the tty) on the spawned process. this is useful for
+// spawning pipelines where only the last command of the pipeline is the only
+// foreground process. this flag is also implied by EC_BACKGROUND_JOB
+#define EC_DONT_REGISTER_FOREGROUND (1 << 2)
 
 typedef struct {
   // arguments for command

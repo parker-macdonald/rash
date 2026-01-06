@@ -367,7 +367,7 @@ int evaluate(const token_t *tokens) {
 
       ec.stdout_fd = fds[1];
       ec.argv = argv.data;
-      ec.flags = EC_NO_WAIT;
+      ec.flags = EC_NO_WAIT | EC_DONT_REGISTER_FOREGROUND;
       pid_t pid = execute(ec);
       if (pid == -1) {
         goto error;
