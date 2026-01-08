@@ -7,7 +7,6 @@
 #include <string.h>
 
 #include "auto_complete.h"
-#include "interpreter/preprocess.h"
 #include "lib/ansi.h"
 #include "lib/sort.h"
 #include "lib/utf_8.h"
@@ -414,50 +413,6 @@ const uint8_t *readline(void *_) {
         }
         // shift+tab
         case 'Z': {
-          VECTOR_PUSH(*current_line, '\0');
-          buf_t *buf = preprocess(current_line->data);
-
-          if (buf == NULL) {
-            // this is a pretty crazy format string, but what it boils down to
-            // is print the error message, then print the line and move the
-            // cursor to the start of the line
-            printf(
-                "\nrash: %s\n\033[s%s%.*s\033[u",
-                pp_error_msg,
-                prompt,
-                (int)current_line->length,
-                (char *)current_line->data
-            );
-            size_t moves_down =
-                ((displayed_cursor_pos + displayed_cursor_pos) / width) -
-                (displayed_cursor_pos / width);
-            if (moves_down > 0) {
-              printf("\033[%zuB", moves_down);
-            }
-            printf("\r\033[%zuC", displayed_cursor_pos % width);
-            (void)fflush(stdout);
-
-            free(pp_error_msg);
-            current_line->length--;
-            continue;
-          }
-
-          free(current_line->data);
-          *current_line = *buf;
-          current_line->length--;
-          cursor_pos = current_line->length;
-          displayed_cursor_pos =
-              strlen_utf8(current_line->data, current_line->length) +
-              prompt_length;
-
-          width = get_terminal_width();
-          size_t moves_up = characters_printed / width;
-          if (moves_up) {
-            printf("\033[%zuA", moves_up);
-          }
-          characters_printed = displayed_cursor_pos;
-          DRAW_LINE(*current_line);
-          (void)fflush(stdout);
           continue;
         }
 
