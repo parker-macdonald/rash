@@ -159,6 +159,7 @@ const uint8_t *readline(void *_) {
   const char *prompt_var = var_get("PS1");
   char *prompt;
   unsigned int prompt_length;
+  bool show_matches = false;
 
   if (prompt_var == NULL) {
     prompt = "$ ";
@@ -222,7 +223,7 @@ const uint8_t *readline(void *_) {
       continue;
     }
 
-    if (curr_byte == ANSI_START_CHAR) {
+    if (curr_byte == ANSI_ESCAPE) {
       curr_byte = (uint8_t)getch();
 
       if (curr_byte != '[') {
@@ -413,7 +414,9 @@ const uint8_t *readline(void *_) {
         }
         // shift+tab
         case 'Z': {
-          continue;
+          show_matches = !show_matches;
+
+          goto draw_line;
         }
 
         default:
@@ -552,7 +555,7 @@ const uint8_t *readline(void *_) {
 
   draw_line:
 
-    fputs(ANSI_CURSOR_POS_SAVE, stdout);
+    (void)fputs(ANSI_CURSOR_POS_SAVE, stdout);
 
     width = get_terminal_width();
 
@@ -562,6 +565,18 @@ const uint8_t *readline(void *_) {
     }
 
     DRAW_LINE(*current_line);
+
+    if (show_matches) {
+      strings_t matches = {0};
+      get_matches(&matches, current_line, cursor_pos);
+      if (matches.length) {
+        sort_strings(&matches);
+        printf("\033[2m");
+        pretty_print_strings(matches.data, matches.length);
+        printf("\033[0m");
+      }
+      VECTOR_DESTROY(matches);
+    }
 
     (void)fputs(ANSI_CURSOR_POS_RESTORE, stdout);
 

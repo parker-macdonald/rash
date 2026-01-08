@@ -152,3 +152,29 @@ void get_command_matches(
 
   free(path2);
 }
+
+size_t get_matches(strings_t *matches, buf_t *line, size_t cursor_pos) {
+  size_t word_start = cursor_pos - 1;
+
+  for (; word_start > 0; word_start--) {
+    if (line->data[word_start] == ' ') {
+      word_start++;
+      break;
+    }
+  }
+
+  char *word = (char *)line->data + word_start;
+  size_t word_len = cursor_pos - word_start;
+
+  if (word_len == 0) {
+    return 0;
+  }
+
+  if (word_start == 0 && memchr(word, '/', word_len) == NULL) {
+    get_command_matches(matches, word, word_len);
+  } else {
+    get_file_matches(matches, word, word_len);
+  }
+
+  return word_start;
+}

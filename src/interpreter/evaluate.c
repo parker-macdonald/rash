@@ -199,7 +199,7 @@ int evaluate(const token_t *tokens) {
   strings_t argv;
   VECTOR_INIT(argv);
 
-  VECTOR(char) buffer;
+  string_t buffer;
   VECTOR_INIT(buffer);
 
   int last_status = -1;

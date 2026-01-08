@@ -38,14 +38,13 @@ void pretty_print_strings(char *const strings[], const size_t length) {
   printf("\n");
 
   for (size_t i = 0; i < length; i++) {
-    printf("%-*s", max_len, strings[i]);
-
     if ((i + 1) % col == 0) {
-      printf("\n");
+      printf("%s...", strings[i]);
+      return;
     }
+    
+    printf("%-*s", max_len, strings[i]);
   }
-
-  printf("\n");
 }
 
 int getch(void) {
