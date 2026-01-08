@@ -7,8 +7,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "../../interpreter/execute.h"
-#include "../../jobs.h"
+#include "interpreter/execute.h"
+#include "jobs.h"
 #include "builtins/builtins.h"
 
 #define BASE 10

@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../shell_vars.h"
 #include "builtins/builtins.h"
+#include "shell_vars.h"
 
 static const char *const SETVAR_HELP =
     "Usage: setvar KEY VALUE\n"

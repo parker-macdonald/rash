@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../jobs.h"
+#include "jobs.h"
 #include "builtins/builtins.h"
 
 #define BASE 10
