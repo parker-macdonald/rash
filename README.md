@@ -27,7 +27,7 @@ Once you have built rash, feel free to take a look at [the user guide](doc/USER_
 
 To setup clangd for this project, you will need to generate a `compile_commands.json` file.
 
-For this, I use [`bear`](github.com/rizsotto/Bear), but you can use other tools if you're more familiar with them.
+For this, I use [Bear](https://github.com/rizsotto/Bear), but you can use other tools if you're more familiar with them.
 
 ```bash
 make clean # make sure no build files exist so that bear knows how to compile all source files
@@ -40,4 +40,6 @@ You can also specify make flags here, for example:
 bear -- make ERROR_HELL=1 # this will generate a compile_commands.json with all errors enabled (not recommended for development)
 ```
 
-Once you have a `compile_commands.json` file, clangd should work fine.
+For more if more info on make flags, check out [the build guide](doc/BUILD.md#make-flags).
+
+Once you have a `compile_commands.json` file in the root of the project, clangd should work fine.
