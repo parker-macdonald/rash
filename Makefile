@@ -3,7 +3,8 @@ VERSION=0.6.9
 PREFIX := /usr/local
 
 SANITIZER :=
-CFLAGS := -std=c17 -D_DEFAULT_SOURCE -DVERSION=\"$(VERSION)\"
+INCLUDE := -Isrc/
+CFLAGS := -std=c17 -D_DEFAULT_SOURCE -DVERSION=\"$(VERSION)\" $(INCLUDE)
 CFLAG_ERRORS := -Werror -Wall -Wvla -Wextra -Wunreachable-code -Wshadow -Wpedantic -Wconversion
 LDFLAGS :=
 CC := clang

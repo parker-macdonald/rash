@@ -1,7 +1,7 @@
 #include <errno.h>
 #include <stdlib.h>
 
-#include "dynamic_sprintf.h"
+#include "lib/dynamic_sprintf.h"
 
 #define BASE 10
 

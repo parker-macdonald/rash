@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../builtins.h"
+#include "builtins/builtins.h"
 
 static const char *const HELP_STRING =
     "Welcome to rash, the rat ass shell!\n"

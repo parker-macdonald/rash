@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../builtins.h"
+#include "builtins/builtins.h"
 
 extern char **environ;
 

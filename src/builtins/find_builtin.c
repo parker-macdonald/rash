@@ -1,4 +1,4 @@
-#include "./find_builtin.h"
+#include "find_builtin.h"
 
 #include <assert.h>
 #include <ctype.h>
@@ -6,9 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../vec_types.h"
-#include "../vector.h"
-#include "./builtins.h"
+#include "lib/vec_types.h"
+#include "lib/vector.h"
+#include "builtins.h"
 
 #define ALPHABET_SIZE 26
 

@@ -5,8 +5,8 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "../utf_8.h"
-#include "../vector.h"
+#include "lib/utf_8.h"
+#include "lib/vector.h"
 
 void line_insert(
     buf_t *const line, const uint8_t byte, const size_t cursor_pos

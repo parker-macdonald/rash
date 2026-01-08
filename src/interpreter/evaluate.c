@@ -11,7 +11,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "../vector.h"
+#include "lib/vec_types.h"
+#include "lib/vector.h"
 #include "execute.h"
 #include "lex.h"
 
@@ -194,7 +195,7 @@ int evaluate(const token_t *tokens) {
     return EXIT_FAILURE;
   }
 
-  argv_t argv;
+  strings_t argv;
   VECTOR_INIT(argv);
 
   VECTOR(char) buffer;

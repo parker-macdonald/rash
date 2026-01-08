@@ -12,7 +12,7 @@
 #include "one_shot.h"
 #include "rashrc.h"
 #include "shlvl.h"
-#include "strings/strings.h"
+#include "strings/version.h"
 
 bool interactive = 0;
 

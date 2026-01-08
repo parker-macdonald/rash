@@ -7,8 +7,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "../builtins/find_builtin.h"
-#include "../vec_types.h"
+#include "builtins/find_builtin.h"
+#include "lib/vec_types.h"
 
 void
 get_file_matches(strings_t *matches, const char *word, size_t word_len) {

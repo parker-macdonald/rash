@@ -5,8 +5,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "vec_types.h"
-#include "vector.h"
+#include "lib/vec_types.h"
 
 struct file_reader {
   FILE *file;

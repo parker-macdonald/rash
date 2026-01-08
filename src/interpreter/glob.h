@@ -1,8 +1,7 @@
 #ifndef GLOB_H
 #define GLOB_H
 
-#include "../vector.h"
-#include "../vec_types.h"
+#include "lib/vec_types.h"
 
 extern char *glob_err_msg;
 

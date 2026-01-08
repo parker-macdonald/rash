@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "vector.h"
+#include "lib/vector.h"
 
 void file_reader_init(struct file_reader *file, FILE *fp) {
   file->file = fp;

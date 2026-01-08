@@ -11,9 +11,9 @@
 #include <termios.h>
 #include <unistd.h>
 
-#include "../ansi.h"
-#include "../jobs.h"
-#include "../vector.h"
+#include "jobs.h"
+#include "lib/ansi.h"
+#include "lib/vector.h"
 
 unsigned short get_terminal_width(void) {
   struct winsize win;
@@ -100,36 +100,4 @@ int getch(void) {
   }
 
   return (int)byte;
-}
-
-void add_path_matches(
-    matches_t *matches,
-    const char *const path,
-    const char *const prefix,
-    const size_t prefix_len
-) {
-  DIR *dir = opendir(path);
-  if (dir == NULL) {
-    return;
-  }
-  struct dirent *ent;
-
-  while ((ent = readdir(dir)) != NULL) {
-    if (strncmp(prefix, ent->d_name, prefix_len) == 0) {
-      bool already_contained = false;
-
-      for (size_t i = 0; i < matches->length; i++) {
-        if (strcmp(matches->data[i], ent->d_name) == 0) {
-          already_contained = true;
-          break;
-        }
-      }
-
-      if (!already_contained) {
-        VECTOR_PUSH(*matches, strdup(ent->d_name));
-      }
-    }
-  }
-
-  closedir(dir);
 }

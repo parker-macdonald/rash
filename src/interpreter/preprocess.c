@@ -9,10 +9,10 @@
 #include <string.h>
 #include <sys/types.h>
 
-#include "../dynamic_sprintf.h"
-#include "../shell_vars.h"
-#include "../vec_types.h"
-#include "../vector.h"
+#include "lib/dynamic_sprintf.h"
+#include "shell_vars.h"
+#include "lib/vec_types.h"
+#include "lib/vector.h"
 #include "glob.h"
 
 char *pp_error_msg;

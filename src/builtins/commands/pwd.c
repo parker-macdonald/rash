@@ -5,7 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "../builtins.h"
+#include "builtins/builtins.h"
 
 static const char *const PWD_HELP = "Usage: pwd\n"
                                     "Prints the current working directory.";

@@ -5,7 +5,7 @@
 
 #include "../../file_reader.h"
 #include "../../interpreter/repl.h"
-#include "../builtins.h"
+#include "builtins/builtins.h"
 
 static const char *const SOURCE_HELP =
     "Usage: source FILENAME\n"

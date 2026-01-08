@@ -1,4 +1,4 @@
-#include "../builtins.h"
+#include "builtins/builtins.h"
 
 int builtin_false(char **argv) {
   (void)argv;

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../builtins.h"
+#include "builtins/builtins.h"
 
 static const char *const UNSETENV_HELP = "Usage: unsetenv KEY\n"
                                          "Remove the environment variable KEY.";

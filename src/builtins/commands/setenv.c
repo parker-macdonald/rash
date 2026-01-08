@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../builtins.h"
+#include "builtins/builtins.h"
 
 static const char *const SETENV_HELP =
     "Usage: setenv KEY [VALUE]\n"

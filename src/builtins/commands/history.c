@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "../../line_reader/line_reader.h"
-#include "../builtins.h"
+#include "builtins/builtins.h"
 
 #define BASE 10
 

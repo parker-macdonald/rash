@@ -6,7 +6,7 @@
 #include <sys/utsname.h>
 #include <unistd.h>
 
-#include "../vector.h"
+#include "lib/vector.h"
 
 static char *getcwd_good(void) {
   size_t cwd_size = 16;

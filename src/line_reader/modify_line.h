@@ -1,7 +1,7 @@
 #ifndef MODIFY_LINE_H
 #define MODIFY_LINE_H
 
-#include "../vec_types.h"
+#include "lib/vec_types.h"
 
 /**
  * @brief adds the specified byte to the line at the cursor position

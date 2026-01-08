@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../vector.h"
+#include "lib/vector.h"
 
 enum lexer_state {
   DEFAULT,

@@ -3,10 +3,10 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "../../interactive.h"
-#include "../../search_path.h"
-#include "../builtins.h"
-#include "../find_builtin.h"
+#include "interactive.h"
+#include "lib/search_path.h"
+#include "builtins/builtins.h"
+#include "builtins/find_builtin.h"
 
 extern char **environ;
 

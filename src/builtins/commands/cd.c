@@ -4,7 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "../builtins.h"
+#include "builtins/builtins.h"
 
 static const char *const CD_HELP =
     "Usage: cd [DIR]\n"

@@ -15,8 +15,6 @@
 // returned by getch when a sigint interrupted the read.
 #define SIGINT_ON_READ -1
 
-typedef VECTOR(char *) matches_t;
-
 /**
  * @brief prints all the strings in the strings array in a nice format that
  * scales to the terminal size.
@@ -32,22 +30,6 @@ void pretty_print_strings(char *const strings[], const size_t length);
  * recieved.
  */
 int getch(void);
-
-/**
- * @brief searches the files in path and adds the files that begin with prefix
- * to the matches vector.
- * @param matches the vector to add the matches to.
- * @param path the path to search for files.
- * @param prefix if a file in path begins with this prefix, it will be added to
- * the matches vector.
- * @param prefix_len the length of the prefix
- */
-void add_path_matches(
-    matches_t *matches,
-    const char *const path,
-    const char *const prefix,
-    const size_t prefix_len
-);
 
 unsigned short get_terminal_width(void);
 

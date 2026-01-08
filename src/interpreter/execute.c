@@ -9,9 +9,9 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "../builtins/find_builtin.h"
-#include "../jobs.h"
-#include "../search_path.h"
+#include "builtins/find_builtin.h"
+#include "jobs.h"
+#include "lib/search_path.h"
 
 extern char **environ;
 

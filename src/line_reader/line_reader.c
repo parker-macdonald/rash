@@ -6,15 +6,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../ansi.h"
-#include "../interpreter/preprocess.h"
-#include "../shell_vars.h"
-#include "../sort.h"
-#include "../utf_8.h"
-#include "../vector.h"
 #include "auto_complete.h"
+#include "interpreter/preprocess.h"
+#include "lib/ansi.h"
+#include "lib/sort.h"
+#include "lib/utf_8.h"
+#include "lib/vector.h"
 #include "modify_line.h"
 #include "prompt.h"
+#include "shell_vars.h"
 #include "utils.h"
 
 #ifdef static_assert

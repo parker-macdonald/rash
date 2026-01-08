@@ -1,4 +1,4 @@
-#include "strings.h"
+#include "version.h"
 
 const char *const VERSION_STRING = "rash version: "
 #ifdef VERSION

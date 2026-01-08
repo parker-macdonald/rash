@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "../../shell_vars.h"
-#include "../builtins.h"
+#include "builtins/builtins.h"
 
 static const char *const SETVAR_HELP =
     "Usage: setvar KEY VALUE\n"

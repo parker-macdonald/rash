@@ -8,8 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../dynamic_sprintf.h"
-#include "../vector.h"
+#include "lib/dynamic_sprintf.h"
+#include "lib/vector.h"
 
 struct queue_node {
   struct queue_node *p_next;
