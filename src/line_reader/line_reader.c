@@ -132,7 +132,6 @@ void print_history(int count) {
   do {                                                                         \
     size_t moves_down = ((displayed_cursor_pos + (n)) / width) -               \
                         (displayed_cursor_pos / width);                        \
-    displayed_cursor_pos += (n);                                               \
     if (moves_down > 0) {                                                      \
       printf("\033[%zuB", moves_down);                                         \
     }                                                                          \
@@ -143,7 +142,6 @@ void print_history(int count) {
   do {                                                                         \
     size_t moves_up = (displayed_cursor_pos / width) -                         \
                       ((displayed_cursor_pos - (n)) / width);                  \
-    displayed_cursor_pos -= (n);                                               \
     if (moves_up > 0) {                                                        \
       printf("\033[%zuA", moves_up);                                           \
     }                                                                          \
@@ -341,6 +339,7 @@ const uint8_t *readline(void *_) {
                     move_right++;
                   }
 
+                  displayed_cursor_pos += move_right;
                   CURSOR_RIGHT_N(move_right);
                   (void)fflush(stdout);
                 }
@@ -362,6 +361,7 @@ const uint8_t *readline(void *_) {
                     move_left++;
                   }
 
+                  displayed_cursor_pos -= move_left;
                   CURSOR_LEFT_N(move_left);
                   (void)fflush(stdout);
                 }
@@ -536,6 +536,7 @@ const uint8_t *readline(void *_) {
       if (bytes_written) {
         const size_t n =
             strlen_utf8(current_line->data + cursor_pos, bytes_written);
+        displayed_cursor_pos += n;
         CURSOR_RIGHT_N(n);
         cursor_pos += bytes_written;
 
@@ -544,7 +545,15 @@ const uint8_t *readline(void *_) {
       continue;
     }
 
-    if (curr_byte != 0) {
+    // clear screen
+    if (curr_byte == '\f') {
+      printf("\033[H\033[2J");
+      CURSOR_RIGHT_N(displayed_cursor_pos);
+      goto draw_line;
+    }
+
+    // only add character to buffer if it is displayable ascii (or utf-8)
+    if (curr_byte >= ' ') {
       line_insert(current_line, curr_byte, cursor_pos);
       cursor_pos++;
 
