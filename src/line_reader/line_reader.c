@@ -508,9 +508,10 @@ const uint8_t *readline(void *_) {
           );
         } else {
           sort_strings(&matches);
+          putchar('\n');
           pretty_print_strings(matches.data, matches.length);
           printf(
-              "\033[s%s%.*s\033[u",
+              "\n\033[s%s%.*s\033[u",
               prompt,
               (int)current_line->length,
               (char *)current_line->data
@@ -571,7 +572,7 @@ const uint8_t *readline(void *_) {
       get_matches(&matches, current_line, cursor_pos);
       if (matches.length) {
         sort_strings(&matches);
-        printf("\033[2m");
+        printf("\033[2m\n");
         pretty_print_strings(matches.data, matches.length);
         printf("\033[0m");
       }
