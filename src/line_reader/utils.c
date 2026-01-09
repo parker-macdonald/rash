@@ -29,14 +29,14 @@ void pretty_print_strings(char *const strings[], const size_t length) {
     const size_t new_len = strlen(strings[num_printed]) + 2;
 
     if (new_len > max_len) {
-      if ((num_printed + 2) * new_len > width) {
+      if ((num_printed + 2) * new_len / width > 3) {
         break;
       }
       max_len = new_len;
       continue;
     }
 
-    if ((num_printed + 2) * max_len > width) {
+    if ((num_printed + 2) * max_len / width > 3) {
       break;
     }
   }
