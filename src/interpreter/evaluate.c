@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <pwd.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,12 +11,12 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "lib/vec_types.h"
-#include "shell_vars.h"
-#include "lib/vector.h"
 #include "execute.h"
 #include "glob.h"
 #include "lex.h"
+#include "lib/vec_types.h"
+#include "lib/vector.h"
+#include "shell_vars.h"
 
 static bool bad_syntax(const token_t *const tokens) {
   if (!IS_ARGUMENT_TOKENS(tokens[0].type)) {
@@ -237,6 +238,33 @@ int evaluate(const token_t *tokens) {
         VECTOR_PUSH(buffer, value[i]);
       }
 
+      continue;
+    }
+
+    if (tokens->type == TILDE) {
+      if (((char *)tokens->data)[0] == '\0') {
+        char *home = getenv("HOME");
+        if (home != NULL) {
+          for (size_t i = 0; home[i] != '\0'; i++) {
+            VECTOR_PUSH(buffer, home[i]);
+          }
+          continue;
+        }
+        fprintf(stderr, "cannot expand ‘~’, HOME is not set.\n");
+        goto error;
+      }
+
+      struct passwd *pw = getpwnam((char *)tokens->data);
+      if (pw == NULL || pw->pw_dir == NULL) {
+        fprintf(
+            stderr, "rash: cannot access user ‘%s’.\n", (char *)tokens->data
+        );
+        goto error;
+      }
+
+      for (size_t i = 0; pw->pw_dir[i] != '\0'; i++) {
+        VECTOR_PUSH(buffer, pw->pw_dir[i]);
+      }
       continue;
     }
 

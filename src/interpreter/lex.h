@@ -25,6 +25,8 @@ typedef enum {
   ENV_EXPANSION,
   // shell variable to be expanded
   VAR_EXPANSION,
+  // '~' used for home folder expansion
+  TILDE,
   // used to end the current argument
   END_ARG,
   // ';' used to run two commands sequentially
@@ -43,7 +45,7 @@ typedef enum {
 
 #define IS_ARGUMENT_TOKENS(x)                                                  \
   ((x) == STRING || (x) == GLOB_WILDCARD || (x) == ENV_EXPANSION ||            \
-   (x) == VAR_EXPANSION)
+   (x) == VAR_EXPANSION || (x) == TILDE)
 
 typedef struct {
   token_type_t type;

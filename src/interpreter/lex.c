@@ -288,27 +288,37 @@ token_t *lex(const uint8_t *source) {
           goto success;
         }
 
-        // crude tilde expansion
-        if (curr == '~') {
-          has_arguments = true;
-          const char *home = getenv("HOME");
-
-          if (home == NULL) {
-            VECTOR_PUSH(buffer, '~');
-            break;
-          }
-
-          for (size_t j = 0; home[j] != '\0'; j++) {
-            VECTOR_PUSH(buffer, (uint8_t)home[j]);
-          }
-          break;
-        }
-
         has_arguments = true;
         VECTOR_PUSH(buffer, curr);
         break;
 
       case WHITESPACE:
+        if (curr == '~') {
+          i++;
+          const uint8_t *user_start = source + i;
+          size_t user_len = 0;
+
+          for (;;) {
+            if (source[i] == '/' || source[i] == '\0' ||
+                isspace((int)source[i])) {
+              break;
+            }
+            user_len++;
+            i++;
+          }
+
+          char *user = malloc(user_len + 1);
+          memcpy(user, user_start, user_len);
+          user[user_len] = '\0';
+
+          VECTOR_PUSH(tokens, ((token_t){.type = TILDE, .data = user}));
+          i--;
+          state = DEFAULT;
+
+          has_arguments = true;
+          continue;
+        }
+
         if (!isspace((int)curr)) {
           state = DEFAULT;
           i--;
@@ -389,7 +399,7 @@ error:
 void free_tokens(token_t **tokens) {
   for (size_t i = 0; (*tokens)[i].type != END; i++) {
     if ((*tokens)[i].type == STRING || (*tokens)[i].type == ENV_EXPANSION ||
-        (*tokens)[i].type == VAR_EXPANSION) {
+        (*tokens)[i].type == VAR_EXPANSION || (*tokens)[i].type == TILDE) {
       free((*tokens)[i].data);
     }
   }
