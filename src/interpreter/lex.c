@@ -195,7 +195,7 @@ token_t *lex(const uint8_t *source) {
           }
 
           for (;;) {
-            if (!isalnum((int)source[i]) || source[i] == '\0') {
+            if ((!isalnum((int)source[i]) && source[i] != '_') || source[i] == '\0') {
               i--;
               break;
             }
