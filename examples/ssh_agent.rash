@@ -1,0 +1,9 @@
+# the -c means to use "csh style commands". I'm not really sure what csh is, 
+# but the commands it spits out are rash compatible
+ssh-agent -c > /tmp/rash_agent
+
+# run the commands spit out by ssh-agent
+source /tmp/rash_agent
+
+# remove the temporary file
+rm /tmp/rash_agent
