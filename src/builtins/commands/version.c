@@ -1,7 +1,8 @@
+#include "strings/version.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "strings/version.h"
 #include "builtins/builtins.h"
 
 int builtin_version(char **argv) {

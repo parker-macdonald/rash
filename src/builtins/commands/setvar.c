@@ -11,7 +11,7 @@ static const char *const SETVAR_HELP =
 
 int builtin_setvar(char **argv) {
   if (argv[1] == NULL || argv[2] == NULL) {
-    fprintf(stderr, "%s\n", SETVAR_HELP);
+    (void)fprintf(stderr, "%s\n", SETVAR_HELP);
     return EXIT_FAILURE;
   }
 

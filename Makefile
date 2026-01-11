@@ -63,7 +63,7 @@ format:
 	clang-format -i $(SRC) $(HEADERS)
 
 lint:
-	$(LINTER) $(SRC) -checks=-*,bugprone-*,cert-*,clang-analyzer-*,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,performance-*,portability-*,misc-* -warnings-as-errors=*,-misc-include-cleaner -- $(INCS) $(CFLAGS)
+	$(LINTER) $(SRC) -- $(CFLAGS)
 
 build: $(BUILD)/$(OUT)
 

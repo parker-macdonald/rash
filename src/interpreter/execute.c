@@ -2,10 +2,11 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -47,8 +48,8 @@ int execute(const execution_context context) {
       status = tcsetpgrp(tty_fd, new_pid);
       assert(status == 0);
 
-      signal(SIGTTOU, SIG_IGN);
-      signal(SIGTSTP, SIG_DFL);
+      (void)signal(SIGTTOU, SIG_IGN);
+      (void)signal(SIGTSTP, SIG_DFL);
     }
 
     if (context.stdout_fd != -1) {
@@ -84,7 +85,7 @@ int execute(const execution_context context) {
       char *argv0 = search_path(context.argv[0]);
 
       if (argv0 == NULL) {
-        fprintf(stderr, "%s: command not found\n", context.argv[0]);
+        (void)fprintf(stderr, "%s: command not found\n", context.argv[0]);
         _exit(EXIT_FAILURE);
       }
 
@@ -97,9 +98,9 @@ int execute(const execution_context context) {
     if (status == -1) {
 
       if (errno != ENOENT) {
-        fprintf(stderr, "rash: execve: %s\n", strerror(errno));
+        (void)fprintf(stderr, "rash: execve: %s\n", strerror(errno));
       } else {
-        fprintf(stderr, "rash: %s: command not found\n", context.argv[0]);
+        (void)fprintf(stderr, "rash: %s: command not found\n", context.argv[0]);
       }
     }
 
@@ -171,17 +172,17 @@ int wait_process(pid_t pid) {
   if (WIFSIGNALED(status)) {
     int signal = WTERMSIG(status);
 
-    fputs(strsignal(signal), stderr);
+    (void)fputs(strsignal(signal), stderr);
 
 // WCOREDUMP is from POSIX.1-2024 so it's pretty new and might not be available
 // everywhere.
 #ifdef WCOREDUMP
     if (WCOREDUMP(status)) {
-      fputs(" (core dumped)", stderr);
+      (void)fputs(" (core dumped)", stderr);
     }
 #endif
 
-    fputc('\n', stderr);
+    (void)fputc('\n', stderr);
     // exiting with a signal seems like a failure to me
     return EXIT_FAILURE;
   }

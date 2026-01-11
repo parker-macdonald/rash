@@ -25,7 +25,7 @@ enum lexer_state {
       VECTOR_PUSH(tokens, ((token_t){.type = STRING, .data = buffer.data}));   \
       VECTOR_INIT(buffer);                                                     \
     }                                                                          \
-    VECTOR_PUSH(tokens, (token_t){.type = token_type});                        \
+    VECTOR_PUSH(tokens, (token_t){.type = (token_type)});                      \
   } while (0)
 
 token_t *lex(const uint8_t *source) {
@@ -77,10 +77,9 @@ token_t *lex(const uint8_t *source) {
             ADD_NONSTR_TOKEN(STDIN_REDIR_STRING);
             i += 2;
             break;
-          } else {
-            ADD_NONSTR_TOKEN(STDIN_REDIR);
-            break;
           }
+          ADD_NONSTR_TOKEN(STDIN_REDIR);
+          break;
         }
 
         // stdout redirection
@@ -199,13 +198,13 @@ token_t *lex(const uint8_t *source) {
 
   switch (state) {
     case SINGLE_LITERAL:
-      fprintf(stderr, "rash: Expected character after ‘\\’.\n");
+      (void)fprintf(stderr, "rash: Expected character after ‘\\’.\n");
       goto error;
     case SINGLE_QUOTE:
-      fprintf(stderr, "rash: Expected closing ‘'’ character.\n");
+      (void)fprintf(stderr, "rash: Expected closing ‘'’ character.\n");
       goto error;
     case DOUBLE_QUOTE:
-      fprintf(stderr, "rash: Expected closing ‘\"’ character.\n");
+      (void)fprintf(stderr, "rash: Expected closing ‘\"’ character.\n");
       goto error;
     default:
       break;

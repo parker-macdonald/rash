@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "lib/dynamic_sprintf.h"
+#include "lib/vec_types.h"
 #include "lib/vector.h"
 
 struct queue_node {
@@ -37,33 +38,34 @@ static bool match(const char *str, const char *pattern) {
       // Easy: unique up on it!
       if (!w || w == '/') {
         return true; // "x" matches "x"
-      } else if (w == '\033') {
+      }
+      if (w == '\033') {
         pattern++;
         continue; // "x*" matches "x" or "xy"
       }
       return false; // "x" doesn't match "xy"
-    } else {
-      // How do you match a tame text string?
-      if (t != w) {
-        // The tame way: unique up on it!
-        if (w == '\033') {
-          after_last_wild = ++pattern;
-          continue; // "*y" matches "xy"
-        } else if (after_last_wild) {
-          pattern = after_last_wild;
-          w = *pattern;
-
-          if (!w || w == '/') {
-            return true; // "*" matches "x"
-          } else if (t == w) {
-            pattern++;
-          }
-          str++;
-          continue; // "*sip*" matches "mississippi"
-        } else {
-          return false; // "x" doesn't match "y"
-        }
+    }
+    // How do you match a tame text string?
+    if (t != w) {
+      // The tame way: unique up on it!
+      if (w == '\033') {
+        after_last_wild = ++pattern;
+        continue; // "*y" matches "xy"
       }
+      if (after_last_wild) {
+        pattern = after_last_wild;
+        w = *pattern;
+
+        if (!w || w == '/') {
+          return true; // "*" matches "x"
+        }
+        if (t == w) {
+          pattern++;
+        }
+        str++;
+        continue; // "*sip*" matches "mississippi"
+      }
+      return false; // "x" doesn't match "y"
     }
     str++;
     pattern++;

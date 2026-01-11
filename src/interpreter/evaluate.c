@@ -7,18 +7,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "lib/vec_types.h"
-#include "lib/vector.h"
 #include "execute.h"
 #include "lex.h"
+#include "lib/vec_types.h"
+#include "lib/vector.h"
 
 static bool bad_syntax(const token_t *const tokens) {
   if (tokens[0].type != STRING) {
-    fprintf(stderr, "rash: invalid first token.\n");
+    (void)fprintf(stderr, "rash: invalid first token.\n");
     return true;
   }
 
@@ -33,7 +32,7 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == STDIN_REDIR) {
       if (tokens[i + 1].type != STRING) {
-        fprintf(stderr, "rash: expected file name after ‘<’.\n");
+        (void)fprintf(stderr, "rash: expected file name after ‘<’.\n");
         return true;
       }
 
@@ -43,7 +42,7 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == STDIN_REDIR_STRING) {
       if (tokens[i + 1].type != STRING) {
-        fprintf(stderr, "rash: expected string after ‘<<<’.\n");
+        (void)fprintf(stderr, "rash: expected string after ‘<<<’.\n");
         return true;
       }
 
@@ -53,7 +52,7 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == STDOUT_REDIR) {
       if (tokens[i + 1].type != STRING) {
-        fprintf(stderr, "rash: expected string after ‘>’.\n");
+        (void)fprintf(stderr, "rash: expected string after ‘>’.\n");
         return true;
       }
 
@@ -63,7 +62,7 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == STDOUT_REDIR_APPEND) {
       if (tokens[i + 1].type != STRING) {
-        fprintf(stderr, "rash: expected string after ‘>>’.\n");
+        (void)fprintf(stderr, "rash: expected string after ‘>>’.\n");
         return true;
       }
 
@@ -73,7 +72,7 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == STDERR_REDIR) {
       if (tokens[i + 1].type != STRING) {
-        fprintf(stderr, "rash: expected string after ‘2>’.\n");
+        (void)fprintf(stderr, "rash: expected string after ‘2>’.\n");
         return true;
       }
 
@@ -83,7 +82,7 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == STDERR_REDIR_APPEND) {
       if (tokens[i + 1].type != STRING) {
-        fprintf(stderr, "rash: expected string after ‘2>>’.\n");
+        (void)fprintf(stderr, "rash: expected string after ‘2>>’.\n");
         return true;
       }
 
@@ -93,12 +92,12 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == PIPE) {
       if (tokens[i + 1].type != STRING) {
-        fprintf(stderr, "rash: expected command after ‘|’.\n");
+        (void)fprintf(stderr, "rash: expected command after ‘|’.\n");
         return true;
       }
 
       if (tokens[i - 1].type != STRING) {
-        fprintf(stderr, "rash: bad placement of ‘|’.\n");
+        (void)fprintf(stderr, "rash: bad placement of ‘|’.\n");
         return true;
       }
 
@@ -106,17 +105,17 @@ static bool bad_syntax(const token_t *const tokens) {
     }
 
     if (stderr_count > 1) {
-      fprintf(stderr, "rash: cannot redirect stderr more than once.\n");
+      (void)fprintf(stderr, "rash: cannot redirect stderr more than once.\n");
       return true;
     }
 
     if (stdout_count > 1) {
-      fprintf(stderr, "rash: cannot redirect stdout more than once.\n");
+      (void)fprintf(stderr, "rash: cannot redirect stdout more than once.\n");
       return true;
     }
 
     if (stdin_count > 1) {
-      fprintf(stderr, "rash: cannot redirect stdin more than once.\n");
+      (void)fprintf(stderr, "rash: cannot redirect stdin more than once.\n");
       return true;
     }
 
@@ -130,12 +129,12 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == LOGICAL_OR) {
       if (tokens[i + 1].type != STRING) {
-        fprintf(stderr, "rash: expected command after ‘||’.\n");
+        (void)fprintf(stderr, "rash: expected command after ‘||’.\n");
         return true;
       }
 
       if (tokens[i - 1].type != STRING) {
-        fprintf(stderr, "rash: bad placement of ‘||’.\n");
+        (void)fprintf(stderr, "rash: bad placement of ‘||’.\n");
         return true;
       }
 
@@ -146,12 +145,12 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == LOGICAL_AND) {
       if (tokens[i + 1].type != STRING) {
-        fprintf(stderr, "rash: expected command after ‘&&’.\n");
+        (void)fprintf(stderr, "rash: expected command after ‘&&’.\n");
         return true;
       }
 
       if (tokens[i - 1].type != STRING) {
-        fprintf(stderr, "rash: bad placement of ‘&&’.\n");
+        (void)fprintf(stderr, "rash: bad placement of ‘&&’.\n");
         return true;
       }
 
@@ -162,7 +161,7 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == SEMI) {
       if (tokens[i - 1].type != STRING) {
-        fprintf(stderr, "rash: bad placement of ‘;’.\n");
+        (void)fprintf(stderr, "rash: bad placement of ‘;’.\n");
         return true;
       }
 
@@ -173,7 +172,7 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == AMP) {
       if (tokens[i - 1].type != STRING) {
-        fprintf(stderr, "rash: bad placement of ‘&’.\n");
+        (void)fprintf(stderr, "rash: bad placement of ‘&’.\n");
         return true;
       }
 
@@ -228,7 +227,7 @@ int evaluate(const token_t *tokens) {
 
       int fd = open((char *)(tokens + 1)->data, O_RDONLY);
       if (fd == -1) {
-        fprintf(
+        (void)fprintf(
             stderr,
             "rash: %s: %s\n",
             (char *)(tokens + 1)->data,
@@ -278,7 +277,7 @@ int evaluate(const token_t *tokens) {
 
       int fd = open((tokens + 1)->data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
       if (fd == -1) {
-        fprintf(
+        (void)fprintf(
             stderr,
             "rash: %s: %s\n",
             (char *)(tokens + 1)->data,
@@ -299,7 +298,7 @@ int evaluate(const token_t *tokens) {
 
       int fd = open((tokens + 1)->data, O_WRONLY | O_CREAT | O_APPEND, 0644);
       if (fd == -1) {
-        fprintf(
+        (void)fprintf(
             stderr,
             "rash: %s: %s\n",
             (char *)(tokens + 1)->data,
@@ -320,7 +319,7 @@ int evaluate(const token_t *tokens) {
 
       int fd = open((tokens + 1)->data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
       if (fd == -1) {
-        fprintf(
+        (void)fprintf(
             stderr,
             "rash: %s: %s\n",
             (char *)(tokens + 1)->data,
@@ -341,7 +340,7 @@ int evaluate(const token_t *tokens) {
 
       int fd = open((tokens + 1)->data, O_WRONLY | O_CREAT | O_APPEND, 0644);
       if (fd == -1) {
-        fprintf(
+        (void)fprintf(
             stderr,
             "rash: %s: %s\n",
             (char *)(tokens + 1)->data,

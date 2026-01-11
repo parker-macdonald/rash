@@ -1,11 +1,12 @@
 #include "modify_line.h"
 
 #include <assert.h>
-#include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "lib/utf_8.h"
+#include "lib/vec_types.h"
 #include "lib/vector.h"
 
 void line_insert(
@@ -106,13 +107,17 @@ static inline size_t next_pow_2(size_t n) {
 }
 
 void line_insert_bulk(
-    buf_t *line, size_t cursor_pos, uint8_t *src, size_t src_len
+    buf_t *line, size_t cursor_pos, const uint8_t *src, size_t src_len
 ) {
   size_t new_length = src_len + line->length;
 
   if (line->_capacity < new_length) {
     line->_capacity = next_pow_2(new_length);
-    line->data = realloc(line->data, line->_capacity);
+    uint8_t *data = realloc(line->data, line->_capacity);
+    if (data == NULL) {
+      abort();
+    }
+    line->data = data;
   }
 
   if (cursor_pos == line->length) {

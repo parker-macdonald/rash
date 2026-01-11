@@ -6,14 +6,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 
+#include "glob.h"
 #include "lib/dynamic_sprintf.h"
-#include "shell_vars.h"
 #include "lib/vec_types.h"
 #include "lib/vector.h"
-#include "glob.h"
+#include "shell_vars.h"
 
 char *pp_error_msg;
 
@@ -268,8 +268,8 @@ static char *to_pattern(buf_t *buffer, size_t word_start) {
 
 #define PUSH_STRING(buffer, str)                                               \
   do {                                                                         \
-    for (size_t j = 0; str[j] != '\0'; j++) {                                  \
-      VECTOR_PUSH(buffer, (uint8_t)str[j]);                                    \
+    for (size_t j = 0; (str)[j] != '\0'; j++) {                                \
+      VECTOR_PUSH(buffer, (uint8_t)(str)[j]);                                  \
     }                                                                          \
   } while (0)
 
@@ -312,12 +312,11 @@ buf_t *preprocess(const uint8_t *source) {
             word_start = buffer.length;
             i += 2;
             continue;
-          } else {
-            PREFORM_GLOB;
-            VECTOR_PUSH(buffer, '<');
-            word_start = buffer.length;
-            continue;
           }
+          PREFORM_GLOB;
+          VECTOR_PUSH(buffer, '<');
+          word_start = buffer.length;
+          continue;
         }
 
         // stdout redirection
@@ -553,6 +552,7 @@ buf_t *preprocess(const uint8_t *source) {
               goto error;
             }
 
+            free(user);
             insert_string(&buffer, pw->pw_dir);
           }
 

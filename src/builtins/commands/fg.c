@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/wait.h>
 #include <unistd.h>
 
 #include "../../interpreter/execute.h"
@@ -35,7 +34,7 @@ int builtin_fg(char **argv) {
     long num = strtol(argv[1], &endptr, BASE);
 
     if (errno != 0 || *endptr != '\0' || num < 1 || num > INT_MAX) {
-      fprintf(stderr, "fg: %s: number 1 or greater expected\n", argv[1]);
+      (void)fprintf(stderr, "fg: %s: number 1 or greater expected\n", argv[1]);
       return EXIT_FAILURE;
     }
 
@@ -46,9 +45,9 @@ int builtin_fg(char **argv) {
 
   if (pid == 0) {
     if (job_id == -1) {
-      fprintf(stderr, "fg: no running jobs\n");
+      (void)fprintf(stderr, "fg: no running jobs\n");
     } else {
-      fprintf(stderr, "fg: %d: no such job\n", job_id);
+      (void)fprintf(stderr, "fg: %d: no such job\n", job_id);
     }
 
     return EXIT_FAILURE;

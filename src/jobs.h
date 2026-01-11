@@ -1,5 +1,6 @@
 #ifndef SIG_HANDLERS_H
 #define SIG_HANDLERS_H
+
 #include <signal.h>
 
 #define JOB_EXITED 0

@@ -50,9 +50,9 @@ void sig_handler_init(void) {
 
   // Set up SIGINT handler using sigaction
   sigaction(SIGINT, &sigint_act, NULL);
-  signal(SIGTSTP, SIG_IGN);
-  signal(SIGTTOU, SIG_IGN);
-  
+  (void)signal(SIGTSTP, SIG_IGN);
+  (void)signal(SIGTTOU, SIG_IGN);
+
   tty_fd = open("/dev/tty", O_RDWR, 0666);
   root_pid = getpid();
 
@@ -61,7 +61,7 @@ void sig_handler_init(void) {
     tcsetpgrp(tty_fd, root_pid);
   } else {
     tty_fd = -1;
-    fprintf(
+    (void)fprintf(
         stderr, "rash: cannot access /dev/tty. Job control is unavailable.\n"
     );
   }
@@ -114,13 +114,13 @@ void clean_jobs(void) {
       } else if (WIFSIGNALED(status)) {
         int signal = WTERMSIG(status);
 
-        fputs(strsignal(signal), stdout);
+        (void)fputs(strsignal(signal), stdout);
 
 // WCOREDUMP is from POSIX.1-2024 so it's pretty new and might not be available
 // everywhere.
 #ifdef WCOREDUMP
         if (WCOREDUMP(status)) {
-          fputs(" (core dumped)", stdout);
+          (void)fputs(" (core dumped)", stdout);
         }
 #endif
 

@@ -35,7 +35,7 @@ int builtin_history(char **const argv) {
     errno = 0;
     const long num = strtol(argv[1], &endptr, BASE);
     if (errno != 0 || *endptr != '\0' || num < 0 || num > INT_MAX) {
-      fprintf(stderr, "history: %s: positive number expected\n", argv[1]);
+      (void)fprintf(stderr, "history: %s: positive number expected\n", argv[1]);
       return EXIT_FAILURE;
     }
 

@@ -10,7 +10,7 @@ static const char *const UNSETVAR_HELP = "Usage: unsetvar KEY\n"
 
 int builtin_unsetvar(char **argv) {
   if (argv[1] == NULL) {
-    fprintf(stderr, "%s\n", UNSETVAR_HELP);
+    (void)fprintf(stderr, "%s\n", UNSETVAR_HELP);
     return EXIT_FAILURE;
   }
 
@@ -20,7 +20,7 @@ int builtin_unsetvar(char **argv) {
   }
 
   if (var_unset(argv[1]) == 1) {
-    fprintf(
+    (void)fprintf(
         stderr, "unsetvar: shell variable ‘%s’ was not declared.\n", argv[1]
     );
     return EXIT_FAILURE;

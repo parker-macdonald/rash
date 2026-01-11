@@ -3,10 +3,10 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "interactive.h"
-#include "lib/search_path.h"
 #include "builtins/builtins.h"
 #include "builtins/find_builtin.h"
+#include "interactive.h"
+#include "lib/search_path.h"
 
 extern char **environ;
 
@@ -37,7 +37,7 @@ int builtin_exec(char **const argv) {
     char *argv0 = search_path(argv[1]);
 
     if (argv0 == NULL) {
-      fprintf(stderr, "%s: command not found\n", argv[1]);
+      (void)fprintf(stderr, "%s: command not found\n", argv[1]);
 
       if (interactive) {
         return EXIT_FAILURE;

@@ -2,6 +2,7 @@
 
 #include <errno.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,7 +24,9 @@ int load_rashrc(void) {
 
   char rc_path[PATH_MAX];
 
-  memcpy(rc_path, home, len);
+  // this use of memcpy does not need to have a null terminated result since the
+  // strcpy on the next line down handles that
+  memcpy(rc_path, home, len); // NOLINT(bugprone-not-null-terminated-result)
   strcpy(rc_path + len, "/.rashrc");
 
   FILE *rashrc = fopen(rc_path, "r");

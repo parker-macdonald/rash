@@ -9,9 +9,7 @@
  * @param byte the byte to add to the line
  * @param cursor_pos where the byte should go in the line
  */
-void line_insert(
-    buf_t *const line, const uint8_t byte, const size_t cursor_pos
-);
+void line_insert(buf_t *line, uint8_t byte, size_t cursor_pos);
 
 /**
  * @brief removes the utf-8 character behind the cursor position from the line
@@ -19,7 +17,7 @@ void line_insert(
  * @param cursor_pos current position of the cursor
  * @return the number of bytes removed from line
  */
-size_t line_backspace(buf_t *const line, const size_t cursor_pos);
+size_t line_backspace(buf_t *line, size_t cursor_pos);
 
 /**
  * @brief removes the utf-8 character in front of the cursor position from the
@@ -28,7 +26,7 @@ size_t line_backspace(buf_t *const line, const size_t cursor_pos);
  * @param cursor_pos current position of the cursor
  * @return the number of bytes removed from line
  */
-size_t line_delete(buf_t *const line, const size_t cursor_pos);
+size_t line_delete(buf_t *line, size_t cursor_pos);
 
 /**
  * @brief copies the contents of the src line to the dest line, this delete the
@@ -36,7 +34,7 @@ size_t line_delete(buf_t *const line, const size_t cursor_pos);
  * @param dest the line to copy to, the contents of this line are erased.
  * @param src the line to copy from
  */
-void line_copy(buf_t *dest, const buf_t *const src);
+void line_copy(buf_t *dest, const buf_t *src);
 
 /**
  * @brief insert src_len bytes from src into line at index cursor_pos
@@ -47,7 +45,7 @@ void line_copy(buf_t *dest, const buf_t *const src);
  * @param src_len the amount of bytes to read from src
  */
 void line_insert_bulk(
-    buf_t *line, size_t cursor_pos, uint8_t *src, size_t src_len
+    buf_t *line, size_t cursor_pos, const uint8_t *src, size_t src_len
 );
 
 #endif

@@ -6,9 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "builtins.h"
 #include "lib/vec_types.h"
 #include "lib/vector.h"
-#include "builtins.h"
 
 #define ALPHABET_SIZE 26
 
@@ -151,4 +151,6 @@ void find_matching_builtins(
     }
 
   } while ((node = VECTOR_POP(stack)));
+
+  VECTOR_DESTROY(stack);
 }

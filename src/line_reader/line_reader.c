@@ -11,6 +11,7 @@
 #include "lib/ansi.h"
 #include "lib/sort.h"
 #include "lib/utf_8.h"
+#include "lib/vec_types.h"
 #include "lib/vector.h"
 #include "modify_line.h"
 #include "prompt.h"
@@ -112,9 +113,9 @@ void print_history(int count) {
   do {                                                                         \
     displayed_cursor_pos++;                                                    \
     if (displayed_cursor_pos % width == 0) {                                   \
-      fputs("\r\033[B", stdout);                                               \
+      (void)fputs("\r\033[B", stdout);                                         \
     } else {                                                                   \
-      fputs(ANSI_CURSOR_RIGHT, stdout);                                        \
+      (void)fputs(ANSI_CURSOR_RIGHT, stdout);                                  \
     }                                                                          \
   } while (0)
 
@@ -122,17 +123,17 @@ void print_history(int count) {
   do {                                                                         \
     displayed_cursor_pos--;                                                    \
     if ((displayed_cursor_pos + 1) % width == 0) {                             \
-      fputs("\033[999C\033[A", stdout);                                        \
+      (void)fputs("\033[999C\033[A", stdout);                                  \
     } else {                                                                   \
-      fputs(ANSI_CURSOR_LEFT, stdout);                                         \
+      (void)fputs(ANSI_CURSOR_LEFT, stdout);                                   \
     }                                                                          \
   } while (0)
 
 #define CURSOR_RIGHT_N(n)                                                      \
   do {                                                                         \
-    size_t moves_down =                                                        \
-        (displayed_cursor_pos + n) / width - displayed_cursor_pos / width;     \
-    displayed_cursor_pos += n;                                                 \
+    size_t moves_down = ((displayed_cursor_pos + (n)) / width) -               \
+                        (displayed_cursor_pos / width);                        \
+    displayed_cursor_pos += (n);                                               \
     if (moves_down > 0) {                                                      \
       printf("\033[%zuB", moves_down);                                         \
     }                                                                          \
@@ -141,9 +142,9 @@ void print_history(int count) {
 
 #define CURSOR_LEFT_N(n)                                                       \
   do {                                                                         \
-    size_t moves_up =                                                          \
-        displayed_cursor_pos / width - (displayed_cursor_pos - n) / width;     \
-    displayed_cursor_pos -= n;                                                 \
+    size_t moves_up = (displayed_cursor_pos / width) -                         \
+                      ((displayed_cursor_pos - (n)) / width);                  \
+    displayed_cursor_pos -= (n);                                               \
     if (moves_up > 0) {                                                        \
       printf("\033[%zuA", moves_up);                                           \
     }                                                                          \
@@ -168,7 +169,7 @@ const uint8_t *readline(void *_) {
   }
 
   printf("\r%s", prompt);
-  fflush(stdout);
+  (void)fflush(stdout);
 
   unsigned short width = get_terminal_width();
   size_t characters_printed = prompt_length;
@@ -189,7 +190,7 @@ const uint8_t *readline(void *_) {
     // pressed ctrl-c to trigger a SIGINT.
     if (ch == SIGINT_ON_READ) {
       printf("\n%s", prompt);
-      fflush(stdout);
+      (void)fflush(stdout);
 
       characters_printed = prompt_length;
       line.length = 0;
@@ -218,7 +219,7 @@ const uint8_t *readline(void *_) {
       }
 
       printf("\n%s", prompt);
-      fflush(stdout);
+      (void)fflush(stdout);
       continue;
     }
 
@@ -247,7 +248,7 @@ const uint8_t *readline(void *_) {
               }
               characters_printed = displayed_cursor_pos;
               DRAW_LINE(node->mut_line);
-              fflush(stdout);
+              (void)fflush(stdout);
             }
           } else if (node->p_prev != NULL) {
             node = node->p_prev;
@@ -263,7 +264,7 @@ const uint8_t *readline(void *_) {
             }
             characters_printed = displayed_cursor_pos;
             DRAW_LINE(node->mut_line);
-            fflush(stdout);
+            (void)fflush(stdout);
           }
           continue;
         // arrow down
@@ -282,7 +283,7 @@ const uint8_t *readline(void *_) {
             }
             characters_printed = displayed_cursor_pos;
             DRAW_LINE(node->mut_line);
-            fflush(stdout);
+            (void)fflush(stdout);
           } else {
             node = NULL;
             cursor_pos = line.length;
@@ -296,7 +297,7 @@ const uint8_t *readline(void *_) {
             }
             characters_printed = displayed_cursor_pos;
             DRAW_LINE(line);
-            fflush(stdout);
+            (void)fflush(stdout);
           }
           continue;
         // right arrow
@@ -307,7 +308,7 @@ const uint8_t *readline(void *_) {
             );
 
             CURSOR_RIGHT;
-            fflush(stdout);
+            (void)fflush(stdout);
           }
           continue;
         // left arrow
@@ -316,7 +317,7 @@ const uint8_t *readline(void *_) {
             cursor_pos -= traverse_back_utf8(current_line->data, cursor_pos);
 
             CURSOR_LEFT;
-            fflush(stdout);
+            (void)fflush(stdout);
           }
           continue;
         case '1':
@@ -341,7 +342,7 @@ const uint8_t *readline(void *_) {
                   }
 
                   CURSOR_RIGHT_N(move_right);
-                  fflush(stdout);
+                  (void)fflush(stdout);
                 }
 
                 continue;
@@ -362,7 +363,7 @@ const uint8_t *readline(void *_) {
                   }
 
                   CURSOR_LEFT_N(move_left);
-                  fflush(stdout);
+                  (void)fflush(stdout);
                 }
 
                 continue;
@@ -391,7 +392,7 @@ const uint8_t *readline(void *_) {
             printf("\033[%zuA", moves_up);
           }
           printf("\r\033[%uC", prompt_length);
-          fflush(stdout);
+          (void)fflush(stdout);
           continue;
         }
         // end key
@@ -408,7 +409,7 @@ const uint8_t *readline(void *_) {
             printf("\033[%zuB", moves_down);
           }
           printf("\r\033[%zuC", line_len % width);
-          fflush(stdout);
+          (void)fflush(stdout);
           continue;
         }
         // shift+tab
@@ -428,13 +429,13 @@ const uint8_t *readline(void *_) {
                 (char *)current_line->data
             );
             size_t moves_down =
-                (displayed_cursor_pos + displayed_cursor_pos) / width -
-                displayed_cursor_pos / width;
+                ((displayed_cursor_pos + displayed_cursor_pos) / width) -
+                (displayed_cursor_pos / width);
             if (moves_down > 0) {
               printf("\033[%zuB", moves_down);
             }
             printf("\r\033[%zuC", displayed_cursor_pos % width);
-            fflush(stdout);
+            (void)fflush(stdout);
 
             free(pp_error_msg);
             current_line->length--;
@@ -456,7 +457,7 @@ const uint8_t *readline(void *_) {
           }
           characters_printed = displayed_cursor_pos;
           DRAW_LINE(*current_line);
-          fflush(stdout);
+          (void)fflush(stdout);
           continue;
         }
 
@@ -557,13 +558,13 @@ const uint8_t *readline(void *_) {
               (char *)current_line->data
           );
           size_t moves_down =
-              (displayed_cursor_pos + displayed_cursor_pos) / width -
-              displayed_cursor_pos / width;
+              ((displayed_cursor_pos + displayed_cursor_pos) / width) -
+              (displayed_cursor_pos / width);
           if (moves_down > 0) {
             printf("\033[%zuB", moves_down);
           }
           printf("\r\033[%zuC", displayed_cursor_pos % width);
-          fflush(stdout);
+          (void)fflush(stdout);
         }
 
         for (size_t j = 0; j < matches.length; j++) {
@@ -607,9 +608,9 @@ const uint8_t *readline(void *_) {
 
     DRAW_LINE(*current_line);
 
-    fputs(ANSI_CURSOR_POS_RESTORE, stdout);
+    (void)fputs(ANSI_CURSOR_POS_RESTORE, stdout);
 
-    fflush(stdout);
+    (void)fflush(stdout);
   }
 
   line_node_t *new_node = malloc(sizeof(line_node_t));

@@ -1,17 +1,17 @@
 #include "auto_complete.h"
 
+#include <assert.h>
 #include <dirent.h>
 #include <fcntl.h>
-#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <unistd.h>
 
 #include "builtins/find_builtin.h"
 #include "lib/vec_types.h"
+#include "lib/vector.h"
 
-void
-get_file_matches(strings_t *matches, const char *word, size_t word_len) {
+void get_file_matches(strings_t *matches, const char *word, size_t word_len) {
   DIR *dir;
   const char *basename;
   size_t basename_len;
@@ -96,11 +96,11 @@ get_file_matches(strings_t *matches, const char *word, size_t word_len) {
   }
 
   closedir(dir);
-  return;
 }
 
-void
-get_command_matches(strings_t *matches, const char *word, size_t word_len) {
+void get_command_matches(
+    strings_t *matches, const char *word, size_t word_len
+) {
   find_matching_builtins(word, word_len, matches);
   const char *path = getenv("PATH");
 
@@ -114,13 +114,13 @@ get_command_matches(strings_t *matches, const char *word, size_t word_len) {
 
   while (path_part != NULL) {
     DIR *dir = opendir(path_part);
-    int fd = dirfd(dir);
-    assert(fd != -1);
 
     if (dir == NULL) {
       continue;
     }
 
+    int fd = dirfd(dir);
+    assert(fd != -1);
     struct dirent *ent;
 
     while ((ent = readdir(dir))) {
@@ -152,4 +152,3 @@ get_command_matches(strings_t *matches, const char *word, size_t word_len) {
 
   free(path2);
 }
-

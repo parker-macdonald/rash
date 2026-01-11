@@ -15,10 +15,9 @@ unsigned short get_terminal_width(void) {
   struct winsize win;
   if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &win) != -1) {
     return win.ws_col;
-  } else {
-    // assume 80 columns if we cant get the terminal size
-    return 80;
   }
+  // assume 80 columns if we cant get the terminal size
+  return 80;
 }
 
 void pretty_print_strings(char *const strings[], const size_t length) {

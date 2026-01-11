@@ -11,7 +11,7 @@ static const char *const SETENV_HELP =
 
 int builtin_setenv(char **argv) {
   if (argv[1] == NULL) {
-    fprintf(stderr, "%s\n", SETENV_HELP);
+    (void)fprintf(stderr, "%s\n", SETENV_HELP);
     return EXIT_FAILURE;
   }
 
@@ -21,7 +21,7 @@ int builtin_setenv(char **argv) {
   }
 
   if (argv[1][0] == '\0' || strchr(argv[1], '=') != NULL) {
-    fprintf(stderr, "setenv: malformed key: ‘%s’\n", argv[1]);
+    (void)fprintf(stderr, "setenv: malformed key: ‘%s’\n", argv[1]);
     return EXIT_FAILURE;
   }
 

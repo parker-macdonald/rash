@@ -27,9 +27,8 @@ static char *getcwd_good(void) {
     if (temp_cwd == NULL) {
       free(cwd);
       return NULL;
-    } else {
-      cwd = temp_cwd;
     }
+    cwd = temp_cwd;
 
     buf = getcwd(cwd, cwd_size);
   }
@@ -173,6 +172,8 @@ unsigned int get_prompt(char **dest, const char *const prompt) {
           increment = 1;
           i++;
           continue;
+        default:
+          break;
       }
     }
 

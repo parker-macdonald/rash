@@ -14,7 +14,7 @@ static const char *const SOURCE_HELP =
 
 int builtin_source(char **argv) {
   if (argv[1] == NULL) {
-    fprintf(stderr, "%s\n", SOURCE_HELP);
+    (void)fprintf(stderr, "%s\n", SOURCE_HELP);
     return EXIT_FAILURE;
   }
 
@@ -26,7 +26,7 @@ int builtin_source(char **argv) {
   FILE *file = fopen(argv[1], "r");
 
   if (file == NULL) {
-    fprintf(stderr, "source: %s: %s\n", argv[1], strerror(errno));
+    (void)fprintf(stderr, "source: %s: %s\n", argv[1], strerror(errno));
     return EXIT_FAILURE;
   }
 

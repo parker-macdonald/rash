@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
     FILE *file = fopen(argv[1], "r");
 
     if (file == NULL) {
-      fprintf(stderr, "rash: %s: %s\n", argv[1], strerror(errno));
+      (void)fprintf(stderr, "rash: %s: %s\n", argv[1], strerror(errno));
       return 1;
     }
 
@@ -65,13 +65,13 @@ int main(int argc, char **argv) {
   if (argc == 3) {
     // one-shot mode
     if (strcmp(argv[1], "-c") != 0) {
-      fprintf(stderr, HELP_STRING, argv[0]);
+      (void)fprintf(stderr, HELP_STRING, argv[0]);
       return 1;
     }
 
     return repl(one_shot_reader, argv[2]);
   }
 
-  fprintf(stderr, HELP_STRING, argv[0]);
+  (void)fprintf(stderr, HELP_STRING, argv[0]);
   return 1;
 }

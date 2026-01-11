@@ -131,9 +131,11 @@ printf("%s", string.data);
   do {                                                                         \
     (vector)._capacity = capacity;                                             \
     (vector).length = 0;                                                       \
-    if (capacity != 0)                                                         \
+    if (capacity != 0) {                                                       \
       (vector).data = malloc(sizeof(*(vector).data) * capacity);               \
-    else                                                                       \
+      if ((vector).data == NULL)                                               \
+        abort();                                                               \
+    } else                                                                     \
       (vector).data = NULL;                                                    \
   } while (0)
 
@@ -147,8 +149,11 @@ printf("%s", string.data);
         (vector)._capacity = (vector).length + 1;                              \
       else                                                                     \
         (vector)._capacity *= 2;                                               \
-      (vector).data =                                                          \
+      void *_data =                                                            \
           realloc((vector).data, sizeof(*(vector).data) * (vector)._capacity); \
+      if (_data == NULL)                                                       \
+        abort();                                                               \
+      (vector).data = _data;                                                   \
     }                                                                          \
     (vector).data[(vector).length] = value;                                    \
     (vector).length++;                                                         \
@@ -156,7 +161,8 @@ printf("%s", string.data);
 
 // no length checks are done for this macro, always check the length is not zero
 // before using vector_pop
-#define VECTOR_POP(vector) ((vector).length == 0 ? NULL : (vector).data[--(vector).length])
+#define VECTOR_POP(vector)                                                     \
+  ((vector).length == 0 ? NULL : (vector).data[--(vector).length])
 
 #define VECTOR_AT(vector, index) (vector).data[index]
 

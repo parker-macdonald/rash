@@ -16,7 +16,7 @@ static const char *const WHICH_HELP =
 
 int builtin_which(char **argv) {
   if (argv[1] == NULL) {
-    fprintf(stderr, "%s\n", WHICH_HELP);
+    (void)fprintf(stderr, "%s\n", WHICH_HELP);
     return EXIT_FAILURE;
   }
 

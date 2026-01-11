@@ -9,7 +9,7 @@ static const char *const UNSETENV_HELP = "Usage: unsetenv KEY\n"
 
 int builtin_unsetenv(char **argv) {
   if (argv[1] == NULL) {
-    fprintf(stderr, "%s\n", UNSETENV_HELP);
+    (void)fprintf(stderr, "%s\n", UNSETENV_HELP);
     return EXIT_FAILURE;
   }
 
@@ -19,12 +19,12 @@ int builtin_unsetenv(char **argv) {
   }
 
   if (argv[1][0] == '\0' || strchr(argv[1], '=') != NULL) {
-    fprintf(stderr, "unsetenv: malformed key: ‘%s’\n", argv[1]);
+    (void)fprintf(stderr, "unsetenv: malformed key: ‘%s’\n", argv[1]);
     return EXIT_FAILURE;
   }
 
   if (getenv(argv[1]) == NULL) {
-    fprintf(
+    (void)fprintf(
         stderr, "unsetenv: environment variable ‘%s’ was not set.\n", argv[1]
     );
     return EXIT_FAILURE;

@@ -12,7 +12,7 @@ static const char *const EXPORT_HELP =
 
 int builtin_export(char **const argv) {
   if (argv[1] == NULL) {
-    fprintf(stderr, "%s\n", EXPORT_HELP);
+    (void)fprintf(stderr, "%s\n", EXPORT_HELP);
     return EXIT_FAILURE;
   }
 
@@ -23,7 +23,7 @@ int builtin_export(char **const argv) {
 
   for (size_t i = 1; argv[i] != NULL; i++) {
     if (argv[i][0] == '=' || argv[i][0] == '\0') {
-      fprintf(
+      (void)fprintf(
           stderr, "export: malformed environment variable: ‘%s’\n", argv[i]
       );
       continue;
