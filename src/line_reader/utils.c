@@ -13,7 +13,6 @@
 
 #include "jobs.h"
 #include "lib/ansi.h"
-#include "lib/vector.h"
 
 unsigned short get_terminal_width(void) {
   struct winsize win;

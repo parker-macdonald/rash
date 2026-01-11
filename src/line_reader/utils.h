@@ -3,8 +3,6 @@
 
 #include <stddef.h>
 
-#include "line_reader.h"
-
 // just a quick short hand for printing out a line.
 #define PRINT_LINE(line)                                                       \
   do {                                                                         \
