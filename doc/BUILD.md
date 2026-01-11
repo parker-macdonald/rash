@@ -6,6 +6,8 @@ rash uses GNU make for it's build system and doesn't need any external dependenc
 
 First off, you need to get rash, you can either download the latest release from [the releases tab](https://git.myriation.xyz/parker_macdonald/rash/releases), or you run `git clone https://git.myriation.xyz/parker_macdonald/rash.git`.
 
+There is also a github mirror available [here](https://github.com/parker-macdonald/rash).
+
 If you get rash via git clone, you may be a few changes ahead of a release. While I would expect everything to work fine, if you want a stable experience, you should download a release.
 
 # Getting GNU make and a C compiler
@@ -14,11 +16,15 @@ First off, you need to get GNU make and a C compiler to build rash, lets go over
 
 ## Linux
 
+### Ubuntu, Linux Mint, Debian, etc.
+
 If you're running Ubuntu, Debian, Linux Mint, or some other Debian derivative can get GNU make and a C compiler with the `build-essential` package.
 
 ```bash
 sudo apt install build-essential
 ```
+
+### Arch Linux, Manjaro, EndeavourOS, etc.
 
 If you're running Arch Linux, Manjaro, or another Arch derivative, you can get GNU make and a C compiler with the `base-devel` package.
 
@@ -27,6 +33,21 @@ sudo pacman -S base-devel
 ```
 
 rash is also packaged in the AUR under [`rash-sh`](https://aur.archlinux.org/packages/rash-sh) if you would prefer to install it that way.
+
+### NixOS
+
+There are nix files in the root of the project, but I don't personally run NixOS, so I can't vouch for how well they work.
+
+In theory, you should be able to run `nix build` and get a binary in `./result/bin/rash`.
+
+You can also run rash on NixOS using the `nix run` command. For example:
+
+```bash
+nix run github:parker-macdonald/rash # download from the github mirror
+nix run git+https://git.myriation.xyz/parker_macdonald/rash.git # download rash from the official repository
+```
+
+Keep in mind though using `nix run` will compile the latest changes on the main branch, which, while they should be stable, won't be as well tested as an official release.
 
 ## OpenBSD
 
