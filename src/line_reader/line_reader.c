@@ -7,7 +7,6 @@
 #include <string.h>
 
 #include "auto_complete.h"
-#include "interpreter/preprocess.h"
 #include "lib/ansi.h"
 #include "lib/sort.h"
 #include "lib/utf_8.h"
@@ -133,22 +132,26 @@ void print_history(int count) {
   do {                                                                         \
     size_t moves_down = ((displayed_cursor_pos + (n)) / width) -               \
                         (displayed_cursor_pos / width);                        \
-    displayed_cursor_pos += (n);                                               \
     if (moves_down > 0) {                                                      \
       printf("\033[%zuB", moves_down);                                         \
     }                                                                          \
-    printf("\r\033[%zuC", displayed_cursor_pos % width);                       \
+    size_t moves_right = displayed_cursor_pos % width;                         \
+    if (moves_right) {                                                         \
+      printf("\r\033[%zuC", moves_right);                                      \
+    }                                                                          \
   } while (0)
 
 #define CURSOR_LEFT_N(n)                                                       \
   do {                                                                         \
     size_t moves_up = (displayed_cursor_pos / width) -                         \
                       ((displayed_cursor_pos - (n)) / width);                  \
-    displayed_cursor_pos -= (n);                                               \
     if (moves_up > 0) {                                                        \
       printf("\033[%zuA", moves_up);                                           \
     }                                                                          \
-    printf("\r\033[%zuC", displayed_cursor_pos % width);                       \
+    size_t moves_left = displayed_cursor_pos % width;                          \
+    if (moves_left) {                                                          \
+      printf("\r\033[%zuC", moves_left);                                       \
+    }                                                                          \
   } while (0)
 
 #define DRAW_LINE(line)                                                        \
@@ -160,6 +163,7 @@ const uint8_t *readline(void *_) {
   const char *prompt_var = var_get("PS1");
   char *prompt;
   unsigned int prompt_length;
+  bool show_matches = false;
 
   if (prompt_var == NULL) {
     prompt = "$ ";
@@ -223,7 +227,7 @@ const uint8_t *readline(void *_) {
       continue;
     }
 
-    if (curr_byte == ANSI_START_CHAR) {
+    if (curr_byte == ANSI_ESCAPE) {
       curr_byte = (uint8_t)getch();
 
       if (curr_byte != '[') {
@@ -341,6 +345,7 @@ const uint8_t *readline(void *_) {
                     move_right++;
                   }
 
+                  displayed_cursor_pos += move_right;
                   CURSOR_RIGHT_N(move_right);
                   (void)fflush(stdout);
                 }
@@ -362,6 +367,7 @@ const uint8_t *readline(void *_) {
                     move_left++;
                   }
 
+                  displayed_cursor_pos -= move_left;
                   CURSOR_LEFT_N(move_left);
                   (void)fflush(stdout);
                 }
@@ -414,51 +420,9 @@ const uint8_t *readline(void *_) {
         }
         // shift+tab
         case 'Z': {
-          VECTOR_PUSH(*current_line, '\0');
-          buf_t *buf = preprocess(current_line->data);
+          show_matches = !show_matches;
 
-          if (buf == NULL) {
-            // this is a pretty crazy format string, but what it boils down to
-            // is print the error message, then print the line and move the
-            // cursor to the start of the line
-            printf(
-                "\nrash: %s\n\033[s%s%.*s\033[u",
-                pp_error_msg,
-                prompt,
-                (int)current_line->length,
-                (char *)current_line->data
-            );
-            size_t moves_down =
-                ((displayed_cursor_pos + displayed_cursor_pos) / width) -
-                (displayed_cursor_pos / width);
-            if (moves_down > 0) {
-              printf("\033[%zuB", moves_down);
-            }
-            printf("\r\033[%zuC", displayed_cursor_pos % width);
-            (void)fflush(stdout);
-
-            free(pp_error_msg);
-            current_line->length--;
-            continue;
-          }
-
-          free(current_line->data);
-          *current_line = *buf;
-          current_line->length--;
-          cursor_pos = current_line->length;
-          displayed_cursor_pos =
-              strlen_utf8(current_line->data, current_line->length) +
-              prompt_length;
-
-          width = get_terminal_width();
-          size_t moves_up = characters_printed / width;
-          if (moves_up) {
-            printf("\033[%zuA", moves_up);
-          }
-          characters_printed = displayed_cursor_pos;
-          DRAW_LINE(*current_line);
-          (void)fflush(stdout);
-          continue;
+          goto draw_line;
         }
 
         default:
@@ -550,9 +514,10 @@ const uint8_t *readline(void *_) {
           );
         } else {
           sort_strings(&matches);
+          putchar('\n');
           pretty_print_strings(matches.data, matches.length);
           printf(
-              "\033[s%s%.*s\033[u",
+              "\n\033[s%s%.*s\033[u",
               prompt,
               (int)current_line->length,
               (char *)current_line->data
@@ -577,6 +542,7 @@ const uint8_t *readline(void *_) {
       if (bytes_written) {
         const size_t n =
             strlen_utf8(current_line->data + cursor_pos, bytes_written);
+        displayed_cursor_pos += n;
         CURSOR_RIGHT_N(n);
         cursor_pos += bytes_written;
 
@@ -585,7 +551,15 @@ const uint8_t *readline(void *_) {
       continue;
     }
 
-    if (curr_byte != 0) {
+    // clear screen
+    if (curr_byte == '\f') {
+      printf("\033[H\033[2J");
+      CURSOR_RIGHT_N(displayed_cursor_pos);
+      goto draw_line;
+    }
+
+    // only add character to buffer if it is displayable ascii (or utf-8)
+    if (curr_byte >= ' ') {
       line_insert(current_line, curr_byte, cursor_pos);
       cursor_pos++;
 
@@ -597,7 +571,7 @@ const uint8_t *readline(void *_) {
 
   draw_line:
 
-    fputs(ANSI_CURSOR_POS_SAVE, stdout);
+    (void)fputs(ANSI_CURSOR_POS_SAVE, stdout);
 
     width = get_terminal_width();
 
@@ -607,6 +581,18 @@ const uint8_t *readline(void *_) {
     }
 
     DRAW_LINE(*current_line);
+
+    if (show_matches) {
+      strings_t matches = {0};
+      get_matches(&matches, current_line, cursor_pos);
+      if (matches.length) {
+        sort_strings(&matches);
+        printf("\033[2m\n");
+        pretty_print_strings(matches.data, matches.length);
+        printf("\033[0m");
+      }
+      VECTOR_DESTROY(matches);
+    }
 
     (void)fputs(ANSI_CURSOR_POS_RESTORE, stdout);
 

@@ -3,8 +3,6 @@
 
 #include "lib/vec_types.h"
 
-extern char *glob_err_msg;
-
-strings_t *glob(const char *pattern);
+int glob(strings_t *vec, const char pattern[]);
 
 #endif

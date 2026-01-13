@@ -8,9 +8,6 @@
 #include "evaluate.h"
 #include "jobs.h"
 #include "lex.h"
-#include "lib/vec_types.h"
-#include "lib/vector.h"
-#include "preprocess.h"
 #include "shell_vars.h"
 
 int repl(const uint8_t *(*reader)(void *), void *reader_data) {
@@ -27,30 +24,16 @@ int repl(const uint8_t *(*reader)(void *), void *reader_data) {
       break;
     }
 
-    {
-      buf_t *processed_line = preprocess(line);
-      if (processed_line == NULL) {
-        assert(pp_error_msg != NULL);
-        (void)fprintf(stderr, "rash: %s\n", pp_error_msg);
-        free(pp_error_msg);
-        pp_error_msg = NULL;
-        status = EXIT_FAILURE;
-        goto stop_evaluating;
-      }
+    token_t *tokens = lex(line);
 
-      token_t *tokens = lex(processed_line->data);
-      VECTOR_DESTROY(*processed_line);
-      if (tokens == NULL) {
-        status = EXIT_FAILURE;
-        goto stop_evaluating;
-      }
-
+    if (tokens != NULL) {
       status = evaluate(tokens);
       free_tokens(&tokens);
+    } else {
+      status = EXIT_FAILURE;
     }
 
-  stop_evaluating:
-    snprintf(status_str, sizeof(status_str), "%d", status);
+    (void)snprintf(status_str, sizeof(status_str), "%d", status);
     var_set("?", status_str);
   }
 

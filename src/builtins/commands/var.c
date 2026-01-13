@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../../shell_vars.h"
+#include "shell_vars.h"
 #include "builtins/builtins.h"
 
 static const char *const VAR_HELP = "Usage: var\n"

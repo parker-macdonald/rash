@@ -21,31 +21,39 @@ unsigned short get_terminal_width(void) {
 }
 
 void pretty_print_strings(char *const strings[], const size_t length) {
-  unsigned int max_len = 0;
-  for (size_t i = 0; i < length; i++) {
-    const unsigned int new_len = (unsigned int)strlen(strings[i]);
+  size_t width = (size_t)get_terminal_width();
+  size_t max_len = 2;
+
+  size_t num_printed = 0;
+  for (; num_printed < length; num_printed++) {
+    const size_t new_len = strlen(strings[num_printed]) + 2;
 
     if (new_len > max_len) {
+      if ((num_printed + 2) * new_len / width > 3) {
+        break;
+      }
       max_len = new_len;
+      continue;
+    }
+
+    if ((num_printed + 2) * max_len / width > 3) {
+      break;
     }
   }
 
-  // add some padding
-  max_len += 2;
+  size_t col = width / max_len;
 
-  const unsigned int col = (unsigned int)get_terminal_width() / max_len;
-
-  printf("\n");
-
-  for (size_t i = 0; i < length; i++) {
-    printf("%-*s", max_len, strings[i]);
+  for (size_t i = 0; i < num_printed; i++) {
+    printf("%-*s", (int)max_len, strings[i]);
 
     if ((i + 1) % col == 0) {
       printf("\n");
     }
   }
 
-  printf("\n");
+  if (num_printed != length) {
+    printf("...");
+  }
 }
 
 int getch(void) {

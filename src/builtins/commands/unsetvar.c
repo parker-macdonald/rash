@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../shell_vars.h"
+#include "shell_vars.h"
 #include "builtins/builtins.h"
 
 static const char *const UNSETVAR_HELP = "Usage: unsetvar KEY\n"

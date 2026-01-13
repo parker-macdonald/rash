@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "lib/dynamic_sprintf.h"
 #include "lib/vec_types.h"
 #include "lib/vector.h"
 
@@ -73,14 +72,10 @@ static bool match(const char *str, const char *pattern) {
   return true;
 }
 
-char *glob_err_msg = NULL;
-static strings_t matches;
-
-strings_t *glob(const char *pattern) {
-  matches = (strings_t){._capacity = 0, .data = NULL, .length = 0};
-
+int glob(strings_t *vec, const char pattern[]) {
   struct queue_node *head = malloc(sizeof(struct queue_node));
   struct queue_node *tail = head;
+  int args_added = 0;
 
   head->p_next = NULL;
 
@@ -121,7 +116,7 @@ strings_t *glob(const char *pattern) {
         continue;
       }
 
-      glob_err_msg = dynamic_sprintf("glob: opendir: %s", strerror(errno));
+      fprintf(stderr, "glob: opendir: %s", strerror(errno));
       struct queue_node *node = head;
 
       while (node != NULL) {
@@ -131,7 +126,7 @@ strings_t *glob(const char *pattern) {
         node = temp;
       }
 
-      return NULL;
+      return -1;
     }
 
     bool end = false;
@@ -170,7 +165,8 @@ strings_t *glob(const char *pattern) {
 
         if (end) {
           new_path[new_path_len - 1] = '\0';
-          VECTOR_PUSH(matches, new_path);
+          VECTOR_PUSH(*vec, new_path);
+          args_added++;
           continue;
         }
 
@@ -193,5 +189,5 @@ strings_t *glob(const char *pattern) {
     head = temp;
   }
 
-  return &matches;
+  return args_added;
 }

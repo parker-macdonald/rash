@@ -3,8 +3,6 @@
 
 #include <sys/types.h>
 
-#include "../optional.h"
-
 // this flag tells execute not to wait for the program to finish and add it to
 // the registered jobs
 #define EC_BACKGROUND_JOB (1)
