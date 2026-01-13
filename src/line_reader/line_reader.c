@@ -135,7 +135,10 @@ void print_history(int count) {
     if (moves_down > 0) {                                                      \
       printf("\033[%zuB", moves_down);                                         \
     }                                                                          \
-    printf("\r\033[%zuC", displayed_cursor_pos % width);                       \
+    size_t moves_right = displayed_cursor_pos % width;                         \
+    if (moves_right) {                                                         \
+      printf("\r\033[%zuC", moves_right);                                      \
+    }                                                                          \
   } while (0)
 
 #define CURSOR_LEFT_N(n)                                                       \
@@ -145,7 +148,10 @@ void print_history(int count) {
     if (moves_up > 0) {                                                        \
       printf("\033[%zuA", moves_up);                                           \
     }                                                                          \
-    printf("\r\033[%zuC", displayed_cursor_pos % width);                       \
+    size_t moves_left = displayed_cursor_pos % width;                          \
+    if (moves_left) {                                                          \
+      printf("\r\033[%zuC", moves_left);                                       \
+    }                                                                          \
   } while (0)
 
 #define DRAW_LINE(line)                                                        \
