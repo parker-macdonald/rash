@@ -116,7 +116,7 @@ int glob(strings_t *vec, const char pattern[]) {
         continue;
       }
 
-      fprintf(stderr, "glob: opendir: %s", strerror(errno));
+      (void)fprintf(stderr, "glob: opendir: %s", strerror(errno));
       struct queue_node *node = head;
 
       while (node != NULL) {

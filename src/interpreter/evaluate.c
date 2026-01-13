@@ -250,13 +250,13 @@ int evaluate(const token_t *tokens) {
           }
           continue;
         }
-        fprintf(stderr, "cannot expand ‘~’, HOME is not set.\n");
+        (void)fprintf(stderr, "cannot expand ‘~’, HOME is not set.\n");
         goto error;
       }
 
       struct passwd *pw = getpwnam((char *)tokens->data);
       if (pw == NULL || pw->pw_dir == NULL) {
-        fprintf(
+        (void)fprintf(
             stderr, "rash: cannot access user ‘%s’.\n", (char *)tokens->data
         );
         goto error;
