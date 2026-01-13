@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "builtins/builtins.h"
 #include "file_reader.h"
 #include "interpreter/repl.h"
-#include "builtins/builtins.h"
 
 static const char *const SOURCE_HELP =
     "Usage: source FILENAME\n"
@@ -13,6 +13,8 @@ static const char *const SOURCE_HELP =
     "state of the shell (shell variables, jobs, etc.).";
 
 int builtin_source(char **argv) {
+  static int recursion_count = 0;
+
   if (argv[1] == NULL) {
     (void)fprintf(stderr, "%s\n", SOURCE_HELP);
     return EXIT_FAILURE;
@@ -33,5 +35,16 @@ int builtin_source(char **argv) {
   struct file_reader reader_data;
   file_reader_init(&reader_data, file);
 
-  return repl(file_reader_read, &reader_data);
+  if (recursion_count > 10000) {
+    (void)fprintf(stderr, "rash: source... source... source... souce...\n");
+    return EXIT_FAILURE;
+  }
+
+  recursion_count++;
+
+  int status_code = repl(file_reader_read, &reader_data);
+
+  recursion_count--;
+
+  return status_code;
 }
