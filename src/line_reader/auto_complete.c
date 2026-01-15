@@ -108,12 +108,16 @@ void get_command_matches(
     return;
   }
 
-  char *path2 = strdup(path);
+  string_t file_path;
+  VECTOR_INIT(file_path);
 
-  char *path_part = strtok(path2, ":");
-
-  while (path_part != NULL) {
-    DIR *dir = opendir(path_part);
+  for (size_t i = 0; path[i] != '\0'; i++) {
+    if (path[i] != ':' && path[i] != '\0') {
+      VECTOR_PUSH(file_path, path[i]);
+      continue;
+    }
+    VECTOR_PUSH(file_path, '\0');
+    DIR *dir = opendir(file_path.data);
 
     if (dir == NULL) {
       continue;
@@ -147,10 +151,11 @@ void get_command_matches(
     }
 
     closedir(dir);
-    path_part = strtok(NULL, ":");
+
+    VECTOR_CLEAR(file_path);
   }
 
-  free(path2);
+  VECTOR_DESTROY(file_path);
 }
 
 size_t get_matches(strings_t *matches, buf_t *line, size_t cursor_pos) {
