@@ -5,7 +5,7 @@
 
 #include "lib/vec_types.h"
 
-size_t get_matches(strings_t* matches, buf_t *line, size_t cursor_pos);
+size_t get_matches(strings_t *matches, buf_t *line, size_t cursor_pos);
 
 void get_file_matches(strings_t *matches, const char *word, size_t word_len);
 

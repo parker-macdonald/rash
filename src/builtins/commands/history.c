@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "line_reader/line_reader.h"
 #include "builtins/builtins.h"
+#include "line_reader/line_reader.h"
 
 static const char *const HISTORY_HELP =
     "Usage: history [-c] [COUNT]\n"

@@ -11,7 +11,7 @@ typedef VECTOR(char) string_t;
 
 void string_append(string_t *self, const char *str);
 
-void string_replace(string_t* self, char search_for, char replace_with);
+void string_replace(string_t *self, char search_for, char replace_with);
 
 typedef VECTOR(char *) strings_t;
 

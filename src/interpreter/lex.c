@@ -161,7 +161,9 @@ token_t *lex(const uint8_t *source) {
               }
 
               if (source[i] == '\0') {
-                (void)fprintf(stderr, "rash: expected closing ‘}’ character.\n");
+                (void)fprintf(
+                    stderr, "rash: expected closing ‘}’ character.\n"
+                );
                 goto error;
               }
 
@@ -195,7 +197,8 @@ token_t *lex(const uint8_t *source) {
           }
 
           for (;;) {
-            if ((!isalnum((int)source[i]) && source[i] != '_') || source[i] == '\0') {
+            if ((!isalnum((int)source[i]) && source[i] != '_') ||
+                source[i] == '\0') {
               i--;
               break;
             }
@@ -248,7 +251,9 @@ token_t *lex(const uint8_t *source) {
           }
 
           if (var_len == 0) {
-            (void)fprintf(stderr, "rash: cannot expand empty shell variable.\n");
+            (void)fprintf(
+                stderr, "rash: cannot expand empty shell variable.\n"
+            );
             goto error;
           }
 

@@ -7,9 +7,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "builtins/builtins.h"
 #include "interpreter/execute.h"
 #include "jobs.h"
-#include "builtins/builtins.h"
 
 static const char *const FG_HELP =
     "Usage: fg [JOB_ID]\n"

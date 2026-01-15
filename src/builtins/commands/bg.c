@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "jobs.h"
 #include "builtins/builtins.h"
+#include "jobs.h"
 
 static const char *const BG_HELP =
     "Usage: bg [JOB_ID]\n"
