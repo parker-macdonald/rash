@@ -18,6 +18,10 @@
 #include "lib/vector.h"
 #include "shell_vars.h"
 
+#define READ_ARG                                                               \
+  while (tokens[i].type != END_ARG)                                            \
+    i++;
+
 static bool bad_syntax(const token_t *const tokens) {
   if (!IS_ARGUMENT_TOKENS(tokens[0].type)) {
     (void)fprintf(stderr, "rash: invalid first token.\n");
@@ -29,72 +33,79 @@ static bool bad_syntax(const token_t *const tokens) {
   int stdin_count = 0;
 
   for (size_t i = 1; tokens[i].type != END; i++) {
-    if (tokens[i].type == STRING) {
+    if (IS_ARGUMENT_TOKENS(tokens[i].type)) {
+      READ_ARG;
       continue;
     }
 
     if (tokens[i].type == STDIN_REDIR) {
-      if (tokens[i + 1].type != STRING) {
-        (void)fprintf(stderr, "rash: expected file name after ‘<’.\n");
+      i++;
+      if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
+        (void)fprintf(stderr, "rash: expected filename after ‘<’.\n");
         return true;
       }
 
-      i++;
+      READ_ARG;
       stdin_count++;
     }
 
     if (tokens[i].type == STDIN_REDIR_STRING) {
-      if (tokens[i + 1].type != STRING) {
+      i++;
+      if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
         (void)fprintf(stderr, "rash: expected string after ‘<<<’.\n");
         return true;
       }
 
-      i++;
+      READ_ARG;
       stdin_count++;
     }
 
     if (tokens[i].type == STDOUT_REDIR) {
-      if (tokens[i + 1].type != STRING) {
-        (void)fprintf(stderr, "rash: expected string after ‘>’.\n");
+      i++;
+      if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
+        (void)fprintf(stderr, "rash: expected filename after ‘>’.\n");
         return true;
       }
 
-      i++;
+      READ_ARG;
       stdout_count++;
     }
 
     if (tokens[i].type == STDOUT_REDIR_APPEND) {
-      if (tokens[i + 1].type != STRING) {
-        (void)fprintf(stderr, "rash: expected string after ‘>>’.\n");
+      i++;
+      if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
+        (void)fprintf(stderr, "rash: expected filename after ‘>>’.\n");
         return true;
       }
 
-      i++;
+      READ_ARG;
       stdout_count++;
     }
 
     if (tokens[i].type == STDERR_REDIR) {
-      if (tokens[i + 1].type != STRING) {
-        (void)fprintf(stderr, "rash: expected string after ‘2>’.\n");
+      i++;
+      if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
+        (void)fprintf(stderr, "rash: expected filename after ‘2>’.\n");
         return true;
       }
 
-      i++;
+      READ_ARG;
       stderr_count++;
     }
 
     if (tokens[i].type == STDERR_REDIR_APPEND) {
-      if (tokens[i + 1].type != STRING) {
-        (void)fprintf(stderr, "rash: expected string after ‘2>>’.\n");
+      i++;
+      if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
+        (void)fprintf(stderr, "rash: expected filename after ‘2>>’.\n");
         return true;
       }
 
-      i++;
+      READ_ARG;
       stderr_count++;
     }
 
     if (tokens[i].type == PIPE) {
-      if (tokens[i + 1].type != STRING) {
+      if (!IS_ARGUMENT_TOKENS(tokens[i + 1].type)) {
         (void)fprintf(stderr, "rash: expected command after ‘|’.\n");
         return true;
       }
@@ -131,7 +142,7 @@ static bool bad_syntax(const token_t *const tokens) {
     }
 
     if (tokens[i].type == LOGICAL_OR) {
-      if (tokens[i + 1].type != STRING) {
+      if (!IS_ARGUMENT_TOKENS(tokens[i + 1].type)) {
         (void)fprintf(stderr, "rash: expected command after ‘||’.\n");
         return true;
       }
@@ -147,7 +158,7 @@ static bool bad_syntax(const token_t *const tokens) {
     }
 
     if (tokens[i].type == LOGICAL_AND) {
-      if (tokens[i + 1].type != STRING) {
+      if (!IS_ARGUMENT_TOKENS(tokens[i + 1].type)) {
         (void)fprintf(stderr, "rash: expected command after ‘&&’.\n");
         return true;
       }
@@ -188,6 +199,97 @@ static bool bad_syntax(const token_t *const tokens) {
   return false;
 }
 
+static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
+  string_t buffer;
+  VECTOR_INIT(buffer);
+
+  for (;; (*tokens)++) {
+    if ((*tokens)->type == STRING) {
+      string_append(&buffer, (char *)((*tokens)->data));
+
+      continue;
+    }
+
+    if ((*tokens)->type == ENV_EXPANSION) {
+      const char *value = getenv((char *)(*tokens)->data);
+
+      if (value == NULL) {
+        (void)fprintf(
+            stderr,
+            "rash: environment variable ‘%s’ does not exist.\n",
+            (char *)(*tokens)->data
+        );
+        goto error;
+      }
+
+      string_append(&buffer, value);
+
+      continue;
+    }
+
+    if ((*tokens)->type == TILDE) {
+      if (((char *)(*tokens)->data)[0] == '\0') {
+        char *home = getenv("HOME");
+        if (home != NULL) {
+          string_append(&buffer, home);
+          continue;
+        }
+        (void)fprintf(stderr, "cannot expand ‘~’, HOME is not set.\n");
+        goto error;
+      }
+
+      struct passwd *pw = getpwnam((char *)(*tokens)->data);
+      if (pw == NULL || pw->pw_dir == NULL) {
+        (void)fprintf(
+            stderr, "rash: cannot access user ‘%s’.\n", (char *)(*tokens)->data
+        );
+        goto error;
+      }
+
+      string_append(&buffer, pw->pw_dir);
+      continue;
+    }
+
+    if ((*tokens)->type == VAR_EXPANSION) {
+      const char *value = var_get((char *)(*tokens)->data);
+
+      if (value == NULL) {
+        (void)fprintf(
+            stderr,
+            "rash: shell variable ‘%s’ does not exist.\n",
+            (char *)(*tokens)->data
+        );
+        goto error;
+      }
+
+      string_append(&buffer, value);
+
+      continue;
+    }
+
+    if ((*tokens)->type == GLOB_WILDCARD) {
+      // this is a really dumb solution to this problem, but the line reader
+      // assures that '\033' never be in the string, so it's not bad unless i
+      // forget to strip out '\033' when i implement shell scripts. also if
+      // futures globs besides the wildcard are added, this will need to be
+      // reworked
+      VECTOR_PUSH(buffer, '\033');
+      *needs_globbing = true;
+      continue;
+    }
+
+    if ((*tokens)->type == END_ARG) {
+      VECTOR_PUSH(buffer, '\0');
+
+      return buffer.data;
+    }
+  }
+
+error:
+  VECTOR_DESTROY(buffer);
+  return NULL;
+}
+
 int evaluate(const token_t *tokens) {
   if (tokens[0].type == END) {
     return EXIT_SUCCESS;
@@ -200,157 +302,86 @@ int evaluate(const token_t *tokens) {
   strings_t argv;
   VECTOR_INIT(argv);
 
-  string_t buffer;
-  VECTOR_INIT(buffer);
-
   int last_status = -1;
 
   VECTOR(pid_t) wait_for_me = {0, 0, 0};
   // this doesn't compile on gcc :(
   // VECTOR_INIT(wait_for_me, 0);
 
-  bool needs_globbing = false;
-
   execution_context ec = {NULL, -1, -1, -1, 0};
 
   for (;; tokens++) {
-    if (tokens->type == STRING) {
-      for (size_t i = 0; ((char *)(tokens->data))[i] != '\0'; i++) {
-        VECTOR_PUSH(buffer, ((char *)(tokens->data))[i]);
-      }
+    if (IS_ARGUMENT_TOKENS(tokens->type)) {
+      bool needs_globbing = false;
+      char *arg = evaluate_arg(&tokens, &needs_globbing);
 
-      continue;
-    }
-
-    if (tokens->type == ENV_EXPANSION) {
-      const char *value = getenv((char *)tokens->data);
-
-      if (value == NULL) {
-        (void)fprintf(
-            stderr,
-            "rash: environment variable ‘%s’ does not exist.\n",
-            (char *)tokens->data
-        );
+      if (arg == NULL) {
         goto error;
       }
 
-      for (size_t i = 0; value[i] != '\0'; i++) {
-        VECTOR_PUSH(buffer, value[i]);
-      }
-
-      continue;
-    }
-
-    if (tokens->type == TILDE) {
-      if (((char *)tokens->data)[0] == '\0') {
-        char *home = getenv("HOME");
-        if (home != NULL) {
-          for (size_t i = 0; home[i] != '\0'; i++) {
-            VECTOR_PUSH(buffer, home[i]);
-          }
-          continue;
-        }
-        (void)fprintf(stderr, "cannot expand ‘~’, HOME is not set.\n");
-        goto error;
-      }
-
-      struct passwd *pw = getpwnam((char *)tokens->data);
-      if (pw == NULL || pw->pw_dir == NULL) {
-        (void)fprintf(
-            stderr, "rash: cannot access user ‘%s’.\n", (char *)tokens->data
-        );
-        goto error;
-      }
-
-      for (size_t i = 0; pw->pw_dir[i] != '\0'; i++) {
-        VECTOR_PUSH(buffer, pw->pw_dir[i]);
-      }
-      continue;
-    }
-
-    if (tokens->type == VAR_EXPANSION) {
-      const char *value = var_get((char *)tokens->data);
-
-      if (value == NULL) {
-        (void)fprintf(
-            stderr,
-            "rash: shell variable ‘%s’ does not exist.\n",
-            (char *)tokens->data
-        );
-        goto error;
-      }
-
-      for (size_t i = 0; value[i] != '\0'; i++) {
-        VECTOR_PUSH(buffer, value[i]);
-      }
-
-      continue;
-    }
-
-    if (tokens->type == GLOB_WILDCARD) {
-      // this is a really dumb solution to this problem, but the line reader
-      // assures that '\033' never be in the string, so it's not bad unless i
-      // forget to strip out '\033' when i implement shell scripts. also if
-      // futures globs besides the wildcard are added, this will need to be
-      // reworked
-      VECTOR_PUSH(buffer, '\033');
-      needs_globbing = true;
-      continue;
-    }
-
-    if (tokens->type == END_ARG) {
-      VECTOR_PUSH(buffer, '\0');
       if (needs_globbing) {
-        int args_added = glob(&argv, buffer.data);
+        int args_added = glob(&argv, arg);
         if (args_added == 0) {
-          for (size_t i = 0; i < buffer.length; i++) {
-            if (buffer.data[i] == '\033') {
-              buffer.data[i] = '*';
+          for (size_t i = 0; arg[i] != '\0'; i++) {
+            if (arg[i] == '\033') {
+              arg[i] = '*';
             }
           }
           (void)fprintf(
-              stderr, "rash: nothing matched glob pattern ‘%s’.\n", buffer.data
+              stderr, "rash: nothing matched glob pattern ‘%s’.\n", arg
           );
+          free(arg);
           goto error;
         }
+        free(arg);
         if (args_added == -1) {
           goto error;
         }
-        VECTOR_DESTROY(buffer);
-        needs_globbing = false;
-      } else {
-        VECTOR_PUSH(argv, buffer.data);
+        continue;
       }
-      VECTOR_INIT(buffer);
 
+      VECTOR_PUSH(argv, arg);
       continue;
     }
 
     if (tokens->type == STDIN_REDIR) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
-      assert((tokens + 1)->type == STRING);
+      tokens++;
+      assert(IS_ARGUMENT_TOKENS(tokens->type));
 
-      int fd = open((char *)(tokens + 1)->data, O_RDONLY);
-      if (fd == -1) {
+      bool needs_globbing = false;
+      char *filename = evaluate_arg(&tokens, &needs_globbing);
+
+      if (filename == NULL) {
+        goto error;
+      }
+      if (needs_globbing) {
         (void)fprintf(
-            stderr,
-            "rash: %s: %s\n",
-            (char *)(tokens + 1)->data,
-            strerror(errno)
+            stderr, "rash: globing expression cannot be used as a filename.\n"
         );
-
+        free(filename);
         goto error;
       }
 
+      int fd = open(filename, O_RDONLY);
+      if (fd == -1) {
+        (void)fprintf(stderr, "rash: %s: %s\n", filename, strerror(errno));
+        free(filename);
+        goto error;
+      }
+      free(filename);
+
       ec.stdin_fd = fd;
 
-      tokens++;
       continue;
     }
 
     if (tokens->type == STDIN_REDIR_STRING) {
-      assert((tokens + 1)->type == STRING);
+      // this should've been taken care of with the call to bad syntax, but you
+      // never know
+      tokens++;
+      assert(IS_ARGUMENT_TOKENS(tokens->type));
 
       int fds[2];
       if (pipe(fds) == -1) {
@@ -359,12 +390,29 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
 
-      size_t len = strlen((char *)(tokens + 1)->data);
-      if (write(fds[1], (tokens + 1)->data, len) == -1) {
+      bool needs_globbing = false;
+      char *str = evaluate_arg(&tokens, &needs_globbing);
+
+      if (str == NULL) {
+        goto error;
+      }
+      if (needs_globbing) {
+        (void)fprintf(
+            stderr,
+            "rash: expected string after ‘<<<’, but found glob expression.\n"
+        );
+        free(str);
+        goto error;
+      }
+
+      size_t len = strlen(str);
+      if (write(fds[1], str, len) == -1) {
+        free(str);
         perror("write");
 
         goto error;
       }
+      free(str);
 
       if (close(fds[1]) == -1) {
         perror("close");
@@ -374,91 +422,142 @@ int evaluate(const token_t *tokens) {
 
       ec.stdin_fd = fds[0];
 
-      tokens++;
       continue;
     }
 
     if (tokens->type == STDOUT_REDIR) {
-      assert((tokens + 1)->type == STRING);
+      // this should've been taken care of with the call to bad syntax, but you
+      // never know
+      tokens++;
+      assert(IS_ARGUMENT_TOKENS(tokens->type));
 
-      int fd = open((tokens + 1)->data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-      if (fd == -1) {
+      bool needs_globbing = false;
+      char *filename = evaluate_arg(&tokens, &needs_globbing);
+
+      if (filename == NULL) {
+        goto error;
+      }
+      if (needs_globbing) {
         (void)fprintf(
-            stderr,
-            "rash: %s: %s\n",
-            (char *)(tokens + 1)->data,
-            strerror(errno)
+            stderr, "rash: globing expression cannot be used as a filename.\n"
         );
-
+        free(filename);
         goto error;
       }
 
+      int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+      if (fd == -1) {
+        (void)fprintf(stderr, "rash: %s: %s\n", filename, strerror(errno));
+
+        free(filename);
+        goto error;
+      }
+      free(filename);
+
       ec.stdout_fd = fd;
 
-      tokens++;
       continue;
     }
 
     if (tokens->type == STDOUT_REDIR_APPEND) {
-      assert((tokens + 1)->type == STRING);
+      // this should've been taken care of with the call to bad syntax, but you
+      // never know
+      tokens++;
+      assert(IS_ARGUMENT_TOKENS(tokens->type));
 
-      int fd = open((tokens + 1)->data, O_WRONLY | O_CREAT | O_APPEND, 0644);
-      if (fd == -1) {
+      bool needs_globbing = false;
+      char *filename = evaluate_arg(&tokens, &needs_globbing);
+
+      if (filename == NULL) {
+        goto error;
+      }
+      if (needs_globbing) {
         (void)fprintf(
-            stderr,
-            "rash: %s: %s\n",
-            (char *)(tokens + 1)->data,
-            strerror(errno)
+            stderr, "rash: globing expression cannot be used as a filename.\n"
         );
-
+        free(filename);
         goto error;
       }
 
+      int fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
+      if (fd == -1) {
+        (void)fprintf(stderr, "rash: %s: %s\n", filename, strerror(errno));
+
+        free(filename);
+        goto error;
+      }
+      free(filename);
+
       ec.stdout_fd = fd;
 
-      tokens++;
       continue;
     }
 
     if (tokens->type == STDERR_REDIR) {
-      assert((tokens + 1)->type == STRING);
+      // this should've been taken care of with the call to bad syntax, but you
+      // never know
+      tokens++;
+      assert(IS_ARGUMENT_TOKENS(tokens->type));
 
-      int fd = open((tokens + 1)->data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-      if (fd == -1) {
+      bool needs_globbing = false;
+      char *filename = evaluate_arg(&tokens, &needs_globbing);
+
+      if (filename == NULL) {
+        goto error;
+      }
+      if (needs_globbing) {
         (void)fprintf(
-            stderr,
-            "rash: %s: %s\n",
-            (char *)(tokens + 1)->data,
-            strerror(errno)
+            stderr, "rash: globing expression cannot be used as a filename.\n"
         );
-
+        free(filename);
         goto error;
       }
 
+      int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+      if (fd == -1) {
+        (void)fprintf(stderr, "rash: %s: %s\n", filename, strerror(errno));
+
+        free(filename);
+        goto error;
+      }
+      free(filename);
+
       ec.stderr_fd = fd;
 
-      tokens++;
       continue;
     }
 
     if (tokens->type == STDERR_REDIR_APPEND) {
-      assert((tokens + 1)->type == STRING);
+      // this should've been taken care of with the call to bad syntax, but you
+      // never know
+      tokens++;
+      assert(IS_ARGUMENT_TOKENS(tokens->type));
 
-      int fd = open((tokens + 1)->data, O_WRONLY | O_CREAT | O_APPEND, 0644);
-      if (fd == -1) {
+      bool needs_globbing = false;
+      char *filename = evaluate_arg(&tokens, &needs_globbing);
+
+      if (filename == NULL) {
+        goto error;
+      }
+      if (needs_globbing) {
         (void)fprintf(
-            stderr,
-            "rash: %s: %s\n",
-            (char *)(tokens + 1)->data,
-            strerror(errno)
+            stderr, "rash: globing expression cannot be used as a filename.\n"
         );
-
+        free(filename);
         goto error;
       }
 
+      int fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
+      if (fd == -1) {
+        (void)fprintf(stderr, "rash: %s: %s\n", filename, strerror(errno));
+        free(filename);
+
+        goto error;
+      }
+      free(filename);
+
       ec.stderr_fd = fd;
 
-      tokens++;
       continue;
     }
 
@@ -540,7 +639,6 @@ int evaluate(const token_t *tokens) {
   }
 
   VECTOR_DESTROY(argv);
-  VECTOR_DESTROY(buffer);
   VECTOR_DESTROY(wait_for_me);
 
   return last_status;
@@ -552,7 +650,9 @@ error:
     assert(id != -1);
   }
   VECTOR_DESTROY(wait_for_me);
-  VECTOR_DESTROY(buffer);
+  for (size_t i = 0; i < argv.length; i++) {
+    free(argv.data[i]);
+  }
   VECTOR_DESTROY(argv);
 
   return EXIT_FAILURE;
