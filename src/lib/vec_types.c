@@ -1,5 +1,7 @@
 #include "vec_types.h"
 
+#include <stddef.h>
+
 #include "vector.h"
 
 void string_append(string_t *self, const char *str) {
