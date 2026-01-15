@@ -1,9 +1,9 @@
+#include "shlvl.h"
+
 #include <errno.h>
 #include <stdlib.h>
 
 #include "lib/dynamic_sprintf.h"
-
-#define BASE 10
 
 void set_shlvl(void) {
   char *shlvl = getenv("SHLVL");
@@ -15,7 +15,7 @@ void set_shlvl(void) {
 
   char *endptr;
   errno = 0;
-  unsigned long shlvl_num = strtoul(shlvl, &endptr, BASE);
+  unsigned long shlvl_num = strtoul(shlvl, &endptr, 10);
 
   if (errno != 0 || *endptr != '\0') {
     setenv("SHLVL", "1", 1);

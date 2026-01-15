@@ -7,8 +7,6 @@
 
 #include "builtins/builtins.h"
 
-#define BASE 10
-
 static const char *const EXIT_HELP =
     "Usage: exit [STATUS]\n"
     "Quit rash with the specified status code.\n"
@@ -26,12 +24,16 @@ int builtin_exit(char **const argv) {
 
   char *endptr;
   errno = 0;
-  long status = strtol(argv[1], &endptr, BASE);
+  long status = strtol(argv[1], &endptr, 10);
 
   if (errno != 0 || *endptr != '\0' || status < INT_MIN || status > INT_MAX) {
     (void)fprintf(stderr, "exit: %s: number expected\n", argv[1]);
     exit(1);
   }
 
-  exit((int)status);
+  if (1) {
+    exit((int)status);
+  }
+
+  return 0;
 }

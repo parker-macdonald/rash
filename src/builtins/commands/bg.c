@@ -8,8 +8,6 @@
 #include "jobs.h"
 #include "builtins/builtins.h"
 
-#define BASE 10
-
 static const char *const BG_HELP =
     "Usage: bg [JOB_ID]\n"
     "Run a paused job in the background based on the job id.\n"
@@ -28,7 +26,7 @@ int builtin_bg(char **argv) {
 
     char *endptr;
     errno = 0;
-    long num = strtol(argv[1], &endptr, BASE);
+    long num = strtol(argv[1], &endptr, 10);
 
     if (errno != 0 || *endptr != '\0' || num < 1 || num > INT_MAX) {
       (void)fprintf(stderr, "bg: %s: number 1 or greater expected\n", argv[1]);

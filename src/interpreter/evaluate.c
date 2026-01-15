@@ -20,7 +20,7 @@
 
 #define READ_ARG                                                               \
   while (tokens[i].type != END_ARG)                                            \
-    i++;
+  i++
 
 static bool bad_syntax(const token_t *const tokens) {
   if (!IS_ARGUMENT_TOKENS(tokens[0].type)) {
