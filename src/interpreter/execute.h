@@ -28,7 +28,7 @@ typedef struct {
   int flags;
 } execution_context;
 
-int execute(const execution_context context);
+int execute(execution_context context);
 
 /**
  * @brief this function is called by execute to handle errors and wait on

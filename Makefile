@@ -63,7 +63,7 @@ format:
 	clang-format -i $(SRC) $(HEADERS)
 
 lint:
-	$(LINTER) $(SRC) -- $(CFLAGS)
+	$(LINTER) $(SRC) $(HEADERS) -- $(CFLAGS)
 
 build: $(BUILD)/$(OUT)
 

@@ -7,21 +7,21 @@
  * @param key the key of the shell variable.
  * @param value the value of the shell variable.
  */
-void var_set(const char *const key, const char *const value);
+void var_set(const char *key, const char *value);
 
 /**
  * @brief get a shell variable given a key.
  * @param key the key of the variable
  * @return returns the associated value or null
  */
-const char *var_get(const char *const key);
+const char *var_get(const char *key);
 
 /**
  * @brief unset a shell variable given a key
  * @param key the key of the variable
  * @return returns 1 if no variable was removed, returns 0 otherwise.
  */
-int var_unset(const char *const key);
+int var_unset(const char *key);
 
 /**
  * @brief prints all shell variables in a list.

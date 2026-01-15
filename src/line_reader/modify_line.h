@@ -1,6 +1,9 @@
 #ifndef MODIFY_LINE_H
 #define MODIFY_LINE_H
 
+#include <stddef.h>
+#include <stdint.h>
+
 #include "lib/vec_types.h"
 
 /**

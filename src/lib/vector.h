@@ -124,7 +124,7 @@ printf("%s", string.data);
   struct {                                                                     \
     size_t _capacity;                                                          \
     size_t length;                                                             \
-    type *data;                                                                \
+    type *data; /* NOLINT(bugprone-macro-parentheses) */                       \
   }
 
 #define USE_VECTOR_INIT_INSTEAD_OF_THIS(vector, capacity, ...)                 \

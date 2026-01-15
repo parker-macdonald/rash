@@ -11,7 +11,7 @@
   } while (0)
 
 // returned by getch when a sigint interrupted the read.
-#define SIGINT_ON_READ -1
+#define SIGINT_ON_READ (-1)
 
 /**
  * @brief prints all the strings in the strings array in a nice format that
@@ -19,7 +19,7 @@
  * @param strings the list of strings to print.
  * @param length the length of the list of strings
  */
-void pretty_print_strings(char *const strings[], const size_t length);
+void pretty_print_strings(char *const strings[], size_t length);
 
 /**
  * @brief reads a byte from stdin without printing it to the screen or moving
