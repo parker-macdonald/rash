@@ -30,4 +30,5 @@ void set_shlvl(void) {
   }
 
   setenv("SHLVL", shlvl, 1);
+  free(shlvl);
 }
