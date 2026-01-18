@@ -148,15 +148,13 @@ echo ${what!?} # value
 
 You can run commands inside of another other commands using something called subshells.
 
-Lets say you want to do something with the output of a command, but don't want that command to change something about rash (like setting an environment variable).
-
-You could write something like this:
+For example, lets say you want to print the users name inside of an echo command.
 
 ```bash
-echo $(command_that_sets_vars)
+echo i am $(whoami), thanks for asking
 ```
 
-The result of `command_that_sets_vars` gets set as the first argument to echo, so if `command_that_sets_vars` prints `hello world`, `hello world` ends up getting printed.
+The result of `whoami` gets set as the third argument to echo, so if `whoami` prints `parker`, `parker` ends up getting printed.
 
 Another useful thing you can do with subshells is run a command with an set environment variable without changing environment variables of the current shell.
 
