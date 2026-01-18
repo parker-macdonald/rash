@@ -306,7 +306,7 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
 
       execution_context ec = {
           .argv = argv,
-          .flags = EC_DONT_REGISTER_FOREGROUND,
+          .flags = 0,
           .stderr_fd = write_null_fd,
           .stdin_fd = read_null_fd,
           .stdout_fd = fds[1]
