@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -9,6 +10,7 @@
 #include "interpreter/repl.h"
 #include "jobs.h"
 #include "lib/f_error.h"
+#include "lib/vector.h"
 #include "line_reader/line_reader.h"
 #include "rashrc.h"
 #include "shlvl.h"
@@ -69,7 +71,17 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    return repl_once((uint8_t*)argv[2]);
+    buf_t command;
+    VECTOR_INIT(command);
+
+    for (size_t i = 0; argv[2][i] != '\0'; i++) {
+      if (!iscntrl((int)argv[2][i])) {
+        VECTOR_PUSH(command, (uint8_t)argv[2][i]);
+      }
+    }
+
+    // no need to free `command` since program exits immediately afterwards
+    return repl_once(command.data);
   }
 
   f_error(HELP_STRING, argv[0]);
