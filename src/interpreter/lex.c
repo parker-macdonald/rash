@@ -162,9 +162,7 @@ token_t *lex(const uint8_t *source) {
               }
 
               if (source[i] == '\0') {
-                f_error(
-                    "rash: expected closing ‘)’ character.\n"
-                );
+                f_error("rash: expected closing ‘)’ character.\n");
                 goto error;
               }
 
@@ -207,9 +205,7 @@ token_t *lex(const uint8_t *source) {
               }
 
               if (source[i] == '\0') {
-                f_error(
-                    "rash: expected closing ‘}’ character.\n"
-                );
+                f_error("rash: expected closing ‘}’ character.\n");
                 goto error;
               }
 
@@ -218,9 +214,7 @@ token_t *lex(const uint8_t *source) {
             }
 
             if (env_len == 0) {
-              f_error(
-                  "rash: cannot expand empty enviroment variable.\n"
-              );
+              f_error("rash: cannot expand empty enviroment variable.\n");
               goto error;
             }
 
@@ -300,9 +294,7 @@ token_t *lex(const uint8_t *source) {
           }
 
           if (var_len == 0) {
-            f_error(
-                "rash: cannot expand empty shell variable.\n"
-            );
+            f_error("rash: cannot expand empty shell variable.\n");
             goto error;
           }
 
@@ -438,7 +430,18 @@ success:
 error:
   VECTOR_DESTROY(buffer);
 
-  free_tokens(&tokens.data);
+  // pro tip: do not refactor this to use the free tokens function because
+  // tokens does not have an END token to mark the end of the array (ask me how
+  // i know).
+  for (size_t i = 0; i < tokens.length; i++) {
+    if (tokens.data[i].type == STRING || tokens.data[i].type == ENV_EXPANSION ||
+        tokens.data[i].type == VAR_EXPANSION || tokens.data[i].type == TILDE ||
+        tokens.data[i].type == SUBSHELL) {
+      free(tokens.data[i].data);
+    }
+  }
+
+  VECTOR_DESTROY(tokens);
 
   return NULL;
 }

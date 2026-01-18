@@ -17,6 +17,7 @@ Checks: >
   -readability-magic-numbers,
   -readability-isolate-declaration,
   -readability-function-size,
+  -readability-braces-around-statements,
 WarningsAsErrors: >
   *,
   -misc-include-cleaner,
