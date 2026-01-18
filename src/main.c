@@ -10,7 +10,6 @@
 #include "jobs.h"
 #include "lib/f_error.h"
 #include "line_reader/line_reader.h"
-#include "one_shot.h"
 #include "rashrc.h"
 #include "shlvl.h"
 #include "strings/version.h"
@@ -70,7 +69,7 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    return repl(one_shot_reader, argv[2]);
+    return repl_once((uint8_t*)argv[2]);
   }
 
   f_error(HELP_STRING, argv[0]);

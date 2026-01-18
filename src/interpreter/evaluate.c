@@ -201,6 +201,13 @@ static bool bad_syntax(const token_t *const tokens) {
   return false;
 }
 
+static void set_exit_code_var(int code) {
+  // 3 digit number (exit status is max of 255) + null terminator
+  char status_str[3 + 1] = {0};
+  (void)snprintf(status_str, sizeof(status_str), "%d", code & 0xff);
+  var_set("?", status_str);
+}
+
 static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
   string_t buffer;
   VECTOR_INIT(buffer);
@@ -651,6 +658,7 @@ int evaluate(const token_t *tokens) {
       VECTOR_PUSH(argv, NULL);
       ec.argv = argv.data;
       last_status = execute(ec);
+      set_exit_code_var(last_status);
       ec = (execution_context){NULL, -1, -1, -1, 0};
 
       for (size_t i = 0; i < argv.length; i++) {
