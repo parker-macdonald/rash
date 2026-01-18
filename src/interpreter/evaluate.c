@@ -275,30 +275,30 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
     if ((*tokens)->type == SUBSHELL) {
       char *argv[4] = {"rash", "-c", (*tokens)->data, NULL};
 
-      int read_null_fd = open("/dev/null", O_RDONLY);
+      int null_fd = open("/dev/null", O_RDWR);
 
-      if (read_null_fd == -1) {
+      if (null_fd == -1) {
         f_error("rash: cannot open /dev/null: %s\n", strerror(errno));
         goto error;
       }
 
-      int write_null_fd = open("/dev/null", O_WRONLY);
+      int null_fd2 = dup(null_fd);
 
-      if (write_null_fd == -1) {
-        if (close(read_null_fd) == -1) {
+      if (null_fd2 == -1) {
+        if (close(null_fd) == -1) {
           perror("rash: close");
         }
-        f_error("rash: cannot open /dev/null: %s\n", strerror(errno));
+        perror("dup");
         goto error;
       }
 
       int fds[2];
 
       if (pipe(fds) == -1) {
-        if (close(read_null_fd) == -1) {
+        if (close(null_fd) == -1) {
           perror("rash: close");
         }
-        if (close(write_null_fd) == -1) {
+        if (close(null_fd2) == -1) {
           perror("rash: close");
         }
         goto error;
@@ -307,8 +307,8 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
       execution_context ec = {
           .argv = argv,
           .flags = 0,
-          .stderr_fd = write_null_fd,
-          .stdin_fd = read_null_fd,
+          .stderr_fd = null_fd,
+          .stdin_fd = null_fd2,
           .stdout_fd = fds[1]
       };
 
