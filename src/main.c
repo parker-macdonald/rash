@@ -11,6 +11,7 @@
 #include "interpreter/repl.h"
 #include "jobs.h"
 #include "lib/error.h"
+#include "lib/vec_types.h"
 #include "lib/vector.h"
 #include "line_reader/line_reader.h"
 #include "rashrc.h"
@@ -91,8 +92,10 @@ int main(int argc, char **argv) {
       }
     }
 
-    // no need to free `command` since program exits immediately afterwards
-    return repl_once(command.data);
+    int status = repl_once(command.data);
+    VECTOR_DESTROY(command);
+
+    return status;
   }
 
   error_f(HELP_STRING, argv[0]);

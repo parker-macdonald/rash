@@ -1,6 +1,7 @@
 #include "vec_types.h"
 
 #include <stddef.h>
+#include <stdint.h>
 
 #include "vector.h"
 

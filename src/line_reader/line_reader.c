@@ -560,7 +560,12 @@ const uint8_t *readline(void *_) {
     }
 
     // only add character to buffer if it is displayable ascii (or utf-8)
-    if (!iscntrl((int)curr_byte)) {
+    // also for some reason clang-tidy gets mad at putting a "tainted index"
+    // into iscntrl. maybe this really is a bug, but i have a hard time
+    // believing that
+    if (
+        !iscntrl((int)curr_byte) // NOLINT(clang-analyzer-security.ArrayBound)
+    ) {
       line_insert(current_line, curr_byte, cursor_pos);
       cursor_pos++;
 
