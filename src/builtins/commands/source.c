@@ -37,6 +37,7 @@ int builtin_source(char **argv) {
   file_reader_init(&reader_data, file);
 
   if (recursion_count > 10000) {
+    recursion_count = 0;
     error_f("rash: source... source... source... souce...\n");
     return EXIT_FAILURE;
   }
