@@ -1,6 +1,7 @@
 #include "evaluate.h"
 
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <pwd.h>
@@ -11,9 +12,11 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "argv0.h"
 #include "execute.h"
 #include "glob.h"
 #include "lex.h"
+#include "lib/error.h"
 #include "lib/vec_types.h"
 #include "lib/vector.h"
 #include "shell_vars.h"
@@ -24,7 +27,7 @@
 
 static bool bad_syntax(const token_t *const tokens) {
   if (!IS_ARGUMENT_TOKENS(tokens[0].type)) {
-    (void)fprintf(stderr, "rash: invalid first token.\n");
+    error_f("rash: invalid first token.\n");
     return true;
   }
 
@@ -41,7 +44,7 @@ static bool bad_syntax(const token_t *const tokens) {
     if (tokens[i].type == STDIN_REDIR) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
-        (void)fprintf(stderr, "rash: expected filename after ‘<’.\n");
+        error_f("rash: expected filename after ‘<’.\n");
         return true;
       }
 
@@ -52,7 +55,7 @@ static bool bad_syntax(const token_t *const tokens) {
     if (tokens[i].type == STDIN_REDIR_STRING) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
-        (void)fprintf(stderr, "rash: expected string after ‘<<<’.\n");
+        error_f("rash: expected string after ‘<<<’.\n");
         return true;
       }
 
@@ -63,7 +66,7 @@ static bool bad_syntax(const token_t *const tokens) {
     if (tokens[i].type == STDOUT_REDIR) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
-        (void)fprintf(stderr, "rash: expected filename after ‘>’.\n");
+        error_f("rash: expected filename after ‘>’.\n");
         return true;
       }
 
@@ -74,7 +77,7 @@ static bool bad_syntax(const token_t *const tokens) {
     if (tokens[i].type == STDOUT_REDIR_APPEND) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
-        (void)fprintf(stderr, "rash: expected filename after ‘>>’.\n");
+        error_f("rash: expected filename after ‘>>’.\n");
         return true;
       }
 
@@ -85,7 +88,7 @@ static bool bad_syntax(const token_t *const tokens) {
     if (tokens[i].type == STDERR_REDIR) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
-        (void)fprintf(stderr, "rash: expected filename after ‘2>’.\n");
+        error_f("rash: expected filename after ‘2>’.\n");
         return true;
       }
 
@@ -96,7 +99,7 @@ static bool bad_syntax(const token_t *const tokens) {
     if (tokens[i].type == STDERR_REDIR_APPEND) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
-        (void)fprintf(stderr, "rash: expected filename after ‘2>>’.\n");
+        error_f("rash: expected filename after ‘2>>’.\n");
         return true;
       }
 
@@ -106,12 +109,12 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == PIPE) {
       if (!IS_ARGUMENT_TOKENS(tokens[i + 1].type)) {
-        (void)fprintf(stderr, "rash: expected command after ‘|’.\n");
+        error_f("rash: expected command after ‘|’.\n");
         return true;
       }
 
       if (tokens[i - 1].type != END_ARG) {
-        (void)fprintf(stderr, "rash: bad placement of ‘|’.\n");
+        error_f("rash: bad placement of ‘|’.\n");
         return true;
       }
 
@@ -119,17 +122,17 @@ static bool bad_syntax(const token_t *const tokens) {
     }
 
     if (stderr_count > 1) {
-      (void)fprintf(stderr, "rash: cannot redirect stderr more than once.\n");
+      error_f("rash: cannot redirect stderr more than once.\n");
       return true;
     }
 
     if (stdout_count > 1) {
-      (void)fprintf(stderr, "rash: cannot redirect stdout more than once.\n");
+      error_f("rash: cannot redirect stdout more than once.\n");
       return true;
     }
 
     if (stdin_count > 1) {
-      (void)fprintf(stderr, "rash: cannot redirect stdin more than once.\n");
+      error_f("rash: cannot redirect stdin more than once.\n");
       return true;
     }
 
@@ -143,12 +146,12 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == LOGICAL_OR) {
       if (!IS_ARGUMENT_TOKENS(tokens[i + 1].type)) {
-        (void)fprintf(stderr, "rash: expected command after ‘||’.\n");
+        error_f("rash: expected command after ‘||’.\n");
         return true;
       }
 
       if (tokens[i - 1].type != END_ARG) {
-        (void)fprintf(stderr, "rash: bad placement of ‘||’.\n");
+        error_f("rash: bad placement of ‘||’.\n");
         return true;
       }
 
@@ -159,12 +162,12 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == LOGICAL_AND) {
       if (!IS_ARGUMENT_TOKENS(tokens[i + 1].type)) {
-        (void)fprintf(stderr, "rash: expected command after ‘&&’.\n");
+        error_f("rash: expected command after ‘&&’.\n");
         return true;
       }
 
       if (tokens[i - 1].type != END_ARG) {
-        (void)fprintf(stderr, "rash: bad placement of ‘&&’.\n");
+        error_f("rash: bad placement of ‘&&’.\n");
         return true;
       }
 
@@ -175,7 +178,7 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == SEMI) {
       if (tokens[i - 1].type != END_ARG) {
-        (void)fprintf(stderr, "rash: bad placement of ‘;’.\n");
+        error_f("rash: bad placement of ‘;’.\n");
         return true;
       }
 
@@ -186,7 +189,7 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == AMP) {
       if (tokens[i - 1].type != END_ARG) {
-        (void)fprintf(stderr, "rash: bad placement of ‘&’.\n");
+        error_f("rash: bad placement of ‘&’.\n");
         return true;
       }
 
@@ -197,6 +200,13 @@ static bool bad_syntax(const token_t *const tokens) {
   }
 
   return false;
+}
+
+static void set_exit_code_var(int code) {
+  // 3 digit number (exit status is max of 255) + null terminator
+  char status_str[3 + 1] = {0};
+  (void)snprintf(status_str, sizeof(status_str), "%d", code & 0xff);
+  var_set("?", status_str);
 }
 
 static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
@@ -214,8 +224,7 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
       const char *value = getenv((char *)(*tokens)->data);
 
       if (value == NULL) {
-        (void)fprintf(
-            stderr,
+        error_f(
             "rash: environment variable ‘%s’ does not exist.\n",
             (char *)(*tokens)->data
         );
@@ -234,15 +243,13 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
           string_append(&buffer, home);
           continue;
         }
-        (void)fprintf(stderr, "cannot expand ‘~’, HOME is not set.\n");
+        error_f("cannot expand ‘~’, HOME is not set.\n");
         goto error;
       }
 
       struct passwd *pw = getpwnam((char *)(*tokens)->data);
       if (pw == NULL || pw->pw_dir == NULL) {
-        (void)fprintf(
-            stderr, "rash: cannot access user ‘%s’.\n", (char *)(*tokens)->data
-        );
+        error_f("rash: cannot access user ‘%s’.\n", (char *)(*tokens)->data);
         goto error;
       }
 
@@ -254,8 +261,7 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
       const char *value = var_get((char *)(*tokens)->data);
 
       if (value == NULL) {
-        (void)fprintf(
-            stderr,
+        error_f(
             "rash: shell variable ‘%s’ does not exist.\n",
             (char *)(*tokens)->data
         );
@@ -264,6 +270,78 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
 
       string_append(&buffer, value);
 
+      continue;
+    }
+
+    if ((*tokens)->type == SUBSHELL) {
+      char *argv[4] = {argv0, "-c", (*tokens)->data, NULL};
+
+      int null_fd = open("/dev/null", O_RDWR);
+
+      if (null_fd == -1) {
+        error_f("rash: cannot open /dev/null: %s\n", strerror(errno));
+        goto error;
+      }
+
+      int null_fd2 = dup(null_fd);
+
+      if (null_fd2 == -1) {
+        if (close(null_fd) == -1) {
+          perror("rash: close");
+        }
+        perror("dup");
+        goto error;
+      }
+
+      int fds[2];
+
+      if (pipe(fds) == -1) {
+        if (close(null_fd) == -1) {
+          perror("rash: close");
+        }
+        if (close(null_fd2) == -1) {
+          perror("rash: close");
+        }
+        goto error;
+      }
+
+      execution_context ec = {
+          .argv = argv,
+          .flags = 0,
+          .stderr_fd = null_fd,
+          .stdin_fd = null_fd2,
+          .stdout_fd = fds[1]
+      };
+
+      pid_t pid = execute(ec);
+
+      if (pid == -1) {
+        goto error;
+      }
+
+      char read_bytes[512];
+      ssize_t nread;
+
+      do {
+        nread = read(fds[0], read_bytes, 512);
+
+        if (nread == -1) {
+          if (close(fds[0]) == -1) {
+            perror("rash: close");
+          }
+          perror("rash: read");
+          goto error;
+        }
+
+        for (ssize_t i = 0; i < nread; i++) {
+          if (!iscntrl((int)read_bytes[i])) {
+            VECTOR_PUSH(buffer, read_bytes[i]);
+          }
+        }
+      } while (nread > 0);
+
+      // pid_t id = waitpid(pid, NULL, 0);
+      // assert(id != -1);
       continue;
     }
 
@@ -327,9 +405,7 @@ int evaluate(const token_t *tokens) {
               arg[i] = '*';
             }
           }
-          (void)fprintf(
-              stderr, "rash: nothing matched glob pattern ‘%s’.\n", arg
-          );
+          error_f("rash: nothing matched glob pattern ‘%s’.\n", arg);
           free(arg);
           goto error;
         }
@@ -357,16 +433,14 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        (void)fprintf(
-            stderr, "rash: globing expression cannot be used as a filename.\n"
-        );
+        error_f("rash: globing expression cannot be used as a filename.\n");
         free(filename);
         goto error;
       }
 
       int fd = open(filename, O_RDONLY);
       if (fd == -1) {
-        (void)fprintf(stderr, "rash: %s: %s\n", filename, strerror(errno));
+        error_f("rash: %s: %s\n", filename, strerror(errno));
         free(filename);
         goto error;
       }
@@ -397,8 +471,7 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        (void)fprintf(
-            stderr,
+        error_f(
             "rash: expected string after ‘<<<’, but found glob expression.\n"
         );
         free(str);
@@ -438,16 +511,14 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        (void)fprintf(
-            stderr, "rash: globing expression cannot be used as a filename.\n"
-        );
+        error_f("rash: globing expression cannot be used as a filename.\n");
         free(filename);
         goto error;
       }
 
       int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
       if (fd == -1) {
-        (void)fprintf(stderr, "rash: %s: %s\n", filename, strerror(errno));
+        error_f("rash: %s: %s\n", filename, strerror(errno));
 
         free(filename);
         goto error;
@@ -472,16 +543,14 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        (void)fprintf(
-            stderr, "rash: globing expression cannot be used as a filename.\n"
-        );
+        error_f("rash: globing expression cannot be used as a filename.\n");
         free(filename);
         goto error;
       }
 
       int fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
       if (fd == -1) {
-        (void)fprintf(stderr, "rash: %s: %s\n", filename, strerror(errno));
+        error_f("rash: %s: %s\n", filename, strerror(errno));
 
         free(filename);
         goto error;
@@ -506,16 +575,14 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        (void)fprintf(
-            stderr, "rash: globing expression cannot be used as a filename.\n"
-        );
+        error_f("rash: globing expression cannot be used as a filename.\n");
         free(filename);
         goto error;
       }
 
       int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
       if (fd == -1) {
-        (void)fprintf(stderr, "rash: %s: %s\n", filename, strerror(errno));
+        error_f("rash: %s: %s\n", filename, strerror(errno));
 
         free(filename);
         goto error;
@@ -540,16 +607,14 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        (void)fprintf(
-            stderr, "rash: globing expression cannot be used as a filename.\n"
-        );
+        error_f("rash: globing expression cannot be used as a filename.\n");
         free(filename);
         goto error;
       }
 
       int fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
       if (fd == -1) {
-        (void)fprintf(stderr, "rash: %s: %s\n", filename, strerror(errno));
+        error_f("rash: %s: %s\n", filename, strerror(errno));
         free(filename);
 
         goto error;
@@ -594,6 +659,7 @@ int evaluate(const token_t *tokens) {
       VECTOR_PUSH(argv, NULL);
       ec.argv = argv.data;
       last_status = execute(ec);
+      set_exit_code_var(last_status);
       ec = (execution_context){NULL, -1, -1, -1, 0};
 
       for (size_t i = 0; i < argv.length; i++) {

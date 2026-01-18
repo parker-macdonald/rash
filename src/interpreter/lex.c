@@ -3,10 +3,10 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "lib/error.h"
 #include "lib/vector.h"
 
 enum lexer_state {
@@ -143,17 +143,61 @@ token_t *lex(const uint8_t *source) {
           break;
         }
 
-        // crazy logic for enviroment variables
+        // crazy logic for enviroment variables and subshells
         if (curr == '$') {
           has_arguments = true;
 
           i++;
-          size_t env_len = 0;
-          const uint8_t *env_start = source + i;
+
+          // subshells
+          if (source[i] == '(') {
+            i++;
+
+            size_t subshell_len = 0;
+            const uint8_t *subshell_start = source + i;
+
+            for (;;) {
+              if (source[i] == ')') {
+                break;
+              }
+
+              if (source[i] == '\0') {
+                error_f("rash: expected closing ‘)’ character.\n");
+                goto error;
+              }
+
+              i++;
+              subshell_len++;
+            }
+
+            if (subshell_len == 0) {
+              error_f("rash: subshell cannot be empty.\n");
+              goto error;
+            }
+
+            char *subshell_cmd = malloc(subshell_len + 1);
+            memcpy(subshell_cmd, subshell_start, subshell_len);
+            subshell_cmd[subshell_len] = '\0';
+
+            if (buffer.length != 0) {
+              VECTOR_PUSH(buffer, '\0');
+              VECTOR_PUSH(
+                  tokens, ((token_t){.type = STRING, .data = buffer.data})
+              );
+              VECTOR_INIT(buffer);
+            }
+
+            VECTOR_PUSH(
+                tokens, ((token_t){.type = SUBSHELL, .data = subshell_cmd})
+            );
+            break;
+          }
 
           if (source[i] == '{') {
             i++;
-            env_start++;
+
+            size_t env_len = 0;
+            const uint8_t *env_start = source + i;
 
             for (;;) {
               if (source[i] == '}') {
@@ -161,9 +205,7 @@ token_t *lex(const uint8_t *source) {
               }
 
               if (source[i] == '\0') {
-                (void)fprintf(
-                    stderr, "rash: expected closing ‘}’ character.\n"
-                );
+                error_f("rash: expected closing ‘}’ character.\n");
                 goto error;
               }
 
@@ -172,9 +214,7 @@ token_t *lex(const uint8_t *source) {
             }
 
             if (env_len == 0) {
-              (void)fprintf(
-                  stderr, "rash: cannot expand empty enviroment variable.\n"
-              );
+              error_f("rash: cannot expand empty enviroment variable.\n");
               goto error;
             }
 
@@ -195,6 +235,9 @@ token_t *lex(const uint8_t *source) {
             );
             break;
           }
+
+          size_t env_len = 0;
+          const uint8_t *env_start = source + i;
 
           for (;;) {
             if ((!isalnum((int)source[i]) && source[i] != '_') ||
@@ -242,7 +285,7 @@ token_t *lex(const uint8_t *source) {
             }
 
             if (source[i] == '\0') {
-              (void)fprintf(stderr, "rash: expected closing ‘}’ character.\n");
+              error_f("rash: expected closing ‘}’ character.\n");
               goto error;
             }
 
@@ -251,9 +294,7 @@ token_t *lex(const uint8_t *source) {
           }
 
           if (var_len == 0) {
-            (void)fprintf(
-                stderr, "rash: cannot expand empty shell variable.\n"
-            );
+            error_f("rash: cannot expand empty shell variable.\n");
             goto error;
           }
 
@@ -357,13 +398,13 @@ token_t *lex(const uint8_t *source) {
 
   switch (state) {
     case SINGLE_LITERAL:
-      (void)fprintf(stderr, "rash: Expected character after ‘\\’.\n");
+      error_f("rash: Expected character after ‘\\’.\n");
       goto error;
     case SINGLE_QUOTE:
-      (void)fprintf(stderr, "rash: Expected closing ‘'’ character.\n");
+      error_f("rash: Expected closing ‘'’ character.\n");
       goto error;
     case DOUBLE_QUOTE:
-      (void)fprintf(stderr, "rash: Expected closing ‘\"’ character.\n");
+      error_f("rash: Expected closing ‘\"’ character.\n");
       goto error;
     default:
       break;
@@ -389,9 +430,13 @@ success:
 error:
   VECTOR_DESTROY(buffer);
 
+  // pro tip: do not refactor this to use the free tokens function because
+  // tokens does not have an END token to mark the end of the array (ask me how
+  // i know).
   for (size_t i = 0; i < tokens.length; i++) {
     if (tokens.data[i].type == STRING || tokens.data[i].type == ENV_EXPANSION ||
-        tokens.data[i].type == VAR_EXPANSION) {
+        tokens.data[i].type == VAR_EXPANSION || tokens.data[i].type == TILDE ||
+        tokens.data[i].type == SUBSHELL) {
       free(tokens.data[i].data);
     }
   }
@@ -404,7 +449,8 @@ error:
 void free_tokens(token_t **tokens) {
   for (size_t i = 0; (*tokens)[i].type != END; i++) {
     if ((*tokens)[i].type == STRING || (*tokens)[i].type == ENV_EXPANSION ||
-        (*tokens)[i].type == VAR_EXPANSION || (*tokens)[i].type == TILDE) {
+        (*tokens)[i].type == VAR_EXPANSION || (*tokens)[i].type == TILDE ||
+        (*tokens)[i].type == SUBSHELL) {
       free((*tokens)[i].data);
     }
   }

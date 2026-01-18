@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "builtins/builtins.h"
+#include "lib/error.h"
 #include "line_reader/line_reader.h"
 
 static const char *const HISTORY_HELP =
@@ -33,7 +34,7 @@ int builtin_history(char **const argv) {
     errno = 0;
     const long num = strtol(argv[1], &endptr, 10);
     if (errno != 0 || *endptr != '\0' || num < 0 || num > INT_MAX) {
-      (void)fprintf(stderr, "history: %s: positive number expected\n", argv[1]);
+      error_f("history: %s: positive number expected\n", argv[1]);
       return EXIT_FAILURE;
     }
 

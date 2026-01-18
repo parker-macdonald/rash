@@ -4,10 +4,10 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "lib/error.h"
 #include "lib/vec_types.h"
 #include "lib/vector.h"
 
@@ -116,7 +116,7 @@ int glob(strings_t *vec, const char pattern[]) {
         continue;
       }
 
-      (void)fprintf(stderr, "glob: opendir: %s", strerror(errno));
+      error_f("glob: opendir: %s", strerror(errno));
       struct queue_node *node = head;
 
       while (node != NULL) {

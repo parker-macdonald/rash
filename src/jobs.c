@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "interactive.h"
+#include "lib/error.h"
 
 #ifdef static_assert
 static_assert(
@@ -61,9 +62,7 @@ void sig_handler_init(void) {
     tcsetpgrp(tty_fd, root_pid);
   } else {
     tty_fd = -1;
-    (void)fprintf(
-        stderr, "rash: cannot access /dev/tty. Job control is unavailable.\n"
-    );
+    error_f("rash: cannot access /dev/tty. Job control is unavailable.\n");
   }
 }
 

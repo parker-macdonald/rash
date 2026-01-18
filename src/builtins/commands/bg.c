@@ -7,6 +7,7 @@
 
 #include "builtins/builtins.h"
 #include "jobs.h"
+#include "lib/error.h"
 
 static const char *const BG_HELP =
     "Usage: bg [JOB_ID]\n"
@@ -29,7 +30,7 @@ int builtin_bg(char **argv) {
     long num = strtol(argv[1], &endptr, 10);
 
     if (errno != 0 || *endptr != '\0' || num < 1 || num > INT_MAX) {
-      (void)fprintf(stderr, "bg: %s: number 1 or greater expected\n", argv[1]);
+      error_f("bg: %s: number 1 or greater expected\n", argv[1]);
       return EXIT_FAILURE;
     }
 
@@ -40,16 +41,16 @@ int builtin_bg(char **argv) {
 
   if (job == NULL) {
     if (job_id == -1) {
-      (void)fprintf(stderr, "bg: no running jobs\n");
+      error_f("bg: no running jobs\n");
     } else {
-      (void)fprintf(stderr, "bg: %d: no such job\n", job_id);
+      error_f("bg: %d: no such job\n", job_id);
     }
 
     return EXIT_FAILURE;
   }
 
   if (job->state == JOB_RUNNING) {
-    (void)fprintf(stderr, "bg: %d: job already running\n", job->id);
+    error_f("bg: %d: job already running\n", job->id);
     return EXIT_FAILURE;
   }
 

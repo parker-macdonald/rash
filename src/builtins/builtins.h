@@ -43,4 +43,6 @@ int builtin_unsetenv(char **argv);
 
 int builtin_exec(char **argv);
 
+int builtin_eval(char **argv);
+
 #endif

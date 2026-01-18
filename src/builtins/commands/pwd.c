@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "builtins/builtins.h"
+#include "lib/error.h"
 
 static const char *const PWD_HELP = "Usage: pwd\n"
                                     "Prints the current working directory.";
@@ -33,9 +34,7 @@ int builtin_pwd(char **argv) {
     char *temp_cwd = realloc(cwd, cwd_size);
 
     if (temp_cwd == NULL) {
-      (void)fprintf(
-          stderr, "pwd: out of memory, current working directory too long.\n"
-      );
+      error_f("pwd: out of memory, current working directory too long.\n");
       free(cwd);
       return EXIT_FAILURE;
     }

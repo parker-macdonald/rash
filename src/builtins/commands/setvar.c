@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "builtins/builtins.h"
+#include "lib/error.h"
 #include "shell_vars.h"
 
 static const char *const SETVAR_HELP =
@@ -11,7 +12,7 @@ static const char *const SETVAR_HELP =
 
 int builtin_setvar(char **argv) {
   if (argv[1] == NULL || argv[2] == NULL) {
-    (void)fprintf(stderr, "%s\n", SETVAR_HELP);
+    error_f("%s\n", SETVAR_HELP);
     return EXIT_FAILURE;
   }
 

@@ -13,11 +13,12 @@
 
 #include "builtins/find_builtin.h"
 #include "jobs.h"
+#include "lib/error.h"
 #include "lib/search_path.h"
 
 extern char **environ;
 
-int execute(const execution_context context) {
+int execute(execution_context context) {
   if (context.argv == NULL) {
     return EXIT_SUCCESS;
   }
@@ -54,27 +55,24 @@ int execute(const execution_context context) {
     }
 
     if (context.stdout_fd != -1) {
-      close(STDOUT_FILENO);
+      int res = dup2(context.stdout_fd, STDOUT_FILENO);
+      close(context.stdout_fd);
 
-      int new_fd = dup(context.stdout_fd);
-
-      assert(new_fd == STDOUT_FILENO);
+      assert(res != -1);
     }
 
     if (context.stderr_fd != -1) {
-      close(STDERR_FILENO);
+      int res = dup2(context.stderr_fd, STDERR_FILENO);
+      close(context.stderr_fd);
 
-      int new_fd = dup(context.stderr_fd);
-
-      assert(new_fd == STDERR_FILENO);
+      assert(res != -1);
     }
 
     if (context.stdin_fd != -1) {
-      close(STDIN_FILENO);
+      int res = dup2(context.stdin_fd, STDIN_FILENO);
+      close(context.stderr_fd);
 
-      int new_fd = dup(context.stdin_fd);
-
-      assert(new_fd == STDIN_FILENO);
+      assert(res != -1);
     }
 
     if (builtin != NULL) {
@@ -86,12 +84,20 @@ int execute(const execution_context context) {
       char *argv0 = search_path(context.argv[0]);
 
       if (argv0 == NULL) {
-        (void)fprintf(stderr, "%s: command not found\n", context.argv[0]);
+        error_f("%s: command not found\n", context.argv[0]);
         _exit(EXIT_FAILURE);
       }
 
-      free(context.argv[0]);
-      context.argv[0] = argv0;
+      size_t argv_len;
+      for (argv_len = 0; context.argv[argv_len] != NULL; argv_len++)
+        ;
+      argv_len++;
+
+      char **new_argv = malloc(argv_len * sizeof(char *));
+      memcpy(new_argv, context.argv, argv_len * sizeof(char *));
+      new_argv[0] = argv0;
+
+      context.argv = new_argv;
     }
 
     int status = execve(context.argv[0], context.argv, environ);
@@ -99,9 +105,9 @@ int execute(const execution_context context) {
     if (status == -1) {
 
       if (errno != ENOENT) {
-        (void)fprintf(stderr, "rash: execve: %s\n", strerror(errno));
+        error_f("rash: execve: %s\n", strerror(errno));
       } else {
-        (void)fprintf(stderr, "rash: %s: command not found\n", context.argv[0]);
+        error_f("rash: %s: command not found\n", context.argv[0]);
       }
     }
 

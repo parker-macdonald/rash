@@ -4,6 +4,12 @@
 
 #include "vector.h"
 
+void buf_append_string(buf_t *self, const char *str) {
+  for (size_t i = 0; str[i] != '\0'; i++) {
+    VECTOR_PUSH(*self, (uint8_t)str[i]);
+  }
+}
+
 void string_append(string_t *self, const char *str) {
   for (size_t i = 0; str[i] != '\0'; i++) {
     VECTOR_PUSH(*self, str[i]);

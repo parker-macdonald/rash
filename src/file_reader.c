@@ -1,5 +1,6 @@
 #include "file_reader.h"
 
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -49,7 +50,7 @@ const uint8_t *file_reader_read(void *file_ptr) {
     }
 
     // don't capture lexer reserved characters
-    if (c == '\0' || c == '\033') {
+    if (iscntrl(c)) {
       continue;
     }
 
