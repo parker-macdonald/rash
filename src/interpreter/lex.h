@@ -23,6 +23,8 @@ typedef enum {
   GLOB_WILDCARD,
   // environment variable to be expanded
   ENV_EXPANSION,
+  // subshell i.e. $(example string)
+  SUBSHELL,
   // shell variable to be expanded
   VAR_EXPANSION,
   // '~' used for home folder expansion
@@ -45,7 +47,7 @@ typedef enum {
 
 #define IS_ARGUMENT_TOKENS(x)                                                  \
   ((x) == STRING || (x) == GLOB_WILDCARD || (x) == ENV_EXPANSION ||            \
-   (x) == VAR_EXPANSION || (x) == TILDE)
+   (x) == VAR_EXPANSION || (x) == TILDE || (x) == SUBSHELL)
 
 typedef struct {
   token_type_t type;

@@ -143,17 +143,63 @@ token_t *lex(const uint8_t *source) {
           break;
         }
 
-        // crazy logic for enviroment variables
+        // crazy logic for enviroment variables and subshells
         if (curr == '$') {
           has_arguments = true;
 
           i++;
-          size_t env_len = 0;
-          const uint8_t *env_start = source + i;
+
+          // subshells
+          if (source[i] == '(') {
+            i++;
+
+            size_t subshell_len = 0;
+            const uint8_t *subshell_start = source + i;
+
+            for (;;) {
+              if (source[i] == ')') {
+                break;
+              }
+
+              if (source[i] == '\0') {
+                (void)fprintf(
+                    stderr, "rash: expected closing ‘)’ character.\n"
+                );
+                goto error;
+              }
+
+              i++;
+              subshell_len++;
+            }
+
+            if (subshell_len == 0) {
+              (void)fprintf(stderr, "rash: subshell cannot be empty.\n");
+              goto error;
+            }
+
+            char *subshell_cmd = malloc(subshell_len + 1);
+            memcpy(subshell_cmd, subshell_start, subshell_len);
+            subshell_cmd[subshell_len] = '\0';
+
+            if (buffer.length != 0) {
+              VECTOR_PUSH(buffer, '\0');
+              VECTOR_PUSH(
+                  tokens, ((token_t){.type = STRING, .data = buffer.data})
+              );
+              VECTOR_INIT(buffer);
+            }
+
+            VECTOR_PUSH(
+                tokens, ((token_t){.type = SUBSHELL, .data = subshell_cmd})
+            );
+            break;
+          }
 
           if (source[i] == '{') {
             i++;
-            env_start++;
+
+            size_t env_len = 0;
+            const uint8_t *env_start = source + i;
 
             for (;;) {
               if (source[i] == '}') {
@@ -195,6 +241,9 @@ token_t *lex(const uint8_t *source) {
             );
             break;
           }
+
+          size_t env_len = 0;
+          const uint8_t *env_start = source + i;
 
           for (;;) {
             if ((!isalnum((int)source[i]) && source[i] != '_') ||
@@ -389,14 +438,7 @@ success:
 error:
   VECTOR_DESTROY(buffer);
 
-  for (size_t i = 0; i < tokens.length; i++) {
-    if (tokens.data[i].type == STRING || tokens.data[i].type == ENV_EXPANSION ||
-        tokens.data[i].type == VAR_EXPANSION) {
-      free(tokens.data[i].data);
-    }
-  }
-
-  VECTOR_DESTROY(tokens);
+  free_tokens(&tokens.data);
 
   return NULL;
 }
@@ -404,7 +446,8 @@ error:
 void free_tokens(token_t **tokens) {
   for (size_t i = 0; (*tokens)[i].type != END; i++) {
     if ((*tokens)[i].type == STRING || (*tokens)[i].type == ENV_EXPANSION ||
-        (*tokens)[i].type == VAR_EXPANSION || (*tokens)[i].type == TILDE) {
+        (*tokens)[i].type == VAR_EXPANSION || (*tokens)[i].type == TILDE ||
+        (*tokens)[i].type == SUBSHELL) {
       free((*tokens)[i].data);
     }
   }

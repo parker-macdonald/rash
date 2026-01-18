@@ -1,6 +1,7 @@
 #include "evaluate.h"
 
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <pwd.h>
@@ -264,6 +265,82 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
 
       string_append(&buffer, value);
 
+      continue;
+    }
+
+    if ((*tokens)->type == SUBSHELL) {
+      char *argv[4] = {"rash", "-c", (*tokens)->data, NULL};
+
+      int read_null_fd = open("/dev/null", O_RDONLY);
+
+      if (read_null_fd == -1) {
+        (void)fprintf(
+            stderr, "rash: cannot open /dev/null: %s\n", strerror(errno)
+        );
+        goto error;
+      }
+
+      int write_null_fd = open("/dev/null", O_WRONLY);
+
+      if (write_null_fd == -1) {
+        if (close(read_null_fd) == -1) {
+          perror("rash: close");
+        }
+        (void)fprintf(
+            stderr, "rash: cannot open /dev/null: %s\n", strerror(errno)
+        );
+        goto error;
+      }
+
+      int fds[2];
+
+      if (pipe(fds) == -1) {
+        if (close(read_null_fd) == -1) {
+          perror("rash: close");
+        }
+        if (close(write_null_fd) == -1) {
+          perror("rash: close");
+        }
+        goto error;
+      }
+
+      execution_context ec = {
+          .argv = argv,
+          .flags = EC_DONT_REGISTER_FOREGROUND,
+          .stderr_fd = write_null_fd,
+          .stdin_fd = read_null_fd,
+          .stdout_fd = fds[1]
+      };
+
+      pid_t pid = execute(ec);
+
+      if (pid == -1) {
+        goto error;
+      }
+
+      char read_bytes[512];
+      ssize_t nread;
+
+      do {
+        nread = read(fds[0], read_bytes, 512);
+
+        if (nread == -1) {
+          if (close(fds[0]) == -1) {
+            perror("rash: close");
+          }
+          perror("rash: read");
+          goto error;
+        }
+
+        for (ssize_t i = 0; i < nread; i++) {
+          if (!iscntrl((int)read_bytes[i])) {
+            VECTOR_PUSH(buffer, read_bytes[i]);
+          }
+        }
+      } while (nread > 0);
+
+      // pid_t id = waitpid(pid, NULL, 0);
+      // assert(id != -1);
       continue;
     }
 

@@ -1,6 +1,7 @@
 #include "line_reader.h"
 
 #include <assert.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -559,7 +560,7 @@ const uint8_t *readline(void *_) {
     }
 
     // only add character to buffer if it is displayable ascii (or utf-8)
-    if (curr_byte >= ' ') {
+    if (!iscntrl((int)curr_byte)) {
       line_insert(current_line, curr_byte, cursor_pos);
       cursor_pos++;
 
