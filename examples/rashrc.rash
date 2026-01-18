@@ -1,0 +1,5 @@
+# start an ssh-agent for this session
+eval $(ssh-agent)
+
+# set a prompt user@host:/working/dir$
+setvar PS1 '\u@\h:\w\$ '
