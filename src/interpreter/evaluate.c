@@ -307,7 +307,7 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
 
       execution_context ec = {
           .argv = argv,
-          .flags = 0,
+          .flags = EC_NO_WAIT,
           .stderr_fd = null_fd,
           .stdin_fd = null_fd2,
           .stdout_fd = fds[1]
@@ -340,8 +340,7 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
         }
       } while (nread > 0);
 
-      // pid_t id = waitpid(pid, NULL, 0);
-      // assert(id != -1);
+      wait_process(pid);
       continue;
     }
 
