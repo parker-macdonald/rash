@@ -3,10 +3,10 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "lib/f_error.h"
 #include "lib/vector.h"
 
 enum lexer_state {
@@ -162,8 +162,8 @@ token_t *lex(const uint8_t *source) {
               }
 
               if (source[i] == '\0') {
-                (void)fprintf(
-                    stderr, "rash: expected closing ‘)’ character.\n"
+                f_error(
+                    "rash: expected closing ‘)’ character.\n"
                 );
                 goto error;
               }
@@ -173,7 +173,7 @@ token_t *lex(const uint8_t *source) {
             }
 
             if (subshell_len == 0) {
-              (void)fprintf(stderr, "rash: subshell cannot be empty.\n");
+              f_error("rash: subshell cannot be empty.\n");
               goto error;
             }
 
@@ -207,8 +207,8 @@ token_t *lex(const uint8_t *source) {
               }
 
               if (source[i] == '\0') {
-                (void)fprintf(
-                    stderr, "rash: expected closing ‘}’ character.\n"
+                f_error(
+                    "rash: expected closing ‘}’ character.\n"
                 );
                 goto error;
               }
@@ -218,8 +218,8 @@ token_t *lex(const uint8_t *source) {
             }
 
             if (env_len == 0) {
-              (void)fprintf(
-                  stderr, "rash: cannot expand empty enviroment variable.\n"
+              f_error(
+                  "rash: cannot expand empty enviroment variable.\n"
               );
               goto error;
             }
@@ -291,7 +291,7 @@ token_t *lex(const uint8_t *source) {
             }
 
             if (source[i] == '\0') {
-              (void)fprintf(stderr, "rash: expected closing ‘}’ character.\n");
+              f_error("rash: expected closing ‘}’ character.\n");
               goto error;
             }
 
@@ -300,8 +300,8 @@ token_t *lex(const uint8_t *source) {
           }
 
           if (var_len == 0) {
-            (void)fprintf(
-                stderr, "rash: cannot expand empty shell variable.\n"
+            f_error(
+                "rash: cannot expand empty shell variable.\n"
             );
             goto error;
           }
@@ -406,13 +406,13 @@ token_t *lex(const uint8_t *source) {
 
   switch (state) {
     case SINGLE_LITERAL:
-      (void)fprintf(stderr, "rash: Expected character after ‘\\’.\n");
+      f_error("rash: Expected character after ‘\\’.\n");
       goto error;
     case SINGLE_QUOTE:
-      (void)fprintf(stderr, "rash: Expected closing ‘'’ character.\n");
+      f_error("rash: Expected closing ‘'’ character.\n");
       goto error;
     case DOUBLE_QUOTE:
-      (void)fprintf(stderr, "rash: Expected closing ‘\"’ character.\n");
+      f_error("rash: Expected closing ‘\"’ character.\n");
       goto error;
     default:
       break;

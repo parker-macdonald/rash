@@ -8,6 +8,7 @@
 #include "interactive.h"
 #include "interpreter/repl.h"
 #include "jobs.h"
+#include "lib/f_error.h"
 #include "line_reader/line_reader.h"
 #include "one_shot.h"
 #include "rashrc.h"
@@ -53,7 +54,7 @@ int main(int argc, char **argv) {
     FILE *file = fopen(argv[1], "r");
 
     if (file == NULL) {
-      (void)fprintf(stderr, "rash: %s: %s\n", argv[1], strerror(errno));
+      f_error("rash: %s: %s\n", argv[1], strerror(errno));
       return 1;
     }
 
@@ -65,13 +66,13 @@ int main(int argc, char **argv) {
   if (argc == 3) {
     // one-shot mode
     if (strcmp(argv[1], "-c") != 0) {
-      (void)fprintf(stderr, HELP_STRING, argv[0]);
+      f_error(HELP_STRING, argv[0]);
       return 1;
     }
 
     return repl(one_shot_reader, argv[2]);
   }
 
-  (void)fprintf(stderr, HELP_STRING, argv[0]);
+  f_error(HELP_STRING, argv[0]);
   return 1;
 }

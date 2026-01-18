@@ -7,6 +7,7 @@
 #include "builtins/find_builtin.h"
 #include "interactive.h"
 #include "lib/search_path.h"
+#include "lib/f_error.h"
 
 extern char **environ;
 
@@ -37,7 +38,7 @@ int builtin_exec(char **const argv) {
     char *argv0 = search_path(argv[1]);
 
     if (argv0 == NULL) {
-      (void)fprintf(stderr, "%s: command not found\n", argv[1]);
+      f_error("%s: command not found\n", argv[1]);
 
       if (interactive) {
         return EXIT_FAILURE;

@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-__attribute__((__format__(__printf__, 1, 2))) char *
-dynamic_sprintf(const char *restrict format, ...) {
+__attribute__((__format__(__printf__, 1, 2)))
+char *dynamic_sprintf(const char *restrict format, ...) {
   va_list ap;
   va_start(ap, format);
 

@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "builtins/builtins.h"
+#include "lib/f_error.h"
 
 static const char *const EXPORT_HELP =
     "Usage: export NAME=VALUE\n"
@@ -12,7 +13,7 @@ static const char *const EXPORT_HELP =
 
 int builtin_export(char **const argv) {
   if (argv[1] == NULL) {
-    (void)fprintf(stderr, "%s\n", EXPORT_HELP);
+    f_error("%s\n", EXPORT_HELP);
     return EXIT_FAILURE;
   }
 
@@ -23,8 +24,8 @@ int builtin_export(char **const argv) {
 
   for (size_t i = 1; argv[i] != NULL; i++) {
     if (argv[i][0] == '=' || argv[i][0] == '\0') {
-      (void)fprintf(
-          stderr, "export: malformed environment variable: ‘%s’\n", argv[i]
+      f_error(
+          "export: malformed environment variable: ‘%s’\n", argv[i]
       );
       continue;
     }

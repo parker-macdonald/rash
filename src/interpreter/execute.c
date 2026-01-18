@@ -13,6 +13,7 @@
 
 #include "builtins/find_builtin.h"
 #include "jobs.h"
+#include "lib/f_error.h"
 #include "lib/search_path.h"
 
 extern char **environ;
@@ -86,7 +87,7 @@ int execute(const execution_context context) {
       char *argv0 = search_path(context.argv[0]);
 
       if (argv0 == NULL) {
-        (void)fprintf(stderr, "%s: command not found\n", context.argv[0]);
+        f_error("%s: command not found\n", context.argv[0]);
         _exit(EXIT_FAILURE);
       }
 
@@ -99,9 +100,9 @@ int execute(const execution_context context) {
     if (status == -1) {
 
       if (errno != ENOENT) {
-        (void)fprintf(stderr, "rash: execve: %s\n", strerror(errno));
+        f_error(stderr, "rash: execve: %s\n", strerror(errno));
       } else {
-        (void)fprintf(stderr, "rash: %s: command not found\n", context.argv[0]);
+        f_error(stderr, "rash: %s: command not found\n", context.argv[0]);
       }
     }
 

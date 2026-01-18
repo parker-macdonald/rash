@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "builtins/builtins.h"
+#include "lib/f_error.h"
 
 static const char *const CD_HELP =
     "Usage: cd [DIR]\n"
@@ -18,7 +19,7 @@ int builtin_cd(char **const argv) {
     const char *home = getenv("HOME");
 
     if (home == NULL) {
-      (void)fprintf(stderr, "cd: HOME is not set\n");
+      f_error("cd: HOME is not set\n");
       return EXIT_FAILURE;
     }
 
@@ -29,7 +30,7 @@ int builtin_cd(char **const argv) {
   }
 
   if (chdir(path) == -1) {
-    (void)fprintf(stderr, "cd: %s: %s\n", path, strerror(errno));
+    f_error("cd: %s: %s\n", path, strerror(errno));
 
     return EXIT_FAILURE;
   }

@@ -6,6 +6,7 @@
 
 #include "builtins/builtins.h"
 #include "builtins/find_builtin.h"
+#include "lib/f_error.h"
 #include "lib/search_path.h"
 
 static const char *const WHICH_HELP =
@@ -16,7 +17,7 @@ static const char *const WHICH_HELP =
 
 int builtin_which(char **argv) {
   if (argv[1] == NULL) {
-    (void)fprintf(stderr, "%s\n", WHICH_HELP);
+    f_error("%s\n", WHICH_HELP);
     return EXIT_FAILURE;
   }
 

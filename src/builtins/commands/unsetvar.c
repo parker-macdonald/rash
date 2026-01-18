@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "builtins/builtins.h"
+#include "lib/f_error.h"
 #include "shell_vars.h"
 
 static const char *const UNSETVAR_HELP = "Usage: unsetvar KEY\n"
@@ -10,7 +11,7 @@ static const char *const UNSETVAR_HELP = "Usage: unsetvar KEY\n"
 
 int builtin_unsetvar(char **argv) {
   if (argv[1] == NULL) {
-    (void)fprintf(stderr, "%s\n", UNSETVAR_HELP);
+    f_error("%s\n", UNSETVAR_HELP);
     return EXIT_FAILURE;
   }
 
@@ -20,8 +21,8 @@ int builtin_unsetvar(char **argv) {
   }
 
   if (var_unset(argv[1]) == 1) {
-    (void)fprintf(
-        stderr, "unsetvar: shell variable ‘%s’ was not declared.\n", argv[1]
+    f_error(
+        "unsetvar: shell variable ‘%s’ was not declared.\n", argv[1]
     );
     return EXIT_FAILURE;
   }

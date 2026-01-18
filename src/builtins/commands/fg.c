@@ -10,6 +10,7 @@
 #include "builtins/builtins.h"
 #include "interpreter/execute.h"
 #include "jobs.h"
+#include "lib/f_error.h"
 
 static const char *const FG_HELP =
     "Usage: fg [JOB_ID]\n"
@@ -32,7 +33,7 @@ int builtin_fg(char **argv) {
     long num = strtol(argv[1], &endptr, 10);
 
     if (errno != 0 || *endptr != '\0' || num < 1 || num > INT_MAX) {
-      (void)fprintf(stderr, "fg: %s: number 1 or greater expected\n", argv[1]);
+      f_error("fg: %s: number 1 or greater expected\n", argv[1]);
       return EXIT_FAILURE;
     }
 
@@ -43,9 +44,9 @@ int builtin_fg(char **argv) {
 
   if (pid == 0) {
     if (job_id == -1) {
-      (void)fprintf(stderr, "fg: no running jobs\n");
+      f_error("fg: no running jobs\n");
     } else {
-      (void)fprintf(stderr, "fg: %d: no such job\n", job_id);
+      f_error("fg: %d: no such job\n", job_id);
     }
 
     return EXIT_FAILURE;
