@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "argv0.h"
 #include "builtins/find_builtin.h"
 #include "file_reader.h"
 #include "interactive.h"
@@ -17,6 +18,8 @@
 #include "strings/version.h"
 
 bool interactive = 0;
+
+char *argv0;
 
 static const char *const HELP_STRING =
     "Usage: %s [-c] [FILENAME]\n"
@@ -32,6 +35,14 @@ int main(int argc, char **argv) {
   sig_handler_init();
   trie_init();
   set_shlvl();
+
+  // this can happen if argv is not populated in a call to execve
+  if (argc == 0) {
+    error_f(HELP_STRING, argv[0]);
+    return 1;
+  }
+
+  argv0 = argv[0];
 
   // no arguments means interactive mode
   if (argc == 1) {

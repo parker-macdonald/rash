@@ -12,6 +12,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "argv0.h"
 #include "execute.h"
 #include "glob.h"
 #include "lex.h"
@@ -273,7 +274,7 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
     }
 
     if ((*tokens)->type == SUBSHELL) {
-      char *argv[4] = {"rash", "-c", (*tokens)->data, NULL};
+      char *argv[4] = {argv0, "-c", (*tokens)->data, NULL};
 
       int null_fd = open("/dev/null", O_RDWR);
 
