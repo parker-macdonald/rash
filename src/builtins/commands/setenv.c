@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "builtins/builtins.h"
-#include "lib/f_error.h"
+#include "lib/error.h"
 
 static const char *const SETENV_HELP =
     "Usage: setenv KEY [VALUE]\n"
@@ -12,7 +12,7 @@ static const char *const SETENV_HELP =
 
 int builtin_setenv(char **argv) {
   if (argv[1] == NULL) {
-    f_error("%s\n", SETENV_HELP);
+    error_f("%s\n", SETENV_HELP);
     return EXIT_FAILURE;
   }
 
@@ -22,7 +22,7 @@ int builtin_setenv(char **argv) {
   }
 
   if (argv[1][0] == '\0' || strchr(argv[1], '=') != NULL) {
-    f_error("setenv: malformed key: ‘%s’\n", argv[1]);
+    error_f("setenv: malformed key: ‘%s’\n", argv[1]);
     return EXIT_FAILURE;
   }
 

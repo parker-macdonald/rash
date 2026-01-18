@@ -15,7 +15,7 @@
 #include "execute.h"
 #include "glob.h"
 #include "lex.h"
-#include "lib/f_error.h"
+#include "lib/error.h"
 #include "lib/vec_types.h"
 #include "lib/vector.h"
 #include "shell_vars.h"
@@ -26,7 +26,7 @@
 
 static bool bad_syntax(const token_t *const tokens) {
   if (!IS_ARGUMENT_TOKENS(tokens[0].type)) {
-    f_error("rash: invalid first token.\n");
+    error_f("rash: invalid first token.\n");
     return true;
   }
 
@@ -43,7 +43,7 @@ static bool bad_syntax(const token_t *const tokens) {
     if (tokens[i].type == STDIN_REDIR) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
-        f_error("rash: expected filename after ‘<’.\n");
+        error_f("rash: expected filename after ‘<’.\n");
         return true;
       }
 
@@ -54,7 +54,7 @@ static bool bad_syntax(const token_t *const tokens) {
     if (tokens[i].type == STDIN_REDIR_STRING) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
-        f_error("rash: expected string after ‘<<<’.\n");
+        error_f("rash: expected string after ‘<<<’.\n");
         return true;
       }
 
@@ -65,7 +65,7 @@ static bool bad_syntax(const token_t *const tokens) {
     if (tokens[i].type == STDOUT_REDIR) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
-        f_error("rash: expected filename after ‘>’.\n");
+        error_f("rash: expected filename after ‘>’.\n");
         return true;
       }
 
@@ -76,7 +76,7 @@ static bool bad_syntax(const token_t *const tokens) {
     if (tokens[i].type == STDOUT_REDIR_APPEND) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
-        f_error("rash: expected filename after ‘>>’.\n");
+        error_f("rash: expected filename after ‘>>’.\n");
         return true;
       }
 
@@ -87,7 +87,7 @@ static bool bad_syntax(const token_t *const tokens) {
     if (tokens[i].type == STDERR_REDIR) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
-        f_error("rash: expected filename after ‘2>’.\n");
+        error_f("rash: expected filename after ‘2>’.\n");
         return true;
       }
 
@@ -98,7 +98,7 @@ static bool bad_syntax(const token_t *const tokens) {
     if (tokens[i].type == STDERR_REDIR_APPEND) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
-        f_error("rash: expected filename after ‘2>>’.\n");
+        error_f("rash: expected filename after ‘2>>’.\n");
         return true;
       }
 
@@ -108,12 +108,12 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == PIPE) {
       if (!IS_ARGUMENT_TOKENS(tokens[i + 1].type)) {
-        f_error("rash: expected command after ‘|’.\n");
+        error_f("rash: expected command after ‘|’.\n");
         return true;
       }
 
       if (tokens[i - 1].type != END_ARG) {
-        f_error("rash: bad placement of ‘|’.\n");
+        error_f("rash: bad placement of ‘|’.\n");
         return true;
       }
 
@@ -121,17 +121,17 @@ static bool bad_syntax(const token_t *const tokens) {
     }
 
     if (stderr_count > 1) {
-      f_error("rash: cannot redirect stderr more than once.\n");
+      error_f("rash: cannot redirect stderr more than once.\n");
       return true;
     }
 
     if (stdout_count > 1) {
-      f_error("rash: cannot redirect stdout more than once.\n");
+      error_f("rash: cannot redirect stdout more than once.\n");
       return true;
     }
 
     if (stdin_count > 1) {
-      f_error("rash: cannot redirect stdin more than once.\n");
+      error_f("rash: cannot redirect stdin more than once.\n");
       return true;
     }
 
@@ -145,12 +145,12 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == LOGICAL_OR) {
       if (!IS_ARGUMENT_TOKENS(tokens[i + 1].type)) {
-        f_error("rash: expected command after ‘||’.\n");
+        error_f("rash: expected command after ‘||’.\n");
         return true;
       }
 
       if (tokens[i - 1].type != END_ARG) {
-        f_error("rash: bad placement of ‘||’.\n");
+        error_f("rash: bad placement of ‘||’.\n");
         return true;
       }
 
@@ -161,12 +161,12 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == LOGICAL_AND) {
       if (!IS_ARGUMENT_TOKENS(tokens[i + 1].type)) {
-        f_error("rash: expected command after ‘&&’.\n");
+        error_f("rash: expected command after ‘&&’.\n");
         return true;
       }
 
       if (tokens[i - 1].type != END_ARG) {
-        f_error("rash: bad placement of ‘&&’.\n");
+        error_f("rash: bad placement of ‘&&’.\n");
         return true;
       }
 
@@ -177,7 +177,7 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == SEMI) {
       if (tokens[i - 1].type != END_ARG) {
-        f_error("rash: bad placement of ‘;’.\n");
+        error_f("rash: bad placement of ‘;’.\n");
         return true;
       }
 
@@ -188,7 +188,7 @@ static bool bad_syntax(const token_t *const tokens) {
 
     if (tokens[i].type == AMP) {
       if (tokens[i - 1].type != END_ARG) {
-        f_error("rash: bad placement of ‘&’.\n");
+        error_f("rash: bad placement of ‘&’.\n");
         return true;
       }
 
@@ -223,7 +223,7 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
       const char *value = getenv((char *)(*tokens)->data);
 
       if (value == NULL) {
-        f_error(
+        error_f(
             "rash: environment variable ‘%s’ does not exist.\n",
             (char *)(*tokens)->data
         );
@@ -242,13 +242,13 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
           string_append(&buffer, home);
           continue;
         }
-        f_error("cannot expand ‘~’, HOME is not set.\n");
+        error_f("cannot expand ‘~’, HOME is not set.\n");
         goto error;
       }
 
       struct passwd *pw = getpwnam((char *)(*tokens)->data);
       if (pw == NULL || pw->pw_dir == NULL) {
-        f_error("rash: cannot access user ‘%s’.\n", (char *)(*tokens)->data);
+        error_f("rash: cannot access user ‘%s’.\n", (char *)(*tokens)->data);
         goto error;
       }
 
@@ -260,7 +260,7 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
       const char *value = var_get((char *)(*tokens)->data);
 
       if (value == NULL) {
-        f_error(
+        error_f(
             "rash: shell variable ‘%s’ does not exist.\n",
             (char *)(*tokens)->data
         );
@@ -278,7 +278,7 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
       int null_fd = open("/dev/null", O_RDWR);
 
       if (null_fd == -1) {
-        f_error("rash: cannot open /dev/null: %s\n", strerror(errno));
+        error_f("rash: cannot open /dev/null: %s\n", strerror(errno));
         goto error;
       }
 
@@ -404,7 +404,7 @@ int evaluate(const token_t *tokens) {
               arg[i] = '*';
             }
           }
-          f_error("rash: nothing matched glob pattern ‘%s’.\n", arg);
+          error_f("rash: nothing matched glob pattern ‘%s’.\n", arg);
           free(arg);
           goto error;
         }
@@ -432,14 +432,14 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        f_error("rash: globing expression cannot be used as a filename.\n");
+        error_f("rash: globing expression cannot be used as a filename.\n");
         free(filename);
         goto error;
       }
 
       int fd = open(filename, O_RDONLY);
       if (fd == -1) {
-        f_error("rash: %s: %s\n", filename, strerror(errno));
+        error_f("rash: %s: %s\n", filename, strerror(errno));
         free(filename);
         goto error;
       }
@@ -470,7 +470,7 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        f_error(
+        error_f(
             "rash: expected string after ‘<<<’, but found glob expression.\n"
         );
         free(str);
@@ -510,14 +510,14 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        f_error("rash: globing expression cannot be used as a filename.\n");
+        error_f("rash: globing expression cannot be used as a filename.\n");
         free(filename);
         goto error;
       }
 
       int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
       if (fd == -1) {
-        f_error("rash: %s: %s\n", filename, strerror(errno));
+        error_f("rash: %s: %s\n", filename, strerror(errno));
 
         free(filename);
         goto error;
@@ -542,14 +542,14 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        f_error("rash: globing expression cannot be used as a filename.\n");
+        error_f("rash: globing expression cannot be used as a filename.\n");
         free(filename);
         goto error;
       }
 
       int fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
       if (fd == -1) {
-        f_error("rash: %s: %s\n", filename, strerror(errno));
+        error_f("rash: %s: %s\n", filename, strerror(errno));
 
         free(filename);
         goto error;
@@ -574,14 +574,14 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        f_error("rash: globing expression cannot be used as a filename.\n");
+        error_f("rash: globing expression cannot be used as a filename.\n");
         free(filename);
         goto error;
       }
 
       int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
       if (fd == -1) {
-        f_error("rash: %s: %s\n", filename, strerror(errno));
+        error_f("rash: %s: %s\n", filename, strerror(errno));
 
         free(filename);
         goto error;
@@ -606,14 +606,14 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        f_error("rash: globing expression cannot be used as a filename.\n");
+        error_f("rash: globing expression cannot be used as a filename.\n");
         free(filename);
         goto error;
       }
 
       int fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
       if (fd == -1) {
-        f_error("rash: %s: %s\n", filename, strerror(errno));
+        error_f("rash: %s: %s\n", filename, strerror(errno));
         free(filename);
 
         goto error;

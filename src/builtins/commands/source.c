@@ -6,7 +6,7 @@
 #include "builtins/builtins.h"
 #include "file_reader.h"
 #include "interpreter/repl.h"
-#include "lib/f_error.h"
+#include "lib/error.h"
 
 static const char *const SOURCE_HELP =
     "Usage: source FILENAME\n"
@@ -17,7 +17,7 @@ int builtin_source(char **argv) {
   static int recursion_count = 0;
 
   if (argv[1] == NULL) {
-    f_error("%s\n", SOURCE_HELP);
+    error_f("%s\n", SOURCE_HELP);
     return EXIT_FAILURE;
   }
 
@@ -29,7 +29,7 @@ int builtin_source(char **argv) {
   FILE *file = fopen(argv[1], "r");
 
   if (file == NULL) {
-    f_error("source: %s: %s\n", argv[1], strerror(errno));
+    error_f("source: %s: %s\n", argv[1], strerror(errno));
     return EXIT_FAILURE;
   }
 
@@ -37,7 +37,7 @@ int builtin_source(char **argv) {
   file_reader_init(&reader_data, file);
 
   if (recursion_count > 10000) {
-    f_error("rash: source... source... source... souce...\n");
+    error_f("rash: source... source... source... souce...\n");
     return EXIT_FAILURE;
   }
 

@@ -6,7 +6,7 @@
 #include <string.h>
 
 #include "builtins/builtins.h"
-#include "lib/f_error.h"
+#include "lib/error.h"
 
 static const char *const EXIT_HELP =
     "Usage: exit [STATUS]\n"
@@ -28,7 +28,7 @@ int builtin_exit(char **const argv) {
   long status = strtol(argv[1], &endptr, 10);
 
   if (errno != 0 || *endptr != '\0' || status < INT_MIN || status > INT_MAX) {
-    f_error("exit: %s: number expected\n", argv[1]);
+    error_f("exit: %s: number expected\n", argv[1]);
     exit(1);
   }
 

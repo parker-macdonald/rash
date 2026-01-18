@@ -3,14 +3,14 @@
 #include <string.h>
 
 #include "builtins/builtins.h"
-#include "lib/f_error.h"
+#include "lib/error.h"
 
 static const char *const UNSETENV_HELP = "Usage: unsetenv KEY\n"
                                          "Remove the environment variable KEY.";
 
 int builtin_unsetenv(char **argv) {
   if (argv[1] == NULL) {
-    f_error("%s\n", UNSETENV_HELP);
+    error_f("%s\n", UNSETENV_HELP);
     return EXIT_FAILURE;
   }
 
@@ -20,12 +20,12 @@ int builtin_unsetenv(char **argv) {
   }
 
   if (argv[1][0] == '\0' || strchr(argv[1], '=') != NULL) {
-    f_error("unsetenv: malformed key: ‘%s’\n", argv[1]);
+    error_f("unsetenv: malformed key: ‘%s’\n", argv[1]);
     return EXIT_FAILURE;
   }
 
   if (getenv(argv[1]) == NULL) {
-    f_error("unsetenv: environment variable ‘%s’ was not set.\n", argv[1]);
+    error_f("unsetenv: environment variable ‘%s’ was not set.\n", argv[1]);
     return EXIT_FAILURE;
   }
 

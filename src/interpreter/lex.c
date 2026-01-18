@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "lib/f_error.h"
+#include "lib/error.h"
 #include "lib/vector.h"
 
 enum lexer_state {
@@ -162,7 +162,7 @@ token_t *lex(const uint8_t *source) {
               }
 
               if (source[i] == '\0') {
-                f_error("rash: expected closing ‘)’ character.\n");
+                error_f("rash: expected closing ‘)’ character.\n");
                 goto error;
               }
 
@@ -171,7 +171,7 @@ token_t *lex(const uint8_t *source) {
             }
 
             if (subshell_len == 0) {
-              f_error("rash: subshell cannot be empty.\n");
+              error_f("rash: subshell cannot be empty.\n");
               goto error;
             }
 
@@ -205,7 +205,7 @@ token_t *lex(const uint8_t *source) {
               }
 
               if (source[i] == '\0') {
-                f_error("rash: expected closing ‘}’ character.\n");
+                error_f("rash: expected closing ‘}’ character.\n");
                 goto error;
               }
 
@@ -214,7 +214,7 @@ token_t *lex(const uint8_t *source) {
             }
 
             if (env_len == 0) {
-              f_error("rash: cannot expand empty enviroment variable.\n");
+              error_f("rash: cannot expand empty enviroment variable.\n");
               goto error;
             }
 
@@ -285,7 +285,7 @@ token_t *lex(const uint8_t *source) {
             }
 
             if (source[i] == '\0') {
-              f_error("rash: expected closing ‘}’ character.\n");
+              error_f("rash: expected closing ‘}’ character.\n");
               goto error;
             }
 
@@ -294,7 +294,7 @@ token_t *lex(const uint8_t *source) {
           }
 
           if (var_len == 0) {
-            f_error("rash: cannot expand empty shell variable.\n");
+            error_f("rash: cannot expand empty shell variable.\n");
             goto error;
           }
 
@@ -398,13 +398,13 @@ token_t *lex(const uint8_t *source) {
 
   switch (state) {
     case SINGLE_LITERAL:
-      f_error("rash: Expected character after ‘\\’.\n");
+      error_f("rash: Expected character after ‘\\’.\n");
       goto error;
     case SINGLE_QUOTE:
-      f_error("rash: Expected closing ‘'’ character.\n");
+      error_f("rash: Expected closing ‘'’ character.\n");
       goto error;
     case DOUBLE_QUOTE:
-      f_error("rash: Expected closing ‘\"’ character.\n");
+      error_f("rash: Expected closing ‘\"’ character.\n");
       goto error;
     default:
       break;
