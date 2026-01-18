@@ -18,8 +18,6 @@ typedef struct job {
   struct job *p_next;
 } job_t;
 
-// the pid of rash (the root process)
-extern pid_t root_pid;
 // the file descriptor of the controlling tty
 extern int tty_fd;
 

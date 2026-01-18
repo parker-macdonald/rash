@@ -33,7 +33,6 @@ static const char *const HELP_STRING =
     "rash will run 'echo hello', then exit.\n";
 
 int main(int argc, char **argv) {
-  sig_handler_init();
   trie_init();
   set_shlvl();
 
@@ -48,6 +47,8 @@ int main(int argc, char **argv) {
   // no arguments means interactive mode
   if (argc == 1) {
     interactive = true;
+    // interactive must be set before calling sig_handler_init
+    sig_handler_init();
     load_rashrc();
 
     return repl(readline, NULL);
@@ -73,6 +74,7 @@ int main(int argc, char **argv) {
 
     struct file_reader reader_data;
     file_reader_init(&reader_data, file);
+    sig_handler_init();
     return repl(file_reader_read, &reader_data);
   }
 

@@ -28,7 +28,7 @@ static job_t *root_job = NULL;
 static job_t *last_job = NULL;
 
 pid_t root_pid;
-int tty_fd;
+int tty_fd = -1;
 
 // this is used for the line reader to print a ^C on sigint
 volatile sig_atomic_t recv_sigint = 0;
@@ -54,15 +54,17 @@ void sig_handler_init(void) {
   (void)signal(SIGTSTP, SIG_IGN);
   (void)signal(SIGTTOU, SIG_IGN);
 
-  tty_fd = open("/dev/tty", O_RDWR, 0666);
-  root_pid = getpid();
-
-  if (tty_fd != -1 && isatty(tty_fd)) {
-    setpgid(0, root_pid);
-    tcsetpgrp(tty_fd, root_pid);
-  } else {
-    tty_fd = -1;
-    error_f("rash: cannot access /dev/tty. Job control is unavailable.\n");
+  if (interactive) {
+    tty_fd = open("/dev/tty", O_RDWR, 0666);
+    root_pid = getpid();
+  
+    if (tty_fd != -1 && isatty(tty_fd)) {
+      setpgid(0, root_pid);
+      tcsetpgrp(tty_fd, root_pid);
+    } else {
+      tty_fd = -1;
+      error_f("rash: cannot access /dev/tty. Job control is unavailable.\n");
+    }
   }
 }
 
