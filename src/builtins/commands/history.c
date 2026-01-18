@@ -5,8 +5,8 @@
 #include <string.h>
 
 #include "builtins/builtins.h"
+#include "lib/f_error.h"
 #include "line_reader/line_reader.h"
-#include <lib/f_error.h>
 
 static const char *const HISTORY_HELP =
     "Usage: history [-c] [COUNT]\n"

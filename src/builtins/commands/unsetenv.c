@@ -25,9 +25,7 @@ int builtin_unsetenv(char **argv) {
   }
 
   if (getenv(argv[1]) == NULL) {
-    f_error(
-        "unsetenv: environment variable ‘%s’ was not set.\n", argv[1]
-    );
+    f_error("unsetenv: environment variable ‘%s’ was not set.\n", argv[1]);
     return EXIT_FAILURE;
   }
 

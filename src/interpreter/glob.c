@@ -7,9 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "lib/f_error.h"
 #include "lib/vec_types.h"
 #include "lib/vector.h"
-#include "lib/f_error.h"
 
 struct queue_node {
   struct queue_node *p_next;

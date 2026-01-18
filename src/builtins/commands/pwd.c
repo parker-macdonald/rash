@@ -34,9 +34,7 @@ int builtin_pwd(char **argv) {
     char *temp_cwd = realloc(cwd, cwd_size);
 
     if (temp_cwd == NULL) {
-      f_error(
-          "pwd: out of memory, current working directory too long.\n"
-      );
+      f_error("pwd: out of memory, current working directory too long.\n");
       free(cwd);
       return EXIT_FAILURE;
     }

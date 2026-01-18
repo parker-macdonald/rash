@@ -6,8 +6,8 @@
 #include "builtins/builtins.h"
 #include "builtins/find_builtin.h"
 #include "interactive.h"
-#include "lib/search_path.h"
 #include "lib/f_error.h"
+#include "lib/search_path.h"
 
 extern char **environ;
 

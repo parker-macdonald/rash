@@ -241,9 +241,7 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
 
       struct passwd *pw = getpwnam((char *)(*tokens)->data);
       if (pw == NULL || pw->pw_dir == NULL) {
-        f_error(
-            "rash: cannot access user ‘%s’.\n", (char *)(*tokens)->data
-        );
+        f_error("rash: cannot access user ‘%s’.\n", (char *)(*tokens)->data);
         goto error;
       }
 
@@ -273,9 +271,7 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
       int read_null_fd = open("/dev/null", O_RDONLY);
 
       if (read_null_fd == -1) {
-        f_error(
-            "rash: cannot open /dev/null: %s\n", strerror(errno)
-        );
+        f_error("rash: cannot open /dev/null: %s\n", strerror(errno));
         goto error;
       }
 
@@ -285,9 +281,7 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
         if (close(read_null_fd) == -1) {
           perror("rash: close");
         }
-        f_error(
-            "rash: cannot open /dev/null: %s\n", strerror(errno)
-        );
+        f_error("rash: cannot open /dev/null: %s\n", strerror(errno));
         goto error;
       }
 
@@ -403,9 +397,7 @@ int evaluate(const token_t *tokens) {
               arg[i] = '*';
             }
           }
-          f_error(
-              "rash: nothing matched glob pattern ‘%s’.\n", arg
-          );
+          f_error("rash: nothing matched glob pattern ‘%s’.\n", arg);
           free(arg);
           goto error;
         }
@@ -433,9 +425,7 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        f_error(
-            "rash: globing expression cannot be used as a filename.\n"
-        );
+        f_error("rash: globing expression cannot be used as a filename.\n");
         free(filename);
         goto error;
       }
@@ -513,9 +503,7 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        f_error(
-            "rash: globing expression cannot be used as a filename.\n"
-        );
+        f_error("rash: globing expression cannot be used as a filename.\n");
         free(filename);
         goto error;
       }
@@ -547,9 +535,7 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        f_error(
-            "rash: globing expression cannot be used as a filename.\n"
-        );
+        f_error("rash: globing expression cannot be used as a filename.\n");
         free(filename);
         goto error;
       }
@@ -581,9 +567,7 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        f_error(
-            "rash: globing expression cannot be used as a filename.\n"
-        );
+        f_error("rash: globing expression cannot be used as a filename.\n");
         free(filename);
         goto error;
       }
@@ -615,9 +599,7 @@ int evaluate(const token_t *tokens) {
         goto error;
       }
       if (needs_globbing) {
-        f_error(
-            "rash: globing expression cannot be used as a filename.\n"
-        );
+        f_error("rash: globing expression cannot be used as a filename.\n");
         free(filename);
         goto error;
       }
