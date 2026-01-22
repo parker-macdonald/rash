@@ -11,6 +11,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "alias.h"
 #include "builtins/find_builtin.h"
 #include "jobs.h"
 #include "lib/error.h"
@@ -21,6 +22,28 @@ extern char **environ;
 int execute(execution_context context) {
   if (context.argv == NULL) {
     return EXIT_SUCCESS;
+  }
+
+  alias_or_none alias = alias_get(context.argv[0]);
+
+  if (alias.has_value) {
+    size_t argv_len;
+    for (argv_len = 0; context.argv[argv_len] != NULL; argv_len++)
+      ;
+
+    char **new_argv = malloc((argv_len + alias.value.length) * sizeof(char *));
+
+    for (size_t i = 0; i < alias.value.length; i++) {
+      new_argv[i] = alias.value.value[i];
+    }
+
+    memcpy(
+        new_argv + alias.value.length,
+        context.argv + 1,
+        argv_len * sizeof(char *)
+    );
+
+    context.argv = new_argv;
   }
 
   builtin_t builtin = find_builtin(context.argv[0]);
@@ -88,16 +111,7 @@ int execute(execution_context context) {
         _exit(EXIT_FAILURE);
       }
 
-      size_t argv_len;
-      for (argv_len = 0; context.argv[argv_len] != NULL; argv_len++)
-        ;
-      argv_len++;
-
-      char **new_argv = malloc(argv_len * sizeof(char *));
-      memcpy(new_argv, context.argv, argv_len * sizeof(char *));
-      new_argv[0] = argv0;
-
-      context.argv = new_argv;
+      context.argv[0] = argv0;
     }
 
     int status = execve(context.argv[0], context.argv, environ);
@@ -133,29 +147,34 @@ int execute(execution_context context) {
       return -1;
     }
 
+    if (alias.has_value) {
+      free(context.argv);
+    }
+
     return EXIT_FAILURE;
   }
   // parent process
-  else {
-    if (context.stderr_fd != -1) {
-      close(context.stderr_fd);
-    }
-    if (context.stdin_fd != -1) {
-      close(context.stdin_fd);
-    }
-    if (context.stdout_fd != -1) {
-      close(context.stdout_fd);
-    }
+  if (alias.has_value) {
+    free(context.argv);
+  }
+  if (context.stderr_fd != -1) {
+    close(context.stderr_fd);
+  }
+  if (context.stdin_fd != -1) {
+    close(context.stdin_fd);
+  }
+  if (context.stdout_fd != -1) {
+    close(context.stdout_fd);
+  }
 
-    if (context.flags & EC_NO_WAIT) {
-      return pid;
-    }
+  if (context.flags & EC_NO_WAIT) {
+    return pid;
+  }
 
-    if (context.flags & EC_BACKGROUND_JOB) {
-      register_job(pid, JOB_RUNNING);
+  if (context.flags & EC_BACKGROUND_JOB) {
+    register_job(pid, JOB_RUNNING);
 
-      return EXIT_SUCCESS;
-    }
+    return EXIT_SUCCESS;
   }
 
   return wait_process(pid);

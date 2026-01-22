@@ -87,6 +87,7 @@ void trie_init(void) {
   trie_insert("unsetenv", &builtin_unsetenv);
   trie_insert("exec", &builtin_exec);
   trie_insert("eval", &builtin_eval);
+  trie_insert("alias", &builtin_alias);
 }
 
 static TrieNode *find_node(const char *str, size_t str_len) {

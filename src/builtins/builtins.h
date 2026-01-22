@@ -45,4 +45,6 @@ int builtin_exec(char **argv);
 
 int builtin_eval(char **argv);
 
+int builtin_alias(char **argv);
+
 #endif
