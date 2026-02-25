@@ -20,6 +20,7 @@ static const char *const HELP_STRING =
     "  setvar: set an environment variable.\n"
     "  setvar: set a shell variable.\n"
     "  source: read and execute the commands from a specified file.\n"
+    "  time: see how long a command takes to run.\n"
     "  true: set the status code to 0.\n"
     "  unsetenv: remove an environment variable.\n"
     "  unsetvar: remove a shell variable.\n"
