@@ -5,8 +5,8 @@
 #include <string.h>
 
 #include "builtins/builtins.h"
+#include "interpreter/lex.h"
 #include "lib/error.h"
-#include "lib/vec_types.h"
 
 static const char *const ALIAS_HELP =
     "Usage: alias [-p] [NAME=VALUE...]\n"
@@ -33,7 +33,7 @@ int builtin_alias(char **const argv) {
 
   for (size_t i = 1; argv[i] != NULL; i++) {
     if (argv[i][0] == '=' || argv[i][0] == '\0') {
-      error_f("export: malformed environment variable: ‘%s’\n", argv[i]);
+      error_f("export: malformed alias: ‘%s’\n", argv[i]);
       continue;
     }
 
@@ -41,17 +41,13 @@ int builtin_alias(char **const argv) {
 
     if (separator) {
       *separator = '\0';
-      char *arg = strtok(separator + 1, " ");
-      strings_t args;
-      VECTOR_INIT(args);
+      token_t *tokens = lex((uint8_t *)separator);
 
-      while (arg != NULL) {
-        VECTOR_PUSH(args, arg);
-
-        arg = strtok(NULL, " ");
+      if (tokens == NULL) {
+        return EXIT_FAILURE;
       }
 
-      alias_set(argv[i], args.data, args.length);
+      alias_set(argv[i], tokens);
     } else {
       error_f("alias: expected ‘=’ after alias name (%s).\n", argv[i]);
     }

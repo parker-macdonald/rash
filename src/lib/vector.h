@@ -43,8 +43,8 @@ VECTOR_INIT(my_floats);
 VECTOR_PUSH(my_floats, 1.2f); // adds 1.2f at position zero in the vector
 ```
 
-VECTOR_POP(vector): removes the last value from the vector, and returns the item
-removed.
+VECTOR_POP(vector, .0f): removes the last value from the vector, and returns the item
+removed or the second argument if the vector is empty.
 
 e.g.
 ```
@@ -53,7 +53,7 @@ VECTOR_INIT(my_floats);
 
 VECTOR_PUSH(my_floats, 1.2f);
 
-float last_item = VECTOR_POP(my_floats); // vector is now empty
+float last_item = VECTOR_POP(my_floats, .0f); // vector is now empty
 last_item == 1.2f; // true
 ```
 
@@ -159,10 +159,9 @@ printf("%s", string.data);
     (vector).length++;                                                         \
   } while (0)
 
-// no length checks are done for this macro, always check the length is not zero
-// before using vector_pop
-#define VECTOR_POP(vector)                                                     \
-  ((vector).length == 0 ? NULL : (vector).data[--(vector).length])
+// returns fail if the vector is empty
+#define VECTOR_POP(vector, fail)                                               \
+  ((vector).length == 0 ? fail : (vector).data[--(vector).length])
 
 #define VECTOR_AT(vector, index) (vector).data[index]
 

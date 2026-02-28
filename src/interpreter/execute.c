@@ -24,28 +24,6 @@ int execute(execution_context context) {
     return EXIT_SUCCESS;
   }
 
-  alias_or_none alias = alias_get(context.argv[0]);
-
-  if (alias.has_value) {
-    size_t argv_len;
-    for (argv_len = 0; context.argv[argv_len] != NULL; argv_len++)
-      ;
-
-    char **new_argv = malloc((argv_len + alias.value.length) * sizeof(char *));
-
-    for (size_t i = 0; i < alias.value.length; i++) {
-      new_argv[i] = alias.value.value[i];
-    }
-
-    memcpy(
-        new_argv + alias.value.length,
-        context.argv + 1,
-        argv_len * sizeof(char *)
-    );
-
-    context.argv = new_argv;
-  }
-
   builtin_t builtin = find_builtin(context.argv[0]);
 
   bool is_io_redirected = context.stderr_fd != -1 || context.stdin_fd != -1 ||
@@ -147,16 +125,9 @@ int execute(execution_context context) {
       return -1;
     }
 
-    if (alias.has_value) {
-      free(context.argv);
-    }
-
     return EXIT_FAILURE;
   }
   // parent process
-  if (alias.has_value) {
-    free(context.argv);
-  }
   if (context.stderr_fd != -1) {
     close(context.stderr_fd);
   }

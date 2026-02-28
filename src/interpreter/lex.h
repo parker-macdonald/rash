@@ -49,6 +49,9 @@ typedef enum {
   ((x) == STRING || (x) == GLOB_WILDCARD || (x) == ENV_EXPANSION ||            \
    (x) == VAR_EXPANSION || (x) == TILDE || (x) == SUBSHELL)
 
+#define IS_TERMINATING_TOKEN(x)                                                \
+  ((x) == LOGICAL_AND || (x) == LOGICAL_OR || (x) == SEMI || (x) == PIPE)
+
 typedef struct {
   token_type_t type;
   void *data;

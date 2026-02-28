@@ -12,6 +12,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "alias.h"
 #include "argv0.h"
 #include "execute.h"
 #include "glob.h"
@@ -24,6 +25,42 @@
 #define READ_ARG                                                               \
   while (tokens[i].type != END_ARG)                                            \
   i++
+
+token_t *alias_pass(const token_t *tokens) {
+  VECTOR(token_t) new_tokens;
+  VECTOR_INIT(new_tokens);
+
+  if (tokens[0].type == STRING) {
+    token_t *alias = alias_get((char *)tokens->data);
+
+    if (alias != NULL) {
+      for (size_t i = 0; alias[i].type != END; i++) {
+        VECTOR_PUSH(new_tokens, alias[i]);
+      }
+      free(alias);
+    } else {
+      VECTOR_PUSH(new_tokens, tokens[0]);
+    }
+  }
+
+  for (size_t i = 2; tokens[i].type != END; i++) {
+    if (IS_TERMINATING_TOKEN(tokens[i - 1].type)) {
+      token_t *alias = alias_get((char *)tokens->data);
+
+      if (alias != NULL) {
+        for (size_t j = 0; alias[j].type != END; j++) {
+          VECTOR_PUSH(new_tokens, alias[j]);
+        }
+        free(alias);
+        continue;
+      }
+    }
+    
+    VECTOR_PUSH(new_tokens, tokens[0]);
+  }
+
+  return new_tokens.data;
+}
 
 static bool bad_syntax(const token_t *const tokens) {
   if (!IS_ARGUMENT_TOKENS(tokens[0].type)) {
