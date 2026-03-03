@@ -10,6 +10,7 @@
 
 #include "jobs.h"
 #include "lib/ansi.h"
+#include "lib/error.h"
 
 unsigned short get_terminal_width(void) {
   struct winsize win;
@@ -61,6 +62,7 @@ int getch(void) {
   struct termios newt = {0};
   uint8_t byte = 0;
   ssize_t nread;
+  int saved_errno;
 
   tcgetattr(STDIN_FILENO, &oldt);
   newt = oldt;
@@ -79,6 +81,7 @@ int getch(void) {
       continue;
     }
     if (errno != EINTR) {
+      saved_errno = errno;
       break;
     }
     if (recv_sigint == 1) {
@@ -98,7 +101,7 @@ int getch(void) {
   }
 
   if (nread == -1) {
-    perror("read");
+    error_f("read: %s\n", strerror(saved_errno));
     return ASCII_END_OF_TRANSMISSION;
   }
 

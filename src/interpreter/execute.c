@@ -40,8 +40,8 @@ int execute(execution_context context) {
 
   // child
   if (pid == 0) {
-    if (tty_fd != -1 && (!(context.flags & EC_BACKGROUND_JOB) ||
-                         !(context.flags & EC_DONT_REGISTER_FOREGROUND))) {
+    if (tty_fd != -1 && !((context.flags & EC_BACKGROUND_JOB) ||
+                          (context.flags & EC_DONT_REGISTER_FOREGROUND))) {
       pid_t new_pid = getpid();
 
       int status = setpgid(new_pid, new_pid);
