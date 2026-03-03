@@ -33,6 +33,12 @@ int tty_fd = -1;
 // this is used for the line reader to print a ^C on sigint
 volatile sig_atomic_t recv_sigint = 0;
 
+void kill_all_children(void) {
+  if (killpg(0, SIGTERM) != 0) {
+    perror("killpg");
+  }
+}
+
 static void sigint_handler(int sig) {
   (void)sig;
   if (!interactive) {
@@ -53,6 +59,9 @@ void sig_handler_init(void) {
   sigaction(SIGINT, &sigint_act, NULL);
   (void)signal(SIGTSTP, SIG_IGN);
   (void)signal(SIGTTOU, SIG_IGN);
+
+  int atexit_return = atexit(kill_all_children);
+  assert(atexit_return == 0);
 
   if (interactive) {
     tty_fd = open("/dev/tty", O_RDWR, 0666);

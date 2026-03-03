@@ -76,6 +76,8 @@ int execute(execution_context context) {
     }
 
     if (builtin != NULL) {
+      // using _exit instead of exit so we don't trigger the atexit function
+      // which kills all child processes.
       _exit(builtin(context.argv));
     }
 
@@ -85,6 +87,8 @@ int execute(execution_context context) {
 
       if (argv0 == NULL) {
         error_f("%s: command not found\n", context.argv[0]);
+        // using _exit instead of exit so we don't trigger the atexit function
+        // which kills all child processes.
         _exit(EXIT_FAILURE);
       }
 
@@ -111,8 +115,8 @@ int execute(execution_context context) {
       }
     }
 
-    // apparently you're supposed to use _exit() inside of a child process
-    // instead of exit()
+    // using _exit instead of exit so we don't trigger the atexit function
+    // which kills all child processes.
     _exit(EXIT_FAILURE);
   }
   // error forking

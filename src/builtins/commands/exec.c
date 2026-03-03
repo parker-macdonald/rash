@@ -30,7 +30,7 @@ int builtin_exec(char **const argv) {
   builtin_t builtin = find_builtin(argv[1]);
 
   if (builtin != NULL) {
-    _exit(builtin(&argv[1]));
+    exit(builtin(&argv[1]));
   }
 
   // search path for executable
@@ -43,7 +43,7 @@ int builtin_exec(char **const argv) {
       if (interactive) {
         return EXIT_FAILURE;
       }
-      _exit(EXIT_FAILURE);
+      exit(EXIT_FAILURE);
     }
 
     free(argv[1]);
@@ -60,5 +60,5 @@ int builtin_exec(char **const argv) {
     return EXIT_FAILURE;
   }
 
-  _exit(EXIT_FAILURE);
+  exit(EXIT_FAILURE);
 }
