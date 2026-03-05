@@ -28,8 +28,8 @@ int builtin_time(char **argv) {
   // sysconf can only fail if name is invalid and name is always valid so...
   assert(ticks_per_sec != -1);
 
-  struct tms unused;
-  clock_t then = times(&unused);
+  struct tms tms_then;
+  clock_t then = times(&tms_then);
   // times can only fail if the buffer is outside of our address space, which it
   // isn't
   assert(then != -1);
@@ -62,27 +62,20 @@ int builtin_time(char **argv) {
   // isn't
   assert(now != -1);
 
-  long elapsed_sec = (now - then) / ticks_per_sec;
-  long elapsed_subsec = (now - then) % ticks_per_sec * 1000 / ticks_per_sec;
-
-  long user_time_sec = tms_now.tms_cutime / ticks_per_sec;
-  long user_time_subsec =
-      tms_now.tms_cutime % ticks_per_sec * 1000 / ticks_per_sec;
-
-  long sys_time_sec = tms_now.tms_cstime / ticks_per_sec;
-  long sys_time_subsec =
-      tms_now.tms_cstime % ticks_per_sec * 1000 / ticks_per_sec;
+  clock_t elapsed = now - then;
+  clock_t user = tms_now.tms_cutime - tms_then.tms_cutime;
+  clock_t sys = tms_now.tms_cstime - tms_then.tms_cstime;
 
   printf(
       "user time: %ld.%03lds\n"
       "sys time: %ld.%03lds\n"
       "elapsed: %ld.%03lds\n",
-      user_time_sec,
-      user_time_subsec,
-      sys_time_sec,
-      sys_time_subsec,
-      elapsed_sec,
-      elapsed_subsec
+      user / ticks_per_sec,
+      user % ticks_per_sec * 1000 / ticks_per_sec,
+      sys / ticks_per_sec,
+      sys % ticks_per_sec * 1000 / ticks_per_sec,
+      elapsed / ticks_per_sec,
+      elapsed % ticks_per_sec * 1000 / ticks_per_sec
   );
 
   return status;
