@@ -62,20 +62,19 @@ int builtin_time(char **argv) {
   // isn't
   assert(now != -1);
 
-  clock_t elapsed = now - then;
-  clock_t user = tms_now.tms_cutime - tms_then.tms_cutime;
-  clock_t sys = tms_now.tms_cstime - tms_then.tms_cstime;
+  double elapsed = (double)(now - then) / (double)ticks_per_sec;
+  double user = (double)(tms_now.tms_cutime - tms_then.tms_cutime) /
+                (double)ticks_per_sec;
+  double sys = (double)(tms_now.tms_cstime - tms_then.tms_cstime) /
+               (double)ticks_per_sec;
 
   printf(
-      "user time: %ld.%03lds\n"
-      "sys time: %ld.%03lds\n"
-      "elapsed: %ld.%03lds\n",
-      user / ticks_per_sec,
-      user % ticks_per_sec * 1000 / ticks_per_sec,
-      sys / ticks_per_sec,
-      sys % ticks_per_sec * 1000 / ticks_per_sec,
-      elapsed / ticks_per_sec,
-      elapsed % ticks_per_sec * 1000 / ticks_per_sec
+      "user time: %.3fs\n"
+      "sys time: %.3fs\n"
+      "elapsed: %.3fs\n",
+      user,
+      sys,
+      elapsed
   );
 
   return status;

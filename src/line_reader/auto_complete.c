@@ -7,6 +7,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifndef _DIRENT_HAVE_D_TYPE
+  #include <sys/stat.h>
+#endif
+
 #include "builtins/find_builtin.h"
 #include "lib/vec_types.h"
 #include "lib/vector.h"
@@ -55,6 +59,11 @@ void get_file_matches(strings_t *matches, const char *word, size_t word_len) {
   if (dir == NULL) {
     return;
   }
+
+#ifndef _DIRENT_HAVE_D_TYPE
+  int fd = dirfd(dir);
+  assert(fd != -1);
+#endif
 
   struct dirent *ent;
 
