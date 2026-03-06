@@ -32,7 +32,7 @@ int builtin_time(char **argv) {
   clock_t then = times(&tms_then);
   // times can only fail if the buffer is outside of our address space, which it
   // isn't
-  assert(then != -1);
+  assert(then != (clock_t)-1);
 
   execution_context ec = {
       .argv = argv + 1,
@@ -60,7 +60,7 @@ int builtin_time(char **argv) {
   clock_t now = times(&tms_now);
   // times can only fail if the buffer is outside of our address space, which it
   // isn't
-  assert(now != -1);
+  assert(now != (clock_t)-1);
 
   double elapsed = (double)(now - then) / (double)ticks_per_sec;
   double user = (double)(tms_now.tms_cutime - tms_then.tms_cutime) /
