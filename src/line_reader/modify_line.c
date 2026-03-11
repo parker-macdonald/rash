@@ -75,30 +75,7 @@ void line_copy(buf_t *dest, const buf_t *const src) {
   }
 }
 
-// calculate the next power of 2 given a number n, this is optimized for 64 bit
-// and 32 bit cpus, before falling back onto a generic implementation
 static inline size_t next_pow_2(size_t n) {
-  if (sizeof(size_t) == 8) {
-    n--;
-    n |= n >> 1;
-    n |= n >> 2;
-    n |= n >> 4;
-    n |= n >> 8;
-    n |= n >> 16;
-    n |= n >> 32;
-    n++;
-    return n;
-  }
-  if (sizeof(size_t) == 4) {
-    n--;
-    n |= n >> 1;
-    n |= n >> 2;
-    n |= n >> 4;
-    n |= n >> 8;
-    n |= n >> 16;
-    n++;
-    return n;
-  }
   size_t p = 1;
   while (p < n) {
     p *= 2;
