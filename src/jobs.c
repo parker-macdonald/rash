@@ -34,9 +34,26 @@ int tty_fd = -1;
 volatile sig_atomic_t recv_sigint = 0;
 
 void kill_all_children(void) {
-  if (killpg(0, SIGTERM) != 0) {
-    perror("killpg");
+  job_t *current = root_job;
+
+  while (current != NULL) {
+    switch (current->state) {
+      case JOB_STOPPED:
+        kill(current->pid, SIGCONT);
+        kill(current->pid, SIGHUP);
+        break;
+      case JOB_RUNNING:
+        kill(current->pid, SIGHUP);
+        break;
+      // this is to get clang to stop complaining
+      default:
+        break;
+    }
+
+    current = current->p_next;
   }
+
+  clean_jobs();
 }
 
 static void sigint_handler(int sig) {
