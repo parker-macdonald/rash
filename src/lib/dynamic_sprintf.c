@@ -1,30 +1,39 @@
 #include "dynamic_sprintf.h"
 
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 __attribute__((__format__(__printf__, 1, 2)))
 char *dynamic_sprintf(const char *restrict format, ...) {
-  va_list ap;
-  va_start(ap, format);
+  char *buffer;
+  size_t size;
 
-  va_list ap2;
-  va_copy(ap2, ap);
-  int size = vsnprintf(NULL, 0, format, ap2);
-  va_end(ap2);
+  FILE *stream = open_memstream(&buffer, &size);
 
-  if (size == -1) {
-    va_end(ap);
+  if (stream == NULL) {
     return NULL;
   }
 
-  char *buffer = malloc((size_t)size + 1);
+  va_list ap;
+  va_start(ap, format);
+  
+  int result = vfprintf(stream, format, ap);
 
-  int new_size = vsnprintf(buffer, (size_t)size + 1, format, ap);
   va_end(ap);
 
-  if (size != new_size) {
+  if (result == -1) {
+    int saved_errno = errno;
+
+    if (fclose(stream) != 0) {
+      errno = saved_errno;
+    }
+    free(buffer);
+    return NULL;
+  }
+
+  if (fclose(stream) != 0) {
     free(buffer);
     return NULL;
   }
