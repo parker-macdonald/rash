@@ -43,8 +43,8 @@ VECTOR_INIT(my_floats);
 VECTOR_PUSH(my_floats, 1.2f); // adds 1.2f at position zero in the vector
 ```
 
-VECTOR_POP(vector): removes the last value from the vector, and returns the item
-removed.
+VECTOR_POP(vector, error): removes the last value from the vector, and returns the item
+removed. if the vector is empty, the value of `error` is returned instead.
 
 e.g.
 ```
@@ -53,7 +53,7 @@ VECTOR_INIT(my_floats);
 
 VECTOR_PUSH(my_floats, 1.2f);
 
-float last_item = VECTOR_POP(my_floats); // vector is now empty
+float last_item = VECTOR_POP(my_floats, 0.0f); // vector is now empty
 last_item == 1.2f; // true
 ```
 
@@ -94,7 +94,7 @@ VECTOR_INIT(my_floats);
 
 VECTOR_PUSH(my_floats, 1.2f);
 
-VECTOR_DESTROY(my_floats);
+VECTOR_CLEAR(my_floats);
 
 VECTOR_PUSH(my_floats, 1.3f);
 VECTOR_AT(my_floats, 0) // 1.3f
@@ -111,7 +111,7 @@ VECTOR_PUSH(string, 'h');
 VECTOR_PUSH(string, 'i');
 VECTOR_PUSH(string, '\0');
 
-printf("%s", string.data);
+printf("%s", string.data); // hi
 ```
 */
 
@@ -159,12 +159,28 @@ printf("%s", string.data);
     (vector).length++;                                                         \
   } while (0)
 
-// no length checks are done for this macro, always check the length is not zero
-// before using vector_pop
-#define VECTOR_POP(vector)                                                     \
-  ((vector).length == 0 ? NULL : (vector).data[--(vector).length])
+#define VECTOR_PUSH_NOTHING(vector)                                            \
+  do {                                                                         \
+    if ((vector)._capacity <= (vector).length) {                               \
+      if ((vector)._capacity == 0)                                             \
+        (vector)._capacity = (vector).length + 1;                              \
+      else                                                                     \
+        (vector)._capacity *= 2;                                               \
+      void *_data =                                                            \
+          realloc((vector).data, sizeof(*(vector).data) * (vector)._capacity); \
+      if (_data == NULL)                                                       \
+        abort();                                                               \
+      (vector).data = _data;                                                   \
+    }                                                                          \
+    (vector).length++;                                                         \
+  } while (0)
 
-#define VECTOR_AT(vector, index) (vector).data[index]
+#define VECTOR_POP(vector, error)                                              \
+  ((vector).length == 0 ? (error) : (vector).data[--(vector).length])
+
+#define VECTOR_AT(vector, index) ((vector).data[index])
+
+#define VECTOR_END(vector) ((vector).data[(vector).length - 1])
 
 #define VECTOR_DESTROY(vector)                                                 \
   do {                                                                         \

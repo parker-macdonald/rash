@@ -152,7 +152,7 @@ void find_matching_builtins(
       }
     }
 
-  } while ((node = VECTOR_POP(stack)));
+  } while ((node = VECTOR_POP(stack, NULL)));
 
   VECTOR_DESTROY(stack);
 }
