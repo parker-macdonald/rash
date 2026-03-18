@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/times.h>
+#include <sys/resource.h>
+#include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "interpreter/execute.h"
@@ -24,23 +26,25 @@ int builtin_time(char **argv) {
     return EXIT_SUCCESS;
   }
 
-  long ticks_per_sec = sysconf(_SC_CLK_TCK);
-  // sysconf can only fail if name is invalid and name is always valid so...
-  assert(ticks_per_sec != -1);
-
-  struct tms tms_then;
-  clock_t then = times(&tms_then);
-  // times can only fail if the buffer is outside of our address space, which it
-  // isn't
-  assert(then != (clock_t)-1);
-
   execution_context ec = {
       .argv = argv + 1,
-      .flags = EC_NO_WAIT | EC_DONT_REGISTER_FOREGROUND,
+      .flags = EC_NO_WAIT,
       .stderr_fd = -1,
       .stdin_fd = -1,
       .stdout_fd = -1
   };
+
+  struct rusage usage_then;
+  if (getrusage(RUSAGE_CHILDREN, &usage_then) == -1) {
+    perror("time: getrusage");
+    return EXIT_FAILURE;
+  }
+
+  struct timespec then;
+  if (clock_gettime(CLOCK_MONOTONIC, &then) == -1) {
+    perror("time: clock_gettime");
+    return EXIT_FAILURE;
+  }
 
   pid_t pid = execute(ec);
 
@@ -56,22 +60,34 @@ int builtin_time(char **argv) {
     return EXIT_FAILURE;
   }
 
-  struct tms tms_now;
-  clock_t now = times(&tms_now);
-  // times can only fail if the buffer is outside of our address space, which it
-  // isn't
-  assert(now != (clock_t)-1);
+  struct timespec now;
+  if (clock_gettime(CLOCK_MONOTONIC, &now) == -1) {
+    perror("time: clock_gettime");
+    return EXIT_FAILURE;
+  }
 
-  double elapsed = (double)(now - then) / (double)ticks_per_sec;
-  double user = (double)(tms_now.tms_cutime - tms_then.tms_cutime) /
-                (double)ticks_per_sec;
-  double sys = (double)(tms_now.tms_cstime - tms_then.tms_cstime) /
-               (double)ticks_per_sec;
+  struct rusage usage_now;
+  if (getrusage(RUSAGE_CHILDREN, &usage_now) == -1) {
+    perror("time: getrusage");
+    return EXIT_FAILURE;
+  }
 
-  printf(
-      "user time: %.3fs\n"
-      "sys time: %.3fs\n"
-      "elapsed: %.3fs\n",
+  double elapsed = ((double)now.tv_sec + (double)now.tv_nsec / 1e9) -
+                   ((double)then.tv_sec + (double)then.tv_nsec / 1e9);
+  double user = ((double)usage_now.ru_utime.tv_sec +
+                 (double)usage_now.ru_utime.tv_usec / 1e6) -
+                ((double)usage_then.ru_utime.tv_sec +
+                 (double)usage_then.ru_utime.tv_usec / 1e6);
+  double sys = ((double)usage_now.ru_stime.tv_sec +
+                (double)usage_now.ru_stime.tv_usec / 1e6) -
+               ((double)usage_then.ru_stime.tv_sec +
+                (double)usage_then.ru_stime.tv_usec / 1e6);
+
+  (void)fprintf(
+      stderr,
+      "\nuser time: %.3fs\n"
+      "sys time:  %.3fs\n"
+      "elapsed:   %.3fs\n",
       user,
       sys,
       elapsed
