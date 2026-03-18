@@ -8,7 +8,7 @@
 }:
 stdenv.mkDerivation rec {
     pname = "rash";
-    version = "0.7.3";
+    version = "0.7.4";
 
     src = lib.fileset.toSource {
         root = ./.;
