@@ -24,7 +24,7 @@
 
 #define ANSI_INSERT_BLANK_CHAR "\033[@"
 
-#define ANSI_DELETE_CHAR
+#define ANSI_DELETE_CHAR "\033[P"
 
 // save current cursor position to be restored later
 #define ANSI_CURSOR_POS_SAVE "\033[s"

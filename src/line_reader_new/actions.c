@@ -3,12 +3,11 @@
 #include <ctype.h>
 #include <stdint.h>
 
+#include "all_actions.h"
 #include "lib/ansi.h"
 #include "line_reader/utils.h"
 #include "line_reader_new/line_reader.h"
 #include "line_reader_new/line_reader_struct.h"
-
-#include "all_actions.h"
 
 int preform_action(line_reader *reader) {
   int ch = getch();
@@ -123,6 +122,10 @@ int preform_action(line_reader *reader) {
     }
   }
 
+  if (byte == ASCII_DEL) {
+    reader->acts.backspace(reader);
+  }
+
   // tab
   if (byte == '\t') {
     reader->acts.tab(reader);
@@ -144,7 +147,7 @@ int preform_action(line_reader *reader) {
 }
 
 void actions_default(actions *acts) {
-  acts->form_feed = action_nop;
+  acts->form_feed = action_clear;
   acts->sigint = action_sigint;
   acts->arrow_left = action_cursor_left;
   acts->arrow_right = action_cursor_right;
@@ -163,4 +166,6 @@ void actions_default(actions *acts) {
   acts->tab = action_nop;
   acts->end_of_file = action_end_of_file;
   acts->insert = action_insert;
+  acts->backspace = action_backspace;
+  acts->shift_backspace = action_nop;
 }

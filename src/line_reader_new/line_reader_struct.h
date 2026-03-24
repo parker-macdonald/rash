@@ -11,7 +11,7 @@ typedef struct history_node {
   // buffer containing a line from history, this buffer is read only, this
   // buffer is null terminated, and the length does not include the null
   // terminator
-  const buf_t line;
+  buf_t line;
 } history_node;
 
 typedef struct line_reader {

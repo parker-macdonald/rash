@@ -5,6 +5,7 @@
 #include "lib/vec_types.h"
 #include "line_reader/modify_line.h"
 #include "line_reader/utils.h"
+#include "line_reader_new/history.h"
 #include "line_reader_new/line_reader.h"
 #include "line_reader_new/line_reader_struct.h"
 
@@ -69,8 +70,25 @@ int action_nop(line_reader *reader) {
 }
 
 int action_clear(line_reader *reader) {
-  (void)reader;
-  PUTS(ANSI_CURSOR_HOME ANSI_ERASE_SCREEN);
+  unsigned short width = get_terminal_width();
+
+  printf(
+      ANSI_CURSOR_HOME ANSI_ERASE_SCREEN "%s%.*s" ANSI_CURSOR_HOME,
+      reader->prompt,
+      (int)reader->buffer.length,
+      reader->buffer.data
+  );
+
+  unsigned moves_down = reader->cursor_pos / width;
+  if (moves_down) {
+    // move the cursor down `moves_down` times
+    printf("\033[%uB", moves_down);
+  }
+
+  printf("\033[%uC", reader->cursor_pos % width);
+
+  FLUSH();
+
   return 0;
 }
 
@@ -99,21 +117,14 @@ int action_cursor_right(line_reader *reader) {
   return 0;
 }
 
-int action_backspace(line_reader *reader) {
-  if (reader->buffer_offset == 0) {
-    return 0;
-  }
-
-  const size_t bytes_removed =
-      line_backspace(&reader->buffer, reader->buffer_offset);
-  reader->buffer_offset -= bytes_removed;
-
-  cursor_left(reader);
-
-  return 0;
+int action_end_of_file(line_reader *reader) {
+  (void)reader;
+  putchar('\n');
+  return -1;
 }
 
 int action_sigint(line_reader *reader) {
+  reader->history_curr = NULL;
   reader->cursor_pos = reader->prompt_length;
   VECTOR_CLEAR(reader->buffer);
 
@@ -122,13 +133,12 @@ int action_sigint(line_reader *reader) {
   return 0;
 }
 
-int action_end_of_file(line_reader *reader) {
-  (void)reader;
-  putchar('\n');
-  return 0;
-}
-
 int action_new_line(line_reader *reader) {
+  if (reader->history_curr != NULL) {
+    buf_copy(&reader->buffer, &reader->history_curr->line);
+    reader->history_curr = NULL;
+  }
+
   if (reader->buffer.length == 0) {
     printf("\n%s", reader->prompt);
     FLUSH();
@@ -137,6 +147,8 @@ int action_new_line(line_reader *reader) {
 
   putchar('\n');
   VECTOR_PUSH(reader->buffer, '\0');
+
+  history_add(reader);
 
   return 1;
 }
@@ -165,6 +177,7 @@ int action_history_up(line_reader *reader) {
 int action_insert(line_reader *reader, uint8_t byte) {
   if (reader->history_curr != NULL) {
     buf_copy(&reader->buffer, &reader->history_curr->line);
+    reader->history_curr = NULL;
   }
 
   line_insert(&reader->buffer, byte, reader->buffer_offset);
@@ -174,6 +187,8 @@ int action_insert(line_reader *reader, uint8_t byte) {
     return 0;
   }
 
+  reader->cursor_pos++;
+
   if (reader->buffer_offset == reader->buffer.length) {
     putchar(byte);
     FLUSH();
@@ -182,5 +197,38 @@ int action_insert(line_reader *reader, uint8_t byte) {
 
   printf(ANSI_INSERT_BLANK_CHAR "%c", byte);
   FLUSH();
+  return 0;
+}
+
+int action_backspace(line_reader *reader) {
+  if (reader->history_curr != NULL) {
+    buf_copy(&reader->buffer, &reader->history_curr->line);
+    reader->history_curr = NULL;
+  }
+  
+  if (reader->buffer_offset == 0) {
+    return 0;
+  }
+
+  const size_t bytes_removed =
+      line_backspace(&reader->buffer, reader->buffer_offset);
+  reader->buffer_offset -= bytes_removed;
+
+  // modified version of the cursor_left function
+  {
+    unsigned short width = get_terminal_width();
+  
+    if (reader->cursor_pos % width == 0) {
+      // move cursor up one line and all the way to the right
+      PUTS("\033[999C" ANSI_CURSOR_UP ANSI_DELETE_CHAR);
+    } else {
+      PUTS(ANSI_CURSOR_LEFT ANSI_DELETE_CHAR);
+    }
+  
+    reader->cursor_pos--;
+  
+    FLUSH();
+  }
+
   return 0;
 }
