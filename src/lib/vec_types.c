@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "vector.h"
 
@@ -9,6 +10,15 @@ void buf_append_string(buf_t *self, const char *str) {
   for (size_t i = 0; str[i] != '\0'; i++) {
     VECTOR_PUSH(*self, (uint8_t)str[i]);
   }
+}
+
+void buf_copy(buf_t *dest, const buf_t *src) {
+  if (dest->_capacity > src->length) {
+    free(dest->data);
+    dest->data = malloc(src->_capacity);
+  }
+
+  memcpy(dest->data, src->data, src->length);
 }
 
 void string_append(string_t *self, const char *str) {

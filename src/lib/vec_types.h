@@ -9,6 +9,8 @@ typedef VECTOR(uint8_t) buf_t;
 
 void buf_append_string(buf_t *self, const char *str);
 
+void buf_copy(buf_t *dest, const buf_t *src);
+
 typedef VECTOR(char) string_t;
 
 void string_append(string_t *self, const char *str);

@@ -78,8 +78,8 @@ size_t traverse_forward_utf8(
   return char_size;
 }
 
-size_t strlen_utf8(const uint8_t *const str, size_t len) {
-  size_t length = 0;
+unsigned strlen_utf8(const uint8_t *const str, size_t len) {
+  unsigned length = 0;
   size_t i = 0;
 
   while (i < len) {

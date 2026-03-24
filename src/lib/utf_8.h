@@ -41,6 +41,6 @@ bool is_continuation_byte_utf8(uint8_t byte);
  * @param len the length of the string in bytes.
  * @return the number of characters in the string.
  */
-size_t strlen_utf8(const uint8_t *str, size_t len);
+unsigned strlen_utf8(const uint8_t *str, size_t len);
 
 #endif
