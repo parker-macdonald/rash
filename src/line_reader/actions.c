@@ -3,13 +3,12 @@
 #include <ctype.h>
 #include <stdint.h>
 
-#include "all_actions.h"
 #include "lib/ansi.h"
-#include "line_reader/utils.h"
-#include "line_reader_new/line_reader.h"
-#include "line_reader_new/line_reader_struct.h"
+#include "line_reader/action_utils.h"
+#include "line_reader/actions_all.h"
+#include "line_reader/line_reader_struct.h"
 
-int preform_action(line_reader *reader) {
+int preform_action(LineReader *reader) {
   int ch = getch();
 
   if (ch == SIGINT_ON_READ) {
@@ -146,7 +145,7 @@ int preform_action(line_reader *reader) {
   return 0;
 }
 
-void actions_default(actions *acts) {
+void actions_default(Actions *acts) {
   acts->form_feed = action_clear;
   acts->sigint = action_sigint;
   acts->arrow_left = action_cursor_left;

@@ -3,30 +3,28 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
+
+#include "lib/vec_types.h"
 
 /**
- * @brief When given a line, traverse_back_utf8 will backtrack to find the
- * starting byte and then return the length of the character in bytes.
- * @param line The line to traverse.
- * @param cursor_pos The position of the cursor, traverse_back_utf8 will start
- * backtracking at the byte before the cursor.
- * @return The number of bytes the character takes up, or one if string is not
- * valid utf-8.
+ * @brief return the index of the first byte of the previous codepoint before
+ * buffer_offset in buffer.
+ * @param buffer the buffer to reader.
+ * @param buffer_offset the offset into the buffer.
+ * @return the index of the previous codepoint.
  */
-size_t traverse_back_utf8(const uint8_t *line, size_t cursor_pos);
+size_t utf8_prev_codepoint(const Buffer *buffer, size_t buffer_offset);
+
+size_t utf8_codepoint_size(const Buffer *buffer, size_t buffer_offset);
 
 /**
- * @brief When given a line, traverse_forward_utf8 will traverse through the
- * line to find the ending byte and then return the length of the character in
- * bytes.
- * @param line The line to traverse.
- * @param cursor_pos The position of the cursor.
- * @return The number of bytes the character takes up, or one if string is not
- * valid utf-8.
+ * @brief return the index of the first byte of the next codepoint after
+ * buffer_offset in buffer.
+ * @param buffer the buffer to read.
+ * @param buffer_offset the offset into the buffer.
+ * @return the index of the next codepoint.
  */
-size_t
-traverse_forward_utf8(const uint8_t *line, size_t line_len, size_t cursor_pos);
+size_t utf8_next_codepoint(const Buffer *buffer, size_t buffer_offset);
 
 /**
  * @brief Returns true when the given character is a continuation byte in utf-8.
@@ -36,11 +34,12 @@ traverse_forward_utf8(const uint8_t *line, size_t line_len, size_t cursor_pos);
 bool is_continuation_byte_utf8(uint8_t byte);
 
 /**
- * @brief returns the number of characters in a string that is utf-8 encoded.
- * @param str the string to read.
- * @param len the length of the string in bytes.
- * @return the number of characters in the string.
+ * @brief returns the number of codepoints in a buffer that is utf-8 encoded.
+ * @param buffer the buffer to read.
+ * @return the number of codepoints in the buffer.
  */
-unsigned strlen_utf8(const uint8_t *str, size_t len);
+unsigned utf8_count_codepoint(const Buffer *buffer);
+
+size_t utf_8_remove_codepoint(Buffer *buffer, size_t buffer_offset);
 
 #endif

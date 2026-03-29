@@ -21,7 +21,7 @@ int builtin_history(char **const argv) {
 
   if (argv[1] != NULL) {
     if (strcmp(argv[1], "-c") == 0) {
-      clear_history();
+      line_reader_hist_clear();
       return EXIT_SUCCESS;
     }
 
@@ -41,7 +41,7 @@ int builtin_history(char **const argv) {
     count = (int)num;
   }
 
-  print_history(count);
+  line_reader_hist_print(count);
 
   return EXIT_SUCCESS;
 }

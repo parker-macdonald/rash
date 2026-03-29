@@ -13,7 +13,7 @@
 #include "lib/error.h"
 #include "lib/vec_types.h"
 #include "lib/vector.h"
-#include "line_reader_new/line_reader.h"
+#include "line_reader/line_reader.h"
 #include "rashrc.h"
 #include "shlvl.h"
 #include "strings/version.h"
@@ -51,9 +51,9 @@ int main(int argc, char **argv) {
     sig_handler_init();
     load_rashrc();
 
-    line_reader *reader = line_reader_create();
-    int status = repl(line_reader_read_void, reader);
-    line_reader_destroy2(reader);
+    line_reader_init();
+    int status = repl(line_reader_read_void, NULL);
+    line_reader_destroy();
     return status;
   }
 

@@ -1,0 +1,30 @@
+#ifndef ACTION_UTILS_H
+#define ACTION_UTILS_H
+
+#include "line_reader_struct.h"
+
+#define PUTS(str) (void)fputs(str, stdout)
+#define FLUSH() (void)fflush(stdout)
+
+// returned by getch when a sigint interrupted the read.
+#define SIGINT_ON_READ (-1)
+
+void cursor_left(LineReader *reader);
+
+void cursor_right(LineReader *reader);
+
+void draw_active_buffer(LineReader *reader);
+
+void copy_hist_buf_if_needed(LineReader *reader);
+
+/**
+ * @brief reads a byte from stdin without printing it to the screen or moving
+ * the cursor.
+ * @return returns a uint8_t casted to an int or RECV_SIGINT, when a sigint is
+ * recieved.
+ */
+int getch(void);
+
+unsigned short get_terminal_width(void);
+
+#endif

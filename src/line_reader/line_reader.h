@@ -3,29 +3,19 @@
 
 #include <stdint.h>
 
-/**
- * @brief reads a line interactively from stdin, the returned buffer does not
- * include the '\n' and is null-terminated.
- * @return a null-terminated buffer containing the line (without the '\n')
- */
-const uint8_t *readline(void *);
+void line_reader_init(void);
 
-/**
- * @brief clears the history of the line reader.
- */
-void clear_history(void);
-
-/**
- * @brief prints the current history of the line reader.
- * @param count the number of history items to print, if count is -1 all the
- * history is printed,
- */
-void print_history(int count);
-
-/**
- * @brief cleans up the line reader (this can be called multiple times without
- * issue).
- */
 void line_reader_destroy(void);
+
+const uint8_t *line_reader_read(void);
+
+// wrapper around line_reader_read that just takes a void ptr instead of
+// nothing. this is useful for the repl functions which take a reader function
+// with a void ptr argument.
+const uint8_t *line_reader_read_void(void *);
+
+void line_reader_hist_print(int count);
+
+void line_reader_hist_clear(void);
 
 #endif

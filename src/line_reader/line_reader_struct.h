@@ -2,27 +2,27 @@
 #define LINE_READER_STRUCT_H
 
 #include "lib/vec_types.h"
-#include "line_reader_new/actions.h"
+#include "line_reader/actions.h"
 
 // a history node is a node in the linked list storing command history.
-typedef struct history_node {
-  struct history_node *p_next;
-  struct history_node *p_prev;
+typedef struct history_node_t {
+  struct history_node_t *p_next;
+  struct history_node_t *p_prev;
   // buffer containing a line from history, this buffer is read only, this
   // buffer is null terminated, and the length does not include the null
   // terminator
   Buffer line;
-} history_node;
+} HistoryNode;
 
-typedef struct line_reader {
+typedef struct line_reader_t {
   // history is a linked list where root is the oldest this in history, end in
   // the newest thing in history, and current is where the user is in history
   // (by pressing up and down).
-  history_node *history_root;
-  history_node *history_end;
-  history_node *history_curr;
+  HistoryNode *history_root;
+  HistoryNode *history_end;
+  HistoryNode *history_curr;
 
-  actions acts;
+  Actions acts;
 
   Buffer buffer;
 
@@ -37,6 +37,6 @@ typedef struct line_reader {
   // length of the prompt in characters, remember, in utf-8, not all characters
   // are one byte.
   unsigned prompt_length;
-} line_reader;
+} LineReader;
 
 #endif

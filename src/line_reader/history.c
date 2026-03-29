@@ -2,13 +2,13 @@
 
 #include <stdio.h>
 
-#include "line_reader_new/line_reader_struct.h"
+#include "line_reader/line_reader_struct.h"
 
-void history_clear(line_reader *reader) {
-  history_node *node = reader->history_root;
+void history_clear(LineReader *reader) {
+  HistoryNode *node = reader->history_root;
 
   while (node != NULL) {
-    history_node *next_node = node->p_next;
+    HistoryNode *next_node = node->p_next;
 
     VECTOR_DESTROY(node->line);
     free(node);
@@ -20,14 +20,14 @@ void history_clear(line_reader *reader) {
   reader->history_curr = NULL;
 }
 
-void history_print(line_reader *reader, int count) {
+void history_print(LineReader *reader, int count) {
   assert(count >= -1);
 
   if (count == 0) {
     return;
   }
 
-  history_node *node = reader->history_root;
+  HistoryNode *node = reader->history_root;
 
   if (count == -1) {
     for (unsigned int i = 1; node != NULL; i++) {
@@ -64,8 +64,8 @@ void history_print(line_reader *reader, int count) {
   }
 }
 
-void history_add(line_reader *reader) {
-  history_node *new_node = malloc(sizeof(history_node));
+void history_add(LineReader *reader) {
+  HistoryNode *new_node = malloc(sizeof(HistoryNode));
 
   new_node->line = reader->buffer;
   // since the length doesn't include the null terminator, we must subtract one

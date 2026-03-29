@@ -23,13 +23,15 @@ int builtin_eval(char **argv) {
 
   argv++;
   while (1) {
-    buf_append_string(&command, *argv);
+    buffer_append_string(&command, *argv);
     argv++;
     if (*argv == NULL) {
       break;
     }
     VECTOR_PUSH(command, ' ');
   }
+
+  VECTOR_PUSH(command, '\0');
 
   int status = repl_once(command.data);
 
