@@ -123,19 +123,18 @@ int action_insert(LineReader *reader, uint8_t byte) {
   buffer_insert(&reader->buffer, reader->buffer_offset, byte);
   reader->buffer_offset++;
 
-  if (is_continuation_byte_utf8(byte)) {
-    return 0;
+  if (!is_continuation_byte_utf8(byte)) {
+    reader->cursor_pos++;
+
+    if (reader->buffer_offset != reader->buffer.length) {
+      printf(ANSI_INSERT_BLANK_CHAR "%c", byte);
+      FLUSH();
+      return 0;
+    }
   }
 
-  reader->cursor_pos++;
+  putchar(byte);
 
-  if (reader->buffer_offset == reader->buffer.length) {
-    putchar(byte);
-    FLUSH();
-    return 0;
-  }
-
-  printf(ANSI_INSERT_BLANK_CHAR "%c", byte);
   FLUSH();
   return 0;
 }
