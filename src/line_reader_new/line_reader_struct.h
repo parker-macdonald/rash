@@ -25,6 +25,8 @@ typedef struct line_reader {
   actions acts;
 
   buf_t buffer;
+
+  buf_t *active_buffer;
   // current cursor position as represented by an index in the buffer.
   size_t buffer_offset;
   // current cursor position as represented by the number of characters before

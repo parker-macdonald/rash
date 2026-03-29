@@ -17,6 +17,8 @@ line_reader *line_reader_create(void) {
 
   reader->buffer_offset = 0;
 
+  reader->active_buffer = &reader->buffer;
+
   reader->history_root = NULL;
   reader->history_end = NULL;
   reader->history_curr = NULL;
@@ -42,6 +44,9 @@ const uint8_t *line_reader_read_void(void *reader) {
 
 const uint8_t *line_reader_read(line_reader *reader) {
   VECTOR_INIT(reader->buffer);
+  reader->active_buffer = &reader->buffer;
+  reader->buffer_offset = 0;
+  reader->cursor_pos = reader->prompt_length;
 
   printf("%s", reader->prompt);
   (void)fflush(stdout);

@@ -18,6 +18,7 @@ void buf_copy(buf_t *dest, const buf_t *src) {
     dest->data = malloc(src->_capacity);
   }
 
+  dest->length = src->length;
   memcpy(dest->data, src->data, src->length);
 }
 

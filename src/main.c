@@ -52,7 +52,9 @@ int main(int argc, char **argv) {
     load_rashrc();
 
     line_reader *reader = line_reader_create();
-    return repl(line_reader_read_void, reader);
+    int status = repl(line_reader_read_void, reader);
+    line_reader_destroy2(reader);
+    return status;
   }
 
   if (argc == 2) {

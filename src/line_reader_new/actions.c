@@ -151,10 +151,10 @@ void actions_default(actions *acts) {
   acts->sigint = action_sigint;
   acts->arrow_left = action_cursor_left;
   acts->arrow_right = action_cursor_right;
-  acts->delete = action_nop;
+  acts->delete = action_delete;
   acts->ctrl_left_arrow = action_nop;
   acts->ctrl_right_arrow = action_nop;
-  acts->arrow_up = action_nop;
+  acts->arrow_up = action_history_up;
   acts->arrow_down = action_nop;
   acts->home = action_nop;
   acts->end = action_nop;
