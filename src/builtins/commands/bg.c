@@ -37,7 +37,7 @@ int builtin_bg(char **argv) {
     job_id = (int)num;
   }
 
-  job_t *job = get_job(job_id);
+  Job *job = get_job(job_id);
 
   if (job == NULL) {
     if (job_id == -1) {

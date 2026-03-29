@@ -40,10 +40,10 @@ int load_rashrc(void) {
     return 1;
   }
 
-  struct file_reader rashrc_reader;
+  FileReader rashrc_reader;
   file_reader_init(&rashrc_reader, rashrc);
 
-  repl((const uint8_t *(*)(void *))file_reader_read, &rashrc_reader);
+  repl(file_reader_read_void, &rashrc_reader);
 
   return 0;
 }

@@ -3,6 +3,6 @@
 
 #include "vec_types.h"
 
-void sort_strings(strings_t *vec);
+void sort_strings(StringList *vec);
 
 #endif

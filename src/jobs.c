@@ -24,8 +24,8 @@ const char *const JOB_STATUSES[NUM_JOB_STATUSES] = {
     "Exited", "Stopped", "Running"
 };
 
-static job_t *root_job = NULL;
-static job_t *last_job = NULL;
+static Job *root_job = NULL;
+static Job *last_job = NULL;
 
 pid_t root_pid;
 int tty_fd = -1;
@@ -34,7 +34,7 @@ int tty_fd = -1;
 volatile sig_atomic_t recv_sigint = 0;
 
 void kill_all_children(void) {
-  job_t *current = root_job;
+  Job *current = root_job;
 
   while (current != NULL) {
     switch (current->state) {
@@ -120,8 +120,8 @@ void restart_on_sigint(void) {
 }
 
 void clean_jobs(void) {
-  job_t *current;
-  job_t *prev = NULL;
+  Job *current;
+  Job *prev = NULL;
 
   for (current = root_job; current != NULL;) {
     int status;
@@ -171,7 +171,7 @@ void clean_jobs(void) {
         last_job = prev;
       }
 
-      job_t *temp = current;
+      Job *temp = current;
       current = current->p_next;
 
       free(temp);
@@ -184,7 +184,7 @@ void clean_jobs(void) {
 }
 
 int register_job(pid_t pid, int state) {
-  job_t *new_job = malloc(sizeof(job_t));
+  Job *new_job = malloc(sizeof(Job));
 
   new_job->p_next = NULL;
 
@@ -213,12 +213,12 @@ int register_job(pid_t pid, int state) {
   return new_job->id;
 }
 
-job_t *get_job(int id) {
+Job *get_job(int id) {
   if (root_job == NULL) {
     return NULL;
   }
 
-  job_t *current;
+  Job *current;
 
   if (id == -1) {
     return last_job;
@@ -238,8 +238,8 @@ pid_t get_pid_and_remove(int *id) {
     return 0;
   }
 
-  job_t *current;
-  job_t *prev = NULL;
+  Job *current;
+  Job *prev = NULL;
 
   if (*id == -1) {
     for (current = root_job;; current = current->p_next) {
@@ -291,7 +291,7 @@ pid_t get_pid_and_remove(int *id) {
 }
 
 void print_jobs(void) {
-  for (job_t *current = root_job; current != NULL; current = current->p_next) {
+  for (Job *current = root_job; current != NULL; current = current->p_next) {
     printf(
         "[%d] PID: %d, State: %s\n",
         current->id,

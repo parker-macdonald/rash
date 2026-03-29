@@ -14,7 +14,7 @@ void trie_destroy(void);
 builtin_t find_builtin(const char *str);
 
 void find_matching_builtins(
-    const char *prefix, size_t prefix_len, strings_t *vec
+    const char *prefix, size_t prefix_len, StringList *vec
 );
 
 #endif

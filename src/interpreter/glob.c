@@ -72,7 +72,7 @@ static bool match(const char *str, const char *pattern) {
   return true;
 }
 
-int glob(strings_t *vec, const char pattern[]) {
+int glob(StringList *vec, const char pattern[]) {
   struct queue_node *head = malloc(sizeof(struct queue_node));
   struct queue_node *tail = head;
   int args_added = 0;

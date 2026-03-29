@@ -75,10 +75,10 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    struct file_reader reader_data;
+    FileReader reader_data;
     file_reader_init(&reader_data, file);
     sig_handler_init();
-    return repl(file_reader_read, &reader_data);
+    return repl(file_reader_read_void, &reader_data);
   }
 
   if (argc == 3) {
@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    buf_t command;
+    Buffer command;
     VECTOR_INIT(command);
 
     for (size_t i = 0; argv[2][i] != '\0'; i++) {

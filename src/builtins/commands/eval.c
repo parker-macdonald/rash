@@ -18,7 +18,7 @@ int builtin_eval(char **argv) {
     return 0;
   }
 
-  buf_t command;
+  Buffer command;
   VECTOR_INIT(command);
 
   argv++;

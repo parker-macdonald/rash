@@ -29,7 +29,7 @@ typedef struct line_node {
   struct line_node *p_next;
   struct line_node *p_prev;
   // line that can be mutated by using the up and down arrows
-  buf_t mut_line;
+  Buffer mut_line;
   // line thats used for displaying history
   uint8_t *const_line;
   size_t const_line_len;
@@ -181,7 +181,7 @@ const uint8_t *readline(void *_) {
 
   line_node_t *node = NULL;
 
-  buf_t line;
+  Buffer line;
   VECTOR_INIT(line);
 
   size_t cursor_pos = 0;
@@ -216,7 +216,7 @@ const uint8_t *readline(void *_) {
     }
 
     // the current line for editing
-    buf_t *current_line = node == NULL ? &line : &node->mut_line;
+    Buffer *current_line = node == NULL ? &line : &node->mut_line;
 
     if (curr_byte == '\n' || curr_byte == '\r') {
       if (current_line->length != 0) {
@@ -462,7 +462,7 @@ const uint8_t *readline(void *_) {
         continue;
       }
 
-      strings_t matches = {0};
+      StringList matches = {0};
 
       if (word_start == 0 && memchr(word, '/', word_len) == NULL) {
         get_command_matches(&matches, word, word_len);
@@ -589,7 +589,7 @@ const uint8_t *readline(void *_) {
     DRAW_LINE(*current_line);
 
     if (show_matches) {
-      strings_t matches = {0};
+      StringList matches = {0};
       get_matches(&matches, current_line, cursor_pos);
       if (matches.length) {
         sort_strings(&matches);

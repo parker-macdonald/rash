@@ -6,14 +6,13 @@
 
 #include "lib/vector.h"
 
-void file_reader_init(struct file_reader *file, FILE *fp) {
+void file_reader_init(FileReader *file, FILE *fp) {
   file->file = fp;
   file->eof = false;
   VECTOR_INIT(file->line);
 }
 
-const uint8_t *file_reader_read(void *file_ptr) {
-  struct file_reader *file = file_ptr;
+const uint8_t *file_reader_read(FileReader *file) {
   if (file->eof) {
     VECTOR_DESTROY(file->line);
     if (fclose(file->file) == EOF) {
@@ -56,4 +55,8 @@ const uint8_t *file_reader_read(void *file_ptr) {
 
     VECTOR_PUSH(file->line, (uint8_t)c);
   }
+}
+
+const uint8_t *file_reader_read_void(void *file_ptr) {
+  return file_reader_read((FileReader *)file_ptr);
 }

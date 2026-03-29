@@ -10,7 +10,7 @@
 #include "lib/vector.h"
 
 void line_insert(
-    buf_t *const line, const uint8_t byte, const size_t cursor_pos
+    Buffer *const line, const uint8_t byte, const size_t cursor_pos
 ) {
   if (cursor_pos == line->length) {
     VECTOR_PUSH((*line), byte);
@@ -31,7 +31,7 @@ void line_insert(
   VECTOR_PUSH((*line), old);
 }
 
-size_t line_backspace(buf_t *const line, const size_t cursor_pos) {
+size_t line_backspace(Buffer *const line, const size_t cursor_pos) {
   const size_t char_size = traverse_back_utf8(line->data, cursor_pos);
 
   if (line->length == cursor_pos) {
@@ -49,7 +49,7 @@ size_t line_backspace(buf_t *const line, const size_t cursor_pos) {
   return char_size;
 }
 
-size_t line_delete(buf_t *const line, const size_t cursor_pos) {
+size_t line_delete(Buffer *const line, const size_t cursor_pos) {
   const size_t char_size =
       traverse_forward_utf8(line->data, line->length, cursor_pos);
 
@@ -67,7 +67,7 @@ size_t line_delete(buf_t *const line, const size_t cursor_pos) {
   return char_size;
 }
 
-void line_copy(buf_t *dest, const buf_t *const src) {
+void line_copy(Buffer *dest, const Buffer *const src) {
   VECTOR_CLEAR(*dest);
 
   for (size_t i = 0; i < src->length; i++) {
@@ -84,7 +84,7 @@ static inline size_t next_pow_2(size_t n) {
 }
 
 void line_insert_bulk(
-    buf_t *line, size_t cursor_pos, const uint8_t *src, size_t src_len
+    Buffer *line, size_t cursor_pos, const uint8_t *src, size_t src_len
 ) {
   size_t new_length = src_len + line->length;
 

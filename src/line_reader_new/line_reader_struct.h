@@ -11,7 +11,7 @@ typedef struct history_node {
   // buffer containing a line from history, this buffer is read only, this
   // buffer is null terminated, and the length does not include the null
   // terminator
-  buf_t line;
+  Buffer line;
 } history_node;
 
 typedef struct line_reader {
@@ -24,9 +24,9 @@ typedef struct line_reader {
 
   actions acts;
 
-  buf_t buffer;
+  Buffer buffer;
 
-  buf_t *active_buffer;
+  Buffer *active_buffer;
   // current cursor position as represented by an index in the buffer.
   size_t buffer_offset;
   // current cursor position as represented by the number of characters before

@@ -210,7 +210,7 @@ static void set_exit_code_var(int code) {
 }
 
 static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
-  string_t buffer;
+  String buffer;
   VECTOR_INIT(buffer);
 
   for (;; (*tokens)++) {
@@ -376,7 +376,7 @@ int evaluate(const token_t *tokens) {
     return EXIT_FAILURE;
   }
 
-  strings_t argv;
+  StringList argv;
   VECTOR_INIT(argv);
 
   int last_status = -1;

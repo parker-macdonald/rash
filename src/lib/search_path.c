@@ -15,7 +15,7 @@ char *search_path(const char *file) {
     path = "/usr/local/bin:/bin:/usr/bin";
   }
 
-  string_t file_path;
+  String file_path;
   VECTOR_INIT(file_path);
 
   for (size_t i = 0;; i++) {

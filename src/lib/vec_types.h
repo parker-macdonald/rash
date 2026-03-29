@@ -5,20 +5,20 @@
 
 #include "vector.h"
 
-typedef VECTOR(uint8_t) buf_t;
+typedef VECTOR(uint8_t) Buffer;
 
-void buf_append_string(buf_t *self, const char *str);
+void buf_append_string(Buffer *self, const char *str);
 
-void buf_copy(buf_t *dest, const buf_t *src);
+void buf_copy(Buffer *dest, const Buffer *src);
 
-typedef VECTOR(char) string_t;
+typedef VECTOR(char) String;
 
-void string_append(string_t *self, const char *str);
+void string_append(String *self, const char *str);
 
-void string_replace(string_t *self, char search_for, char replace_with);
+void string_replace(String *self, char search_for, char replace_with);
 
-typedef VECTOR(char *) strings_t;
+typedef VECTOR(char *) StringList;
 
-void strings_append(strings_t *dest, const strings_t *src);
+void strings_append(StringList *dest, const StringList *src);
 
 #endif

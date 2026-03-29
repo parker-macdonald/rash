@@ -11,12 +11,12 @@
 // string versions for job statuses
 extern const char *const JOB_STATUSES[NUM_JOB_STATUSES];
 
-typedef struct job {
+typedef struct job_t {
   pid_t pid;
   int id;
   int state;
-  struct job *p_next;
-} job_t;
+  struct job_t *p_next;
+} Job;
 
 // the file descriptor of the controlling tty
 extern int tty_fd;
@@ -49,7 +49,7 @@ int register_job(pid_t pid, int state);
  * the last job in the job list
  * @return a pointer to the job with the id, or null if no job exists
  */
-job_t *get_job(int id);
+Job *get_job(int id);
 
 /**
  * @brief gets the pid of the job with the given id and removes it from the job

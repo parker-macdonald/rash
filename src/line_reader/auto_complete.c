@@ -15,7 +15,7 @@
 #include "lib/vec_types.h"
 #include "lib/vector.h"
 
-void get_file_matches(strings_t *matches, const char *word, size_t word_len) {
+void get_file_matches(StringList *matches, const char *word, size_t word_len) {
   DIR *dir;
   const char *basename;
   size_t basename_len;
@@ -108,7 +108,7 @@ void get_file_matches(strings_t *matches, const char *word, size_t word_len) {
 }
 
 void get_command_matches(
-    strings_t *matches, const char *word, size_t word_len
+    StringList *matches, const char *word, size_t word_len
 ) {
   find_matching_builtins(word, word_len, matches);
   const char *path = getenv("PATH");
@@ -117,7 +117,7 @@ void get_command_matches(
     return;
   }
 
-  string_t file_path;
+  String file_path;
   VECTOR_INIT(file_path);
 
   for (size_t i = 0; path[i] != '\0'; i++) {
@@ -167,7 +167,7 @@ void get_command_matches(
   VECTOR_DESTROY(file_path);
 }
 
-size_t get_matches(strings_t *matches, buf_t *line, size_t cursor_pos) {
+size_t get_matches(StringList *matches, Buffer *line, size_t cursor_pos) {
   size_t word_start = cursor_pos - 1;
 
   for (; word_start > 0; word_start--) {
