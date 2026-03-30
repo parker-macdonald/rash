@@ -149,7 +149,7 @@ int action_backspace(LineReader *reader) {
   copy_hist_buf_if_needed(reader);
 
   size_t previous = utf8_prev_codepoint(&reader->buffer, reader->buffer_offset);
-  utf_8_remove_codepoint(&reader->buffer, previous);
+  utf8_remove_codepoint(&reader->buffer, previous);
   reader->buffer_offset = previous;
 
   // modified version of the cursor_left function
@@ -178,7 +178,7 @@ int action_delete(LineReader *reader) {
 
   copy_hist_buf_if_needed(reader);
 
-  utf_8_remove_codepoint(&reader->buffer, reader->buffer_offset);
+  utf8_remove_codepoint(&reader->buffer, reader->buffer_offset);
 
   PUTS(ANSI_DELETE_CHAR);
 
@@ -192,22 +192,16 @@ int action_word_left(LineReader *reader) {
     return 0;
   }
 
-  unsigned count = 0;
+  unsigned count = 1;
 
-  while (1) {
-    size_t prev =
+  reader->buffer_offset =
+      utf8_prev_codepoint(reader->active_buffer, reader->buffer_offset);
+
+  while (reader->buffer_offset > 0 &&
+         reader->active_buffer->data[reader->buffer_offset - 1] != ' ') {
+    reader->buffer_offset =
         utf8_prev_codepoint(reader->active_buffer, reader->buffer_offset);
-
-    if (reader->active_buffer->data[prev] == ' ') {
-      break;
-    }
-
-    reader->buffer_offset = prev;
     count++;
-
-    if (prev == 0) {
-      break;
-    }
   }
 
   cursor_left_n(reader, count);
@@ -219,20 +213,16 @@ int action_word_right(LineReader *reader) {
     return 0;
   }
 
-  unsigned count = 0;
+  unsigned count = 1;
 
-  while (1) {
+  reader->buffer_offset =
+      utf8_next_codepoint(reader->active_buffer, reader->buffer_offset);
+
+  while (reader->buffer_offset <= reader->active_buffer->length - 1 &&
+         reader->active_buffer->data[reader->buffer_offset] != ' ') {
     reader->buffer_offset =
         utf8_next_codepoint(reader->active_buffer, reader->buffer_offset);
     count++;
-
-    if (reader->buffer_offset == reader->active_buffer->length) {
-      break;
-    }
-
-    if (reader->active_buffer->data[reader->buffer_offset] == ' ') {
-      break;
-    }
   }
 
   cursor_right_n(reader, count);

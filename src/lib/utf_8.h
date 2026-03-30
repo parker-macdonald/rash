@@ -40,6 +40,6 @@ bool is_continuation_byte_utf8(uint8_t byte);
  */
 unsigned utf8_count_codepoint(const Buffer *buffer);
 
-size_t utf_8_remove_codepoint(Buffer *buffer, size_t buffer_offset);
+size_t utf8_remove_codepoint(Buffer *buffer, size_t buffer_offset);
 
 #endif

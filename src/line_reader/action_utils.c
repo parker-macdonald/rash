@@ -54,10 +54,10 @@ void cursor_left_n(LineReader *reader, unsigned n) {
   }
 
   reader->cursor_pos -= n;
-  unsigned moves_left = reader->cursor_pos % width;
+  unsigned x_pos = reader->cursor_pos % width;
 
-  if (moves_left) {
-    printf("\r\033[%uC", moves_left);
+  if (x_pos) {
+    printf("\r\033[%uC", x_pos);
   }
 
   FLUSH();
@@ -74,13 +74,11 @@ void cursor_right_n(LineReader *reader, unsigned n) {
   }
 
   reader->cursor_pos += n;
-  unsigned moves_right = reader->cursor_pos % width;
+  unsigned x_pos = reader->cursor_pos % width;
 
-  if (moves_right) {
-    printf("\r\033[%uC", moves_right);
+  if (x_pos) {
+    printf("\r\033[%uC", x_pos);
   }
-
-  reader->cursor_pos += n;
 
   FLUSH();
 }
@@ -95,7 +93,7 @@ void draw_active_buffer(LineReader *reader) {
   }
 
   printf(
-      "\r" ANSI_REMOVE_BELOW_CURSOR "%s%.*s ",
+      "\r" ANSI_REMOVE_BELOW_CURSOR "%s%.*s " ANSI_CURSOR_LEFT,
       reader->prompt,
       (int)reader->active_buffer->length,
       reader->active_buffer->data
