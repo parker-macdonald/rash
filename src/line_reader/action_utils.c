@@ -43,6 +43,48 @@ void cursor_right(LineReader *reader) {
   FLUSH();
 }
 
+void cursor_left_n(LineReader *reader, unsigned n) {
+  unsigned short width = get_terminal_width();
+
+  unsigned moves_up =
+      (reader->cursor_pos / width) - ((reader->cursor_pos - n) / width);
+
+  if (moves_up > 0) {
+    printf("\033[%uA", moves_up);
+  }
+
+  reader->cursor_pos -= n;
+  unsigned moves_left = reader->cursor_pos % width;
+
+  if (moves_left) {
+    printf("\r\033[%uC", moves_left);
+  }
+
+  FLUSH();
+}
+
+void cursor_right_n(LineReader *reader, unsigned n) {
+  unsigned short width = get_terminal_width();
+
+  unsigned moves_down =
+      ((reader->cursor_pos + n) / width) - (reader->cursor_pos / width);
+
+  if (moves_down > 0) {
+    printf("\033[%uB", moves_down);
+  }
+
+  reader->cursor_pos += n;
+  unsigned moves_right = reader->cursor_pos % width;
+
+  if (moves_right) {
+    printf("\r\033[%uC", moves_right);
+  }
+
+  reader->cursor_pos += n;
+
+  FLUSH();
+}
+
 void draw_active_buffer(LineReader *reader) {
   unsigned short width = get_terminal_width();
 
@@ -53,7 +95,7 @@ void draw_active_buffer(LineReader *reader) {
   }
 
   printf(
-      "\r" ANSI_REMOVE_BELOW_CURSOR "%s%.*s",
+      "\r" ANSI_REMOVE_BELOW_CURSOR "%s%.*s ",
       reader->prompt,
       (int)reader->active_buffer->length,
       reader->active_buffer->data

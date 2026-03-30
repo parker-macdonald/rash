@@ -13,6 +13,10 @@ void cursor_left(LineReader *reader);
 
 void cursor_right(LineReader *reader);
 
+void cursor_left_n(LineReader *reader, unsigned n);
+
+void cursor_right_n(LineReader *reader, unsigned n);
+
 void draw_active_buffer(LineReader *reader);
 
 void copy_hist_buf_if_needed(LineReader *reader);

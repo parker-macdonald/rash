@@ -1,3 +1,5 @@
+#include "line_reader/actions_all.h"
+
 #include <stdio.h>
 
 #include "lib/ansi.h"
@@ -182,5 +184,57 @@ int action_delete(LineReader *reader) {
 
   FLUSH();
 
+  return 0;
+}
+
+int action_word_left(LineReader *reader) {
+  if (reader->buffer_offset == 0) {
+    return 0;
+  }
+
+  unsigned count = 0;
+
+  while (1) {
+    size_t prev =
+        utf8_prev_codepoint(reader->active_buffer, reader->buffer_offset);
+
+    if (reader->active_buffer->data[prev] == ' ') {
+      break;
+    }
+
+    reader->buffer_offset = prev;
+    count++;
+
+    if (prev == 0) {
+      break;
+    }
+  }
+
+  cursor_left_n(reader, count);
+  return 0;
+}
+
+int action_word_right(LineReader *reader) {
+  if (reader->active_buffer->length == reader->buffer_offset) {
+    return 0;
+  }
+
+  unsigned count = 0;
+
+  while (1) {
+    reader->buffer_offset =
+        utf8_next_codepoint(reader->active_buffer, reader->buffer_offset);
+    count++;
+
+    if (reader->buffer_offset == reader->active_buffer->length) {
+      break;
+    }
+
+    if (reader->active_buffer->data[reader->buffer_offset] == ' ') {
+      break;
+    }
+  }
+
+  cursor_right_n(reader, count);
   return 0;
 }

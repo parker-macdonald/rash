@@ -123,6 +123,7 @@ int preform_action(LineReader *reader) {
 
   if (byte == ASCII_DEL) {
     reader->acts.backspace(reader);
+    return 0;
   }
 
   // tab
@@ -134,6 +135,7 @@ int preform_action(LineReader *reader) {
   // ctrl+l (usually clears the screen)
   if (byte == '\f') {
     reader->acts.form_feed(reader);
+    return 0;
   }
 
   if (iscntrl((int)byte)) {
@@ -151,8 +153,8 @@ void actions_default(Actions *acts) {
   acts->arrow_left = action_cursor_left;
   acts->arrow_right = action_cursor_right;
   acts->delete = action_delete;
-  acts->ctrl_left_arrow = action_nop;
-  acts->ctrl_right_arrow = action_nop;
+  acts->ctrl_left_arrow = action_word_left;
+  acts->ctrl_right_arrow = action_word_right;
   acts->arrow_up = action_history_up;
   acts->arrow_down = action_nop;
   acts->home = action_nop;

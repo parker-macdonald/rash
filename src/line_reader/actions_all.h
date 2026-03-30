@@ -25,4 +25,8 @@ int action_delete(LineReader *reader);
 
 int action_insert(LineReader *reader, uint8_t byte);
 
+int action_word_left(LineReader *reader);
+
+int action_word_right(LineReader *reader);
+
 #endif
