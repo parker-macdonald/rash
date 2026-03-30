@@ -138,6 +138,12 @@ int preform_action(LineReader *reader) {
     return 0;
   }
 
+  // ctrl+backspace
+  if (byte == ASCII_END_TRANS_BLOCK) {
+    reader->acts.ctrl_backspace(reader);
+    return 0;
+  }
+
   if (iscntrl((int)byte)) {
     return 0;
   }
@@ -168,5 +174,5 @@ void actions_default(Actions *acts) {
   acts->end_of_file = action_end_of_file;
   acts->insert = action_insert;
   acts->backspace = action_backspace;
-  acts->shift_backspace = action_nop;
+  acts->ctrl_backspace = action_nop;
 }

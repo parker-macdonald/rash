@@ -28,7 +28,7 @@ typedef struct {
   Action tab;
   Action end_of_file;
   Action backspace;
-  Action shift_backspace;
+  Action ctrl_backspace;
   int (*insert)(LineReader *, uint8_t);
 } Actions;
 

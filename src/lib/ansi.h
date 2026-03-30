@@ -9,6 +9,9 @@
 // disabled
 #define ASCII_DEL '\177'
 
+// ctrl+backspace for some reason
+#define ASCII_END_TRANS_BLOCK '\27'
+
 // delete the current line (cursor will not move)
 #define ANSI_REMOVE_FULL_LINE "\033[2K"
 #define ANSI_REMOVE_BELOW_CURSOR "\033[0J"
