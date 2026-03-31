@@ -251,3 +251,45 @@ int action_word_right(LineReader *reader) {
   cursor_right_n(reader, count);
   return 0;
 }
+
+int action_home(LineReader *reader) {
+  unsigned short width = get_terminal_width();
+
+  reader->buffer_offset = 0;
+
+  unsigned moves_up = reader->cursor_pos / width;
+  reader->cursor_pos = reader->prompt_length;
+
+  if (moves_up > 0) {
+    printf("\033[%uA", moves_up);
+  }
+
+  // move the cursort all the way to the left, then right prompt_length times
+  printf("\r\033[%uC", reader->prompt_length);
+
+  FLUSH();
+
+  return 0;
+}
+
+int action_end(LineReader *reader) {
+  unsigned short width = get_terminal_width();
+
+  reader->buffer_offset = reader->active_buffer->length;
+
+  unsigned length =
+      utf8_count_codepoint(reader->active_buffer) + reader->prompt_length;
+
+  // this is real code written by sane individuals
+  unsigned moves_down = (length - reader->cursor_pos) / width;
+  if (moves_down > 0) {
+    printf("\033[%uB", moves_down);
+  }
+
+  reader->cursor_pos = length;
+  printf("\r\033[%uC", length % width);
+
+  FLUSH();
+
+  return 0;
+}

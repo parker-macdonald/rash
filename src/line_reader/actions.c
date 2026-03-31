@@ -163,8 +163,8 @@ void actions_default(Actions *acts) {
   acts->ctrl_right_arrow = action_word_right;
   acts->arrow_up = action_history_up;
   acts->arrow_down = action_history_down;
-  acts->home = action_nop;
-  acts->end = action_nop;
+  acts->home = action_home;
+  acts->end = action_end;
   acts->new_line = action_new_line;
   acts->shift_delete = action_nop;
   acts->page_up = action_nop;

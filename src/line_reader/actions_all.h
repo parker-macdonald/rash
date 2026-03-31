@@ -31,4 +31,8 @@ int action_word_left(LineReader *reader);
 
 int action_word_right(LineReader *reader);
 
+int action_home(LineReader *reader);
+
+int action_end(LineReader *reader);
+
 #endif
