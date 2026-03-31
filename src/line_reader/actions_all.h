@@ -21,6 +21,8 @@ int action_new_line(LineReader *reader);
 
 int action_history_up(LineReader *reader);
 
+int action_history_down(LineReader *reader);
+
 int action_delete(LineReader *reader);
 
 int action_insert(LineReader *reader, uint8_t byte);

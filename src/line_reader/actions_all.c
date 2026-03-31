@@ -97,25 +97,48 @@ int action_new_line(LineReader *reader) {
 }
 
 int action_history_up(LineReader *reader) {
-  // if there's no current line, assign it to the last node
-  if (reader->history_curr == NULL) {
-    if (reader->history_end != NULL) {
-      reader->history_curr = reader->history_end;
-    } else {
-      return 0;
-    }
-    // if there is a current line, assign it to the previous one
+  if (reader->history_curr == NULL && reader->history_end != NULL) {
+    reader->history_curr = reader->history_end;
+  } else if (reader->history_curr->p_prev != NULL) {
+    reader->history_curr = reader->history_curr->p_prev;
   } else {
-    if (reader->history_curr->p_prev != NULL) {
-      reader->history_curr = reader->history_curr->p_prev;
-    } else {
-      return 0;
-    }
+    // there is no more history
+    return 0;
   }
 
-  reader->active_buffer = &reader->history_curr->line;
+  reader->buffer_offset = reader->history_curr->line.length;
+  reader->cursor_pos =
+      utf8_count_codepoint(&reader->history_curr->line) + reader->prompt_length;
 
+  reader->active_buffer = &reader->history_curr->line;
   draw_active_buffer(reader);
+
+  return 0;
+}
+
+int action_history_down(LineReader *reader) {
+  if (reader->history_curr != NULL) {
+    if (reader->history_curr->p_next != NULL) {
+      reader->history_curr = reader->history_curr->p_next;
+      reader->buffer_offset = reader->history_curr->line.length;
+      reader->cursor_pos = utf8_count_codepoint(&reader->history_curr->line) +
+                           reader->prompt_length;
+
+      reader->active_buffer = &reader->history_curr->line;
+      draw_active_buffer(reader);
+      return 0;
+    }
+
+    reader->history_curr = NULL;
+    reader->buffer_offset = reader->buffer.length;
+    reader->cursor_pos =
+        utf8_count_codepoint(&reader->buffer) + reader->prompt_length;
+
+    reader->active_buffer = &reader->buffer;
+    draw_active_buffer(reader);
+    return 0;
+  }
+
   return 0;
 }
 

@@ -162,7 +162,7 @@ void actions_default(Actions *acts) {
   acts->ctrl_left_arrow = action_word_left;
   acts->ctrl_right_arrow = action_word_right;
   acts->arrow_up = action_history_up;
-  acts->arrow_down = action_nop;
+  acts->arrow_down = action_history_down;
   acts->home = action_nop;
   acts->end = action_nop;
   acts->new_line = action_new_line;
