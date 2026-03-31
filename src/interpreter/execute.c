@@ -70,7 +70,7 @@ int execute(ExecutionContext context) {
 
     if (context.stdin_fd != -1) {
       int res = dup2(context.stdin_fd, STDIN_FILENO);
-      close(context.stderr_fd);
+      close(context.stdin_fd);
 
       assert(res != -1);
     }
