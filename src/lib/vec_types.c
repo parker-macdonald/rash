@@ -14,7 +14,7 @@ void buffer_append_string(Buffer *self, const char *str) {
 }
 
 void buffer_copy(Buffer *dest, const Buffer *src) {
-  if (dest->_capacity > src->length) {
+  if (dest->_capacity < src->length) {
     free(dest->data);
     dest->data = malloc(next_pow_2(src->length));
   }
