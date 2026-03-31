@@ -25,7 +25,7 @@
   while (tokens[i].type != END_ARG)                                            \
   i++
 
-static bool bad_syntax(const token_t *const tokens) {
+static bool bad_syntax(const Token *const tokens) {
   if (!IS_ARGUMENT_TOKENS(tokens[0].type)) {
     error_f("rash: invalid first token.\n");
     return true;
@@ -209,7 +209,7 @@ static void set_exit_code_var(int code) {
   var_set("?", status_str);
 }
 
-static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
+static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
   String buffer;
   VECTOR_INIT(buffer);
 
@@ -305,7 +305,7 @@ static char *evaluate_arg(const token_t **tokens, bool *needs_globbing) {
         goto error;
       }
 
-      execution_context ec = {
+      ExecutionContext ec = {
           .argv = argv,
           .flags = EC_NO_WAIT,
           .stderr_fd = null_fd,
@@ -367,7 +367,7 @@ error:
   return NULL;
 }
 
-int evaluate(const token_t *tokens) {
+int evaluate(const Token *tokens) {
   if (tokens[0].type == END) {
     return EXIT_SUCCESS;
   }
@@ -385,7 +385,7 @@ int evaluate(const token_t *tokens) {
   // this doesn't compile on gcc :(
   // VECTOR_INIT(wait_for_me, 0);
 
-  execution_context ec = {NULL, -1, -1, -1, 0};
+  ExecutionContext ec = {NULL, -1, -1, -1, 0};
 
   for (;; tokens++) {
     if (IS_ARGUMENT_TOKENS(tokens->type)) {
@@ -643,7 +643,7 @@ int evaluate(const token_t *tokens) {
       }
       VECTOR_PUSH(wait_for_me, pid);
 
-      ec = (execution_context){NULL, -1, fds[0], -1, 0};
+      ec = (ExecutionContext){NULL, -1, fds[0], -1, 0};
 
       VECTOR_CLEAR(argv);
       continue;
@@ -659,7 +659,7 @@ int evaluate(const token_t *tokens) {
       ec.argv = argv.data;
       last_status = execute(ec);
       set_exit_code_var(last_status);
-      ec = (execution_context){NULL, -1, -1, -1, 0};
+      ec = (ExecutionContext){NULL, -1, -1, -1, 0};
 
       for (size_t i = 0; i < argv.length; i++) {
         free(argv.data[i]);

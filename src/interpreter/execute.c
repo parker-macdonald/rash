@@ -18,7 +18,7 @@
 
 extern char **environ;
 
-int execute(execution_context context) {
+int execute(ExecutionContext context) {
   if (context.argv == NULL) {
     return EXIT_SUCCESS;
   }

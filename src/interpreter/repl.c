@@ -17,7 +17,7 @@ int repl(const uint8_t *(*reader)(void *), void *reader_data) {
       break;
     }
 
-    token_t *tokens = lex(line);
+    Token *tokens = lex(line);
 
     if (tokens != NULL) {
       evaluate(tokens);
@@ -33,7 +33,7 @@ int repl_once(const uint8_t *line) {
 
   clean_jobs();
 
-  token_t *tokens = lex(line);
+  Token *tokens = lex(line);
 
   if (tokens != NULL) {
     status = evaluate(tokens);

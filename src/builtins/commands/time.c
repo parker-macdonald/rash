@@ -26,7 +26,7 @@ int builtin_time(char **argv) {
     return EXIT_SUCCESS;
   }
 
-  execution_context ec = {
+  ExecutionContext ec = {
       .argv = argv + 1,
       .flags = EC_NO_WAIT,
       .stderr_fd = -1,

@@ -7,11 +7,11 @@
 
 #include "lib/vec_types.h"
 
-struct {
+typedef struct {
   FILE *file;
   Buffer line;
   bool eof;
-} typedef FileReader;
+} FileReader;
 
 void file_reader_init(FileReader *file, FILE *fp);
 

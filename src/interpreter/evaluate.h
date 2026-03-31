@@ -3,6 +3,6 @@
 
 #include "lex.h"
 
-int evaluate(const token_t *tokens);
+int evaluate(const Token *tokens);
 
 #endif
