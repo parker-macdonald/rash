@@ -21,9 +21,6 @@ typedef struct job_t {
 // the file descriptor of the controlling tty
 extern int tty_fd;
 
-// this is used for the line reader to print a ^C on sigint
-extern volatile sig_atomic_t recv_sigint;
-
 /**
  * @brief initializes all signal handlers used by rash
  */
@@ -73,18 +70,18 @@ void print_jobs(void);
  * in the flags, this is so you can preform an operation that must be aware a
  * sigint occured (such as reading a character). pretty much all of rash's code
  * does not handle the EINTR error, so calling this function, without later
- * calling restart_on_sigint will cause bugs.
+ * calling ignore_sigint will cause bugs.
  */
-void dont_restart_on_sigint(void);
+void dont_ignore_sigint(void);
 
 /**
- * @brief this function re-registers the sigint handler WITH SA_RESTART set
- * in the flags, this function must be called at some point after a call to
- * dont_restart_on_sigint since pretty much all of rash's code does not handle
- * the EINTR error. if you don't call this function after a call to
- * dont_restart_on_sigint, there WILL be bugs and other unintended consequences.
+ * @brief this function re-registers the sigint handler with SIG_IGN set, this
+ * function must be called at some point after a call to dont_ignore_sigint
+ * since pretty much all of rash's code does not handle the EINTR error. if you
+ * don't call this function after a call to dont_ignore_sigint, there WILL be
+ * bugs and other unintended consequences.
  */
-void restart_on_sigint(void);
+void ignore_sigint(void);
 
 void reset_fg_process(void);
 

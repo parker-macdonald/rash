@@ -128,7 +128,7 @@ int getch(void) {
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
   // this is to allow the read system call to know a sigint occured.
-  dont_restart_on_sigint();
+  dont_ignore_sigint();
 
   for (;;) {
     errno = 0;
@@ -138,20 +138,18 @@ int getch(void) {
     if (nread == 1 && byte == '\0') {
       continue;
     }
-    if (errno != EINTR) {
-      saved_errno = errno;
-      break;
-    }
-    if (recv_sigint == 1) {
-      recv_sigint = 0;
-      restart_on_sigint();
+    if (errno == EINTR) {
+      ignore_sigint();
       tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // Restore original settings
 
       return SIGINT_ON_READ;
     }
+
+    saved_errno = errno;
+    break;
   }
 
-  restart_on_sigint();
+  ignore_sigint();
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // Restore original settings
 
   if (nread == 0) {

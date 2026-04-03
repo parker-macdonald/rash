@@ -12,14 +12,6 @@
 #include "interactive.h"
 #include "lib/error.h"
 
-#ifdef static_assert
-static_assert(
-    sizeof(sig_atomic_t) == sizeof(pid_t),
-    "size of sig_atomic_t differs from pid_t. what the hell are "
-    "you compiling this on?"
-);
-#endif
-
 const char *const JOB_STATUSES[NUM_JOB_STATUSES] = {
     "Exited", "Stopped", "Running"
 };
@@ -29,9 +21,6 @@ static Job *last_job = NULL;
 
 pid_t root_pid;
 int tty_fd = -1;
-
-// this is used for the line reader to print a ^C on sigint
-volatile sig_atomic_t recv_sigint = 0;
 
 void kill_all_children(void) {
   Job *current = root_job;
@@ -56,24 +45,23 @@ void kill_all_children(void) {
   clean_jobs();
 }
 
-static void sigint_handler(int sig) {
-  (void)sig;
-  if (!interactive) {
-    _exit(EXIT_FAILURE);
-  }
+// static void sigchld_handler(int sig) {
+//   (void)sig;
 
-  // tell the line reader we recieved a sigint
-  recv_sigint = 1;
+//   int saved_errno = errno;
+
+//   int status;
+//   pid_t pid = waitpid(-1, &status, WNOHANG | WCONTINUED | WUNTRACED);
+
+//   errno = saved_errno;
+// }
+
+void sigint_handler(int sig) {
+  (void)sig;
 }
 
 void sig_handler_init(void) {
-  struct sigaction sigint_act;
-  sigint_act.sa_handler = sigint_handler;
-  sigint_act.sa_flags = SA_RESTART;
-  sigemptyset(&sigint_act.sa_mask);
-
-  // Set up SIGINT handler using sigaction
-  sigaction(SIGINT, &sigint_act, NULL);
+  (void)signal(SIGINT, SIG_IGN);
   (void)signal(SIGTSTP, SIG_IGN);
   (void)signal(SIGTTOU, SIG_IGN);
 
@@ -83,7 +71,7 @@ void sig_handler_init(void) {
   if (interactive) {
     tty_fd = open("/dev/tty", O_RDWR, 0666);
     root_pid = getpid();
-  
+
     if (tty_fd != -1 && isatty(tty_fd)) {
       setpgid(0, root_pid);
       tcsetpgrp(tty_fd, root_pid);
@@ -101,7 +89,7 @@ void reset_fg_process(void) {
   }
 }
 
-void dont_restart_on_sigint(void) {
+void dont_ignore_sigint(void) {
   struct sigaction sigint_act;
   sigint_act.sa_handler = sigint_handler;
   sigint_act.sa_flags = 0;
@@ -110,13 +98,8 @@ void dont_restart_on_sigint(void) {
   sigaction(SIGINT, &sigint_act, NULL);
 }
 
-void restart_on_sigint(void) {
-  struct sigaction sigint_act;
-  sigint_act.sa_handler = sigint_handler;
-  sigint_act.sa_flags = SA_RESTART;
-  sigemptyset(&sigint_act.sa_mask);
-
-  sigaction(SIGINT, &sigint_act, NULL);
+void ignore_sigint(void) {
+  (void)signal(SIGINT, SIG_IGN);
 }
 
 void clean_jobs(void) {
