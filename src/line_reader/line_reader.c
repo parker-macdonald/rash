@@ -2,11 +2,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "lib/vector.h"
 #include "line_reader/actions.h"
 #include "line_reader/history.h"
+#include "line_reader/prompt.h"
 #include "line_reader_struct.h"
+#include "shell_vars.h"
 
 static LineReader reader;
 
@@ -22,9 +25,6 @@ void line_reader_init(void) {
   reader.history_root = NULL;
   reader.history_end = NULL;
   reader.history_curr = NULL;
-
-  reader.prompt = "$ ";
-  reader.prompt_length = 2;
 
   reader.cursor_pos = reader.prompt_length;
 
@@ -43,6 +43,15 @@ const uint8_t *line_reader_read_void(void *_) {
 }
 
 const uint8_t *line_reader_read(void) {
+  const char *prompt = var_get("PS1");
+
+  if (prompt == NULL) {
+    reader.prompt_length = 2;
+    reader.prompt = strdup("$ ");
+  } else {
+    reader.prompt_length = get_prompt(&reader.prompt, prompt);
+  }
+
   VECTOR_INIT(reader.buffer);
   reader.active_buffer = &reader.buffer;
   reader.buffer_offset = 0;
@@ -62,6 +71,8 @@ const uint8_t *line_reader_read(void) {
       break;
     }
   }
+
+  free(reader.prompt);
 
   return reader.buffer.data;
 }

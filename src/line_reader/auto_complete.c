@@ -353,9 +353,19 @@ void auto_complete(LineReader *reader) {
 
     const unsigned n = utf8_count_codepoint(&buffer);
     cursor_right_n(reader, n);
-    printf(ANSI_CURSOR_POS_SAVE);
-    draw_active_buffer(reader);
-    printf(ANSI_CURSOR_POS_RESTORE);
+    
+    unsigned short width = get_terminal_width();
+    
+    PUTS(ANSI_CURSOR_POS_SAVE);
+    size_t moves_up = reader->cursor_pos / width;
+    if (moves_up > 0) {
+      printf("\033[%zuA", moves_up);
+    }
+
+    printf("\r\033[0J%s%.*s", reader->prompt, (int)reader->active_buffer->length, (char *)reader->active_buffer->data);
+
+    PUTS(ANSI_CURSOR_POS_RESTORE);
+
     FLUSH();
 
     reader->buffer_offset += bytes_written;
