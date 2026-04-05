@@ -35,4 +35,6 @@ int action_home(LineReader *reader);
 
 int action_end(LineReader *reader);
 
+int action_complete(LineReader *reader);
+
 #endif

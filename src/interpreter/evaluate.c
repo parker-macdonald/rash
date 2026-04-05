@@ -17,7 +17,7 @@
 #include "glob.h"
 #include "lex.h"
 #include "lib/error.h"
-#include "lib/vec_types.h"
+#include "lib/string.h"
 #include "lib/vector.h"
 #include "shell_vars.h"
 

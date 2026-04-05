@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#include "lib/vec_types.h"
+#include "lib/string.h"
 
 typedef int (*builtin_t)(char **);
 

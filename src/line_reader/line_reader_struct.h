@@ -1,7 +1,7 @@
 #ifndef LINE_READER_STRUCT_H
 #define LINE_READER_STRUCT_H
 
-#include "lib/vec_types.h"
+#include "lib/buffer.h"
 #include "line_reader/actions.h"
 
 // a history node is a node in the linked list storing command history.

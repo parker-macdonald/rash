@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "lib/vec_types.h"
+#include "lib/buffer.h"
 
 #define LAST_BIT_OF_BYTE_MASK 0x80
 

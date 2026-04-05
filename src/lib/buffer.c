@@ -1,19 +1,22 @@
-#include "vec_types.h"
+#include "lib/buffer.h"
 
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 
 #include "lib/next_pow_2.h"
-#include "vector.h"
 
 void buffer_append_string(Buffer *self, const char *str) {
+  // if capacity is -1, this buffer is read only
+  assert(self->_capacity != (size_t)-1);
+
   for (size_t i = 0; str[i] != '\0'; i++) {
     VECTOR_PUSH(*self, (uint8_t)str[i]);
   }
 }
 
 void buffer_copy(Buffer *dest, const Buffer *src) {
+  // if capacity is -1, this buffer is read only
+  assert(dest->_capacity != (size_t)-1);
+
   if (dest->_capacity < src->length) {
     free(dest->data);
     dest->_capacity = next_pow_2(src->length);
@@ -25,6 +28,9 @@ void buffer_copy(Buffer *dest, const Buffer *src) {
 }
 
 void buffer_insert(Buffer *buffer, size_t buffer_offset, uint8_t byte) {
+  // if capacity is -1, this buffer is read only
+  assert(buffer->_capacity != (size_t)-1);
+
   if (buffer_offset >= buffer->length) {
     VECTOR_PUSH((*buffer), byte);
     return;
@@ -44,7 +50,12 @@ void buffer_insert(Buffer *buffer, size_t buffer_offset, uint8_t byte) {
   VECTOR_PUSH((*buffer), old_value);
 }
 
-void buffer_insert_bulk(Buffer *buffer, const uint8_t *src, size_t src_len, size_t buffer_offset) {
+void buffer_insert_bulk(
+    Buffer *buffer, const uint8_t *src, size_t src_len, size_t buffer_offset
+) {
+  // if capacity is -1, this buffer is read only
+  assert(buffer->_capacity != (size_t)-1);
+
   size_t new_length = src_len + buffer->length;
 
   if (buffer->_capacity < new_length) {
@@ -85,22 +96,25 @@ void buffer_insert_bulk(Buffer *buffer, const uint8_t *src, size_t src_len, size
   buffer->length = new_length;
 }
 
-void string_append(String *self, const char *str) {
-  for (size_t i = 0; str[i] != '\0'; i++) {
-    VECTOR_PUSH(*self, str[i]);
-  }
+Buffer buffer_from(const uint8_t *data, size_t length) {
+  Buffer buffer;
+
+  buffer._capacity = next_pow_2(length);
+  buffer.data = malloc(buffer._capacity);
+  buffer.length = length;
+
+  memcpy(buffer.data, data, length);
+
+  return buffer;
 }
 
-void string_replace(String *self, char search_for, char replace_with) {
-  for (size_t i = 0; self->length; i++) {
-    if (self->data[i] == search_for) {
-      self->data[i] = replace_with;
-    }
-  }
-}
+Buffer buffer_using(const uint8_t *data, size_t length) {
+  Buffer buffer;
 
-void strings_append(StringList *dest, const StringList *src) {
-  for (size_t i = 0; src->length; i++) {
-    VECTOR_PUSH(*dest, src->data[i]);
-  }
+  buffer._capacity = (size_t)-1;
+  // scary cast that discards const
+  buffer.data = (uint8_t *)data;
+  buffer.length = length;
+
+  return buffer;
 }

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "lib/vec_types.h"
+#include "lib/buffer.h"
 
 /**
  * @brief return the index of the first byte of the previous codepoint before

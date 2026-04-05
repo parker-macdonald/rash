@@ -11,7 +11,7 @@
 #include "interpreter/repl.h"
 #include "jobs.h"
 #include "lib/error.h"
-#include "lib/vec_types.h"
+#include "lib/buffer.h"
 #include "lib/vector.h"
 #include "line_reader/line_reader.h"
 #include "rashrc.h"

@@ -170,7 +170,7 @@ void actions_default(Actions *acts) {
   acts->page_up = action_nop;
   acts->page_down = action_nop;
   acts->shift_tab = action_nop;
-  acts->tab = action_nop;
+  acts->tab = action_complete;
   acts->end_of_file = action_end_of_file;
   acts->insert = action_insert;
   acts->backspace = action_backspace;

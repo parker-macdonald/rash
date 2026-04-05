@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "lib/vec_types.h"
+#include "lib/string.h"
 #include "vector.h"
 
 char *search_path(const char *file) {

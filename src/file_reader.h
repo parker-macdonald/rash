@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "lib/vec_types.h"
+#include "lib/buffer.h"
 
 typedef struct {
   FILE *file;

@@ -3,7 +3,7 @@
 
 #include "builtins/builtins.h"
 #include "interpreter/repl.h"
-#include "lib/vec_types.h"
+#include "lib/buffer.h"
 #include "lib/vector.h"
 
 extern char **environ;

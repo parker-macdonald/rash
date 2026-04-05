@@ -1,12 +1,13 @@
 #include "line_reader/actions_all.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "lib/ansi.h"
 #include "lib/utf_8.h"
-#include "lib/vec_types.h"
+#include "lib/buffer.h"
 #include "line_reader/action_utils.h"
-#include "line_reader/actions.h"
+#include "line_reader/auto_complete.h"
 #include "line_reader/history.h"
 #include "line_reader/line_reader_struct.h"
 
@@ -290,6 +291,12 @@ int action_end(LineReader *reader) {
   printf("\r\033[%uC", length % width);
 
   FLUSH();
+
+  return 0;
+}
+
+int action_complete(LineReader *reader) {
+  auto_complete(reader);
 
   return 0;
 }
