@@ -19,7 +19,7 @@ void cursor_right_n(LineReader *reader, unsigned n);
 
 void draw_active_buffer(LineReader *reader);
 
-void show_active_buffer(LineReader *reader);
+void update_active_buffer(LineReader *reader, Buffer *buffer);
 
 void copy_hist_buf_if_needed(LineReader *reader);
 

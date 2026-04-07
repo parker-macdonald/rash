@@ -33,9 +33,6 @@ typedef struct line_reader_t {
   // the cursor. remember, this is utf-8 land, not all characters are one byte.
   unsigned cursor_pos;
 
-  // the count of characters in the current line
-  unsigned line_length;
-
   char *prompt;
   // length of the prompt in characters, remember, in utf-8, not all characters
   // are one byte.

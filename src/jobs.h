@@ -65,24 +65,6 @@ pid_t get_pid_and_remove(int *id);
  */
 void print_jobs(void);
 
-/**
- * @brief this function re-registers the sigint handler WITHOUT SA_RESTART set
- * in the flags, this is so you can preform an operation that must be aware a
- * sigint occured (such as reading a character). pretty much all of rash's code
- * does not handle the EINTR error, so calling this function, without later
- * calling ignore_sigint will cause bugs.
- */
-void dont_ignore_sigint(void);
-
-/**
- * @brief this function re-registers the sigint handler with SIG_IGN set, this
- * function must be called at some point after a call to dont_ignore_sigint
- * since pretty much all of rash's code does not handle the EINTR error. if you
- * don't call this function after a call to dont_ignore_sigint, there WILL be
- * bugs and other unintended consequences.
- */
-void ignore_sigint(void);
-
 void reset_fg_process(void);
 
 #endif

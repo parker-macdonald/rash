@@ -1,6 +1,7 @@
 #include "action_utils.h"
 
 #include <errno.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -8,7 +9,6 @@
 #include <termios.h>
 #include <unistd.h>
 
-#include "jobs.h"
 #include "lib/ansi.h"
 #include "lib/error.h"
 #include "lib/utf_8.h"
@@ -90,14 +90,18 @@ void draw_active_buffer(LineReader *reader) {
   );
 }
 
-void show_active_buffer(LineReader *reader) {
+void update_active_buffer(LineReader *reader, Buffer *buffer) {
+  reader->active_buffer = buffer;
+  reader->buffer_offset = buffer->length;
+
   draw_active_buffer(reader);
+
+  PUTS(ANSI_CURSOR_LEFT);
 
   FLUSH();
 
-  reader->buffer_offset = reader->active_buffer->length;
   reader->cursor_pos =
-      reader->prompt_length + utf8_count_codepoint(reader->active_buffer);
+      utf8_count_codepoint(reader->active_buffer) + reader->prompt_length;
 }
 
 unsigned short get_terminal_width(void) {
@@ -112,46 +116,39 @@ unsigned short get_terminal_width(void) {
 int getch(void) {
   struct termios oldt = {0};
   struct termios newt = {0};
-  uint8_t byte = 0;
-  ssize_t nread;
-  int saved_errno;
 
   tcgetattr(STDIN_FILENO, &oldt);
   newt = oldt;
   newt.c_lflag &= ~(unsigned int)(ICANON | ECHO);
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-  // this is to allow the read system call to know a sigint occured.
-  dont_ignore_sigint();
+  fd_set fds;
+  FD_ZERO(&fds);
+  FD_SET(STDIN_FILENO, &fds);
 
-  for (;;) {
-    errno = 0;
-    nread = read(STDIN_FILENO, &byte, sizeof(byte));
+  sigset_t set;
+  sigemptyset(&set);
 
-    // adding a null terminator to the line buffer will fuck up the lexer
-    if (nread == 1 && byte == '\0') {
-      continue;
-    }
+  if (pselect(1, &fds, NULL, NULL, NULL, &set) == -1) {
     if (errno == EINTR) {
-      ignore_sigint();
-      tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // Restore original settings
-
       return SIGINT_ON_READ;
     }
 
-    saved_errno = errno;
-    break;
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    fatal_f("pselect: %s\n", strerror(errno));
   }
 
-  ignore_sigint();
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // Restore original settings
+  uint8_t byte = 0;
+  ssize_t nread = read(STDIN_FILENO, &byte, sizeof(byte));
+
+  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 
   if (nread == 0) {
     return ASCII_END_OF_TRANSMISSION;
   }
 
   if (nread == -1) {
-    error_f("read: %s\n", strerror(saved_errno));
+    error_f("read: %s\n", strerror(errno));
     return ASCII_END_OF_TRANSMISSION;
   }
 
