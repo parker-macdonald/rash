@@ -51,6 +51,7 @@ const uint8_t *line_reader_read(void) {
   } else {
     reader.prompt_length = get_prompt(&reader.prompt, prompt);
   }
+  reader.line_length = reader.prompt_length;
 
   VECTOR_INIT(reader.buffer);
   reader.active_buffer = &reader.buffer;
