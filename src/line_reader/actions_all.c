@@ -4,8 +4,8 @@
 #include <string.h>
 
 #include "lib/ansi.h"
-#include "lib/utf_8.h"
 #include "lib/buffer.h"
+#include "lib/utf_8.h"
 #include "line_reader/action_utils.h"
 #include "line_reader/auto_complete.h"
 #include "line_reader/history.h"
@@ -29,10 +29,10 @@ int action_clear(LineReader *reader) {
   unsigned moves_down = reader->cursor_pos / width;
   if (moves_down) {
     // move the cursor down `moves_down` times
-    printf("\033[%uB", moves_down);
+    printf(ANSI_CURSOR_DOWN_N("%u"), moves_down);
   }
 
-  printf("\033[%uC", reader->cursor_pos % width);
+  printf(ANSI_CURSOR_RIGHT_N("%u"), reader->cursor_pos % width);
 
   FLUSH();
 
@@ -182,7 +182,7 @@ int action_backspace(LineReader *reader) {
 
     if (reader->cursor_pos % width == 0) {
       // move cursor up one line and all the way to the right
-      PUTS("\033[999C" ANSI_CURSOR_UP ANSI_DELETE_CHAR);
+      PUTS(ANSI_CURSOR_RIGHT_N("999") ANSI_CURSOR_UP ANSI_DELETE_CHAR);
     } else {
       PUTS(ANSI_CURSOR_LEFT ANSI_DELETE_CHAR);
     }
@@ -262,11 +262,11 @@ int action_home(LineReader *reader) {
   reader->cursor_pos = reader->prompt_length;
 
   if (moves_up > 0) {
-    printf("\033[%uA", moves_up);
+    printf(ANSI_CURSOR_UP_N("%u"), moves_up);
   }
 
   // move the cursort all the way to the left, then right prompt_length times
-  printf("\r\033[%uC", reader->prompt_length);
+  printf("\r" ANSI_CURSOR_RIGHT_N("%u"), reader->prompt_length);
 
   FLUSH();
 
@@ -284,11 +284,11 @@ int action_end(LineReader *reader) {
   // this is real code written by sane individuals
   unsigned moves_down = (length - reader->cursor_pos) / width;
   if (moves_down > 0) {
-    printf("\033[%uB", moves_down);
+    printf(ANSI_CURSOR_DOWN_N("%u"), moves_down);
   }
 
   reader->cursor_pos = length;
-  printf("\r\033[%uC", length % width);
+  printf("\r" ANSI_CURSOR_RIGHT_N("%u"), length % width);
 
   FLUSH();
 

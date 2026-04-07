@@ -321,7 +321,7 @@ void auto_complete(LineReader *reader) {
       putchar('\n');
       pretty_print_strings(matches.data, matches.length);
       printf(
-          "\n\033[s%s%.*s\033[u",
+          "\n" ANSI_CURSOR_POS_SAVE "%s%.*s" ANSI_CURSOR_POS_RESTORE,
           reader->prompt,
           (int)reader->active_buffer->length,
           (char *)reader->active_buffer->data
@@ -333,9 +333,9 @@ void auto_complete(LineReader *reader) {
           ((reader->cursor_pos + reader->cursor_pos) / width) -
           (reader->cursor_pos / width);
       if (moves_down > 0) {
-        printf("\033[%uB", moves_down);
+        printf(ANSI_CURSOR_DOWN_N("%u"), moves_down);
       }
-      printf("\r\033[%uC", reader->cursor_pos % width);
+      printf("\r" ANSI_CURSOR_RIGHT_N("%u"), reader->cursor_pos % width);
       (void)fflush(stdout);
     }
 
@@ -353,16 +353,21 @@ void auto_complete(LineReader *reader) {
 
     const unsigned n = utf8_count_codepoint(&buffer);
     cursor_right_n(reader, n);
-    
+
     unsigned short width = get_terminal_width();
-    
+
     PUTS(ANSI_CURSOR_POS_SAVE);
-    size_t moves_up = reader->cursor_pos / width;
+    unsigned moves_up = reader->cursor_pos / width;
     if (moves_up > 0) {
-      printf("\033[%zuA", moves_up);
+      printf(ANSI_CURSOR_UP_N("%u"), moves_up);
     }
 
-    printf("\r\033[0J%s%.*s", reader->prompt, (int)reader->active_buffer->length, (char *)reader->active_buffer->data);
+    printf(
+        "\r" ANSI_REMOVE_BELOW_CURSOR "%s%.*s",
+        reader->prompt,
+        (int)reader->active_buffer->length,
+        (char *)reader->active_buffer->data
+    );
 
     PUTS(ANSI_CURSOR_POS_RESTORE);
 

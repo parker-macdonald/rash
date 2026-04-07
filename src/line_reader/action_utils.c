@@ -19,7 +19,7 @@ void cursor_left(LineReader *reader) {
 
   if (reader->cursor_pos % width == 0) {
     // move cursor up one line and all the way to the right
-    PUTS("\033[999C\033[A");
+    PUTS(ANSI_CURSOR_RIGHT_N("999") ANSI_CURSOR_UP);
   } else {
     PUTS(ANSI_CURSOR_LEFT);
   }
@@ -50,14 +50,14 @@ void cursor_left_n(LineReader *reader, unsigned n) {
       (reader->cursor_pos / width) - ((reader->cursor_pos - n) / width);
 
   if (moves_up > 0) {
-    printf("\033[%uA", moves_up);
+    printf(ANSI_CURSOR_UP_N("%u"), moves_up);
   }
 
   reader->cursor_pos -= n;
   unsigned x_pos = reader->cursor_pos % width;
 
   if (x_pos) {
-    printf("\r\033[%uC", x_pos);
+    printf("\r" ANSI_CURSOR_RIGHT_N("%u"), x_pos);
   }
 
   FLUSH();
@@ -70,14 +70,14 @@ void cursor_right_n(LineReader *reader, unsigned n) {
       ((reader->cursor_pos + n) / width) - (reader->cursor_pos / width);
 
   if (moves_down > 0) {
-    printf("\033[%uB", moves_down);
+    printf(ANSI_CURSOR_DOWN_N("%u"), moves_down);
   }
 
   reader->cursor_pos += n;
   unsigned x_pos = reader->cursor_pos % width;
 
   if (x_pos) {
-    printf("\r\033[%uC", x_pos);
+    printf("\r" ANSI_CURSOR_RIGHT_N("%u"), x_pos);
   }
 
   FLUSH();
@@ -89,7 +89,7 @@ void draw_active_buffer(LineReader *reader) {
   unsigned moves_up = reader->cursor_pos / width;
   if (moves_up) {
     // move the cursor up `moves_up` times
-    printf("\033[%uA", moves_up);
+    printf(ANSI_CURSOR_UP_N("%u"), moves_up);
   }
 
   printf(

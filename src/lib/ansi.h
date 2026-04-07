@@ -17,9 +17,16 @@
 #define ANSI_REMOVE_BELOW_CURSOR "\033[0J"
 
 #define ANSI_CURSOR_UP "\033[A"
+#define ANSI_CURSOR_UP_N(s) "\033["s"A"
+
 #define ANSI_CURSOR_DOWN "\033[B"
+#define ANSI_CURSOR_DOWN_N(s) "\033["s"B"
+
 #define ANSI_CURSOR_RIGHT "\033[C"
+#define ANSI_CURSOR_RIGHT_N(s) "\033["s"C"
+
 #define ANSI_CURSOR_LEFT "\033[D"
+#define ANSI_CURSOR_LEFT_N(s) "\033["s"D"
 
 #define ANSI_CURSOR_HOME "\033[H"
 
