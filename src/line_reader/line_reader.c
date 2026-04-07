@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <termios.h>
+#include <unistd.h>
 
 #include "lib/vector.h"
 #include "line_reader/actions.h"
@@ -42,7 +44,8 @@ const uint8_t *line_reader_read_void(void *_) {
   return line_reader_read();
 }
 
-const uint8_t *line_reader_read(void) {
+struct termios oldt = {0};
+void reader_begin(void) {
   const char *prompt = var_get("PS1");
 
   if (prompt == NULL) {
@@ -60,10 +63,27 @@ const uint8_t *line_reader_read(void) {
   printf("%s", reader.prompt);
   (void)fflush(stdout);
 
+  struct termios newt = {0};
+
+  tcgetattr(STDIN_FILENO, &oldt);
+  newt = oldt;
+  newt.c_lflag &= ~(unsigned int)(ICANON | ECHO);
+  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+}
+
+void reader_end(void) {
+  free(reader.prompt);
+  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+}
+
+const uint8_t *line_reader_read(void) {
+  reader_begin();
+
   while (1) {
     int status = preform_action(&reader);
 
     if (status < 0) {
+      reader_end();
       return NULL;
     }
 
@@ -72,8 +92,7 @@ const uint8_t *line_reader_read(void) {
     }
   }
 
-  free(reader.prompt);
-
+  reader_end();
   return reader.buffer.data;
 }
 

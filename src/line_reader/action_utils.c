@@ -114,14 +114,6 @@ unsigned short get_terminal_width(void) {
 }
 
 int getch(void) {
-  struct termios oldt = {0};
-  struct termios newt = {0};
-
-  tcgetattr(STDIN_FILENO, &oldt);
-  newt = oldt;
-  newt.c_lflag &= ~(unsigned int)(ICANON | ECHO);
-  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
   fd_set fds;
   FD_ZERO(&fds);
   FD_SET(STDIN_FILENO, &fds);
@@ -133,15 +125,12 @@ int getch(void) {
     if (errno == EINTR) {
       return SIGINT_ON_READ;
     }
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    
     fatal_f("pselect: %s\n", strerror(errno));
   }
 
   uint8_t byte = 0;
   ssize_t nread = read(STDIN_FILENO, &byte, sizeof(byte));
-
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 
   if (nread == 0) {
     return ASCII_END_OF_TRANSMISSION;
