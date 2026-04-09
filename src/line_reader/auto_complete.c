@@ -354,20 +354,9 @@ void auto_complete(LineReader *reader) {
     const unsigned n = utf8_count_codepoint(&buffer);
     cursor_right_n(reader, n);
 
-    unsigned short width = get_terminal_width();
-
     PUTS(ANSI_CURSOR_POS_SAVE);
-    unsigned moves_up = reader->cursor_pos / width;
-    if (moves_up > 0) {
-      printf(ANSI_CURSOR_UP_N("%u"), moves_up);
-    }
-
-    printf(
-        "\r" ANSI_REMOVE_BELOW_CURSOR "%s%.*s",
-        reader->prompt,
-        (int)reader->active_buffer->length,
-        (char *)reader->active_buffer->data
-    );
+    
+    draw_active_buffer(reader);
 
     PUTS(ANSI_CURSOR_POS_RESTORE);
 

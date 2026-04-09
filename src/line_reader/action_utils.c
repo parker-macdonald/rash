@@ -12,6 +12,7 @@
 #include "lib/ansi.h"
 #include "lib/error.h"
 #include "lib/utf_8.h"
+#include "line_reader/actions.h"
 #include "line_reader/line_reader_struct.h"
 
 void cursor_left(LineReader *reader) {
@@ -100,8 +101,7 @@ void update_active_buffer(LineReader *reader, Buffer *buffer) {
 
   FLUSH();
 
-  reader->cursor_pos =
-      utf8_count_codepoint(reader->active_buffer) + reader->prompt_length;
+  reader->cursor_pos = get_line_length(reader);
 }
 
 unsigned short get_terminal_width(void) {
@@ -125,7 +125,7 @@ int getch(void) {
     if (errno == EINTR) {
       return SIGINT_ON_READ;
     }
-    
+
     fatal_f("pselect: %s\n", strerror(errno));
   }
 
@@ -150,4 +150,22 @@ void copy_hist_buf_if_needed(LineReader *reader) {
     reader->active_buffer = &reader->buffer;
     reader->history_curr = NULL;
   }
+}
+
+unsigned get_line_length(const LineReader *reader) {
+  return reader->prompt_length + utf8_count_codepoint(reader->active_buffer);
+}
+
+void cursor_to_bottom(const LineReader *reader) {
+  unsigned short width = get_terminal_width();
+  unsigned length = get_line_length(reader);
+  unsigned current_line = reader->cursor_pos / width;
+  unsigned total_lines = length / width;
+
+  unsigned down = total_lines - current_line;
+  if (down > 0) {
+    printf(ANSI_CURSOR_DOWN_N("%u"), down);
+  }
+
+  putchar('\r');
 }

@@ -64,12 +64,16 @@ int action_cursor_right(LineReader *reader) {
 }
 
 int action_end_of_file(LineReader *reader) {
-  (void)reader;
+  cursor_to_bottom(reader);
   putchar('\n');
   return -1;
 }
 
 int action_sigint(LineReader *reader) {
+  cursor_to_bottom(reader);
+  printf("\n%s", reader->prompt);
+  FLUSH();
+
   reader->history_curr = NULL;
   reader->active_buffer = &reader->buffer;
 
@@ -77,8 +81,6 @@ int action_sigint(LineReader *reader) {
 
   VECTOR_CLEAR(reader->buffer);
 
-  printf("\n%s", reader->prompt);
-  FLUSH();
   return 0;
 }
 
@@ -89,9 +91,11 @@ int action_new_line(LineReader *reader) {
     return 0;
   }
 
+  cursor_to_bottom(reader);
+  putchar('\n');
+
   copy_hist_buf_if_needed(reader);
 
-  putchar('\n');
   VECTOR_PUSH(reader->buffer, '\0');
 
   history_add(reader);
@@ -263,13 +267,12 @@ int action_home(LineReader *reader) {
 int action_end(LineReader *reader) {
   unsigned short width = get_terminal_width();
 
-  unsigned length =
-      reader->prompt_length + utf8_count_codepoint(reader->active_buffer);
+  unsigned length = get_line_length(reader);
 
   reader->buffer_offset = reader->active_buffer->length;
 
   unsigned current_line = reader->cursor_pos / width;
-  unsigned total_lines = (length / width) + 1;
+  unsigned total_lines = length / width;
 
   unsigned down = total_lines - current_line;
   if (down > 0) {

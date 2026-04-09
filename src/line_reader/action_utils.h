@@ -33,4 +33,12 @@ int getch(void);
 
 unsigned short get_terminal_width(void);
 
+unsigned get_line_length(const LineReader *reader);
+
+// move cursor to the start of the bottom row of the current line
+// i.e.
+//                    this is a line la la la <-- cursor here
+// cursor now here -->keeps going
+void cursor_to_bottom(const LineReader *reader);
+
 #endif
