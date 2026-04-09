@@ -70,28 +70,25 @@ void buffer_insert_bulk(
   if (buffer_offset == buffer->length) {
     uint8_t *line_end = buffer->data + buffer->length;
 
-    for (size_t i = 0; i < src_len; i++) {
-      *line_end = src[i];
-      line_end++;
-    }
+    memcpy(line_end, src, src_len);
 
     buffer->length = new_length;
     return;
   }
 
+  uint8_t *offset = buffer->data + buffer_offset;
+
   // move previous data over
   // i think this is the first feature newer than c99 i've used so far (besides
   // static_assert)
   memmove(
-      buffer->data + buffer_offset + src_len,
-      buffer->data + buffer_offset,
+      offset + src_len,
+      offset,
       buffer->length - buffer_offset
   );
 
   // copy new data in
-  for (size_t i = 0; i < src_len; i++) {
-    buffer->data[i + buffer_offset] = src[i];
-  }
+  memcpy(offset, src, src_len);
 
   buffer->length = new_length;
 }
