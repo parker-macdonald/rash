@@ -21,7 +21,7 @@ typedef struct {
   Action home;
   Action end;
   Action new_line;
-  Action shift_delete;
+  Action ctrl_delete;
   Action page_up;
   Action page_down;
   Action shift_tab;

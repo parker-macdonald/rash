@@ -298,3 +298,75 @@ int action_complete(LineReader *reader) {
 
   return 0;
 }
+
+int action_delete_word_left(LineReader *reader) {
+  if (reader->buffer_offset == 0) {
+    return 0;
+  }
+
+  size_t saved_offset = reader->buffer_offset;
+  unsigned count = 1;
+
+  reader->buffer_offset =
+      utf8_prev_codepoint(reader->active_buffer, reader->buffer_offset);
+
+  while (reader->buffer_offset > 0 &&
+         reader->active_buffer->data[reader->buffer_offset - 1] != ' ') {
+    reader->buffer_offset =
+        utf8_prev_codepoint(reader->active_buffer, reader->buffer_offset);
+    count++;
+  }
+
+  copy_hist_buf_if_needed(reader);
+
+  buffer_remove_bulk(
+      reader->active_buffer,
+      reader->buffer_offset,
+      saved_offset - reader->buffer_offset
+  );
+
+  cursor_left_n(reader, count);
+
+  PUTS(ANSI_CURSOR_POS_SAVE);
+
+  draw_active_buffer(reader);
+
+  PUTS(ANSI_CURSOR_POS_RESTORE);
+
+  FLUSH();
+
+  return 0;
+}
+
+int action_delete_word_right(LineReader *reader) {
+  if (reader->active_buffer->length == reader->buffer_offset) {
+    return 0;
+  }
+
+  size_t new_offset =
+      utf8_next_codepoint(reader->active_buffer, reader->buffer_offset);
+
+  while (new_offset <= reader->active_buffer->length - 1 &&
+         reader->active_buffer->data[new_offset] != ' ') {
+    new_offset =
+        utf8_next_codepoint(reader->active_buffer, new_offset);
+  }
+
+  copy_hist_buf_if_needed(reader);
+
+  buffer_remove_bulk(
+      reader->active_buffer,
+      reader->buffer_offset,
+      new_offset - reader->buffer_offset
+  );
+
+  PUTS(ANSI_CURSOR_POS_SAVE);
+
+  draw_active_buffer(reader);
+
+  PUTS(ANSI_CURSOR_POS_RESTORE);
+
+  FLUSH();
+
+  return 0;
+}

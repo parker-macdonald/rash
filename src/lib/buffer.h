@@ -17,6 +17,8 @@ void buffer_insert_bulk(
     Buffer *buffer, const uint8_t *src, size_t src_len, size_t buffer_offset
 );
 
+void buffer_remove_bulk(Buffer *buffer, size_t offset, size_t count);
+
 // constructs a buffer by copying the data at `data` of length `length`. if this
 // were rust i would say that the returned buffer owns it's data.
 Buffer buffer_from(const uint8_t *data, size_t length);

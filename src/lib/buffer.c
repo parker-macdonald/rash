@@ -93,6 +93,18 @@ void buffer_insert_bulk(
   buffer->length = new_length;
 }
 
+void buffer_remove_bulk(Buffer *buffer, size_t offset, size_t count) {
+  buffer->length -= count;
+  
+  if (buffer->length == offset + count) {
+    return;
+  }
+
+  for (size_t i = offset; i < buffer->length; i++) {
+    buffer->data[i] = buffer->data[i + count];
+  }
+}
+
 Buffer buffer_from(const uint8_t *data, size_t length) {
   Buffer buffer;
 

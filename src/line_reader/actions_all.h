@@ -37,4 +37,8 @@ int action_end(LineReader *reader);
 
 int action_complete(LineReader *reader);
 
+int action_delete_word_left(LineReader *reader);
+
+int action_delete_word_right(LineReader *reader);
+
 #endif

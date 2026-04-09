@@ -33,7 +33,7 @@ int preform_action(LineReader *reader) {
     byte = (uint8_t)getch();
 
     if (byte == 'd') {
-      reader->acts.shift_delete(reader);
+      reader->acts.ctrl_delete(reader);
       return 0;
     }
 
@@ -166,7 +166,7 @@ void actions_default(Actions *acts) {
   acts->home = action_home;
   acts->end = action_end;
   acts->new_line = action_new_line;
-  acts->shift_delete = action_nop;
+  acts->ctrl_delete = action_delete_word_right;
   acts->page_up = action_nop;
   acts->page_down = action_nop;
   acts->shift_tab = action_nop;
@@ -174,5 +174,5 @@ void actions_default(Actions *acts) {
   acts->end_of_file = action_end_of_file;
   acts->insert = action_insert;
   acts->backspace = action_backspace;
-  acts->ctrl_backspace = action_nop;
+  acts->ctrl_backspace = action_delete_word_left;
 }
