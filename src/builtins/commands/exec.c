@@ -61,4 +61,6 @@ int builtin_exec(char **const argv) {
   }
 
   exit(EXIT_FAILURE);
+
+  return 0;
 }

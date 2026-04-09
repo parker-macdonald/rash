@@ -44,8 +44,8 @@ const uint8_t *line_reader_read_void(void *_) {
   return line_reader_read();
 }
 
-struct termios oldt = {0};
-void reader_begin(void) {
+static struct termios oldt = {0};
+static void reader_begin(void) {
   const char *prompt = var_get("PS1");
 
   if (prompt == NULL) {
@@ -71,7 +71,7 @@ void reader_begin(void) {
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 }
 
-void reader_end(void) {
+static void reader_end(void) {
   free(reader.prompt);
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 }

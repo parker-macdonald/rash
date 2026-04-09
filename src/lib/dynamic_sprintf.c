@@ -4,8 +4,9 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "lib/attrib.h"
 
-__attribute__((__format__(__printf__, 1, 2)))
+ATTRIB_PRINTF(1, 2)
 char *dynamic_sprintf(const char *restrict format, ...) {
   char *buffer;
   size_t size;

@@ -19,10 +19,10 @@ const char *const JOB_STATUSES[NUM_JOB_STATUSES] = {
 static Job *root_job = NULL;
 static Job *last_job = NULL;
 
-pid_t root_pid;
+static pid_t root_pid;
 int tty_fd = -1;
 
-void kill_all_children(void) {
+static void kill_all_children(void) {
   Job *current = root_job;
 
   while (current != NULL) {
@@ -56,7 +56,7 @@ void kill_all_children(void) {
 //   errno = saved_errno;
 // }
 
-void sigint_handler(int sig) {
+static void sigint_handler(int sig) {
   (void)sig;
 }
 
