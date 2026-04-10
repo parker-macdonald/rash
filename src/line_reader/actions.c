@@ -1,6 +1,5 @@
 #include "actions.h"
 
-#include <ctype.h>
 #include <stdint.h>
 
 #include "lib/ansi.h"
@@ -144,7 +143,8 @@ int preform_action(LineReader *reader) {
     return 0;
   }
 
-  if (iscntrl((int)byte)) {
+  // check if byte is an ascii control character
+  if (byte <= 31) {
     return 0;
   }
 
