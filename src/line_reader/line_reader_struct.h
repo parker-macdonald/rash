@@ -1,6 +1,8 @@
 #ifndef LINE_READER_STRUCT_H
 #define LINE_READER_STRUCT_H
 
+#include <stddef.h>
+
 #include "lib/buffer.h"
 #include "line_reader/actions.h"
 

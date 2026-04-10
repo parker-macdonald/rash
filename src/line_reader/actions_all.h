@@ -1,6 +1,8 @@
 #ifndef ACTIONS_ALL_H
 #define ACTIONS_ALL_H
 
+#include <stdint.h>
+
 #include "line_reader/line_reader_struct.h"
 
 int action_nop(LineReader *reader);

@@ -9,12 +9,14 @@
 #include <assert.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #include "lib/ansi.h"
+#include "lib/attrib.h"
 #include "lib/sort.h"
 #include "lib/utf_8.h"
 #include "line_reader/action_utils.h"
@@ -26,9 +28,11 @@
 
 #include "builtins/find_builtin.h"
 #include "lib/buffer.h"
+#include "lib/string.h"
 #include "lib/vector.h"
 
-void get_file_matches(StringList *matches, const char *word, size_t word_len) {
+static void
+get_file_matches(StringList *matches, const char *word, size_t word_len) {
   DIR *dir;
   const char *basename;
   size_t basename_len;
@@ -120,9 +124,8 @@ void get_file_matches(StringList *matches, const char *word, size_t word_len) {
   closedir(dir);
 }
 
-void get_command_matches(
-    StringList *matches, const char *word, size_t word_len
-) {
+static void
+get_command_matches(StringList *matches, const char *word, size_t word_len) {
   find_matching_builtins(word, word_len, matches);
   const char *path = getenv("PATH");
 
@@ -180,7 +183,9 @@ void get_command_matches(
   VECTOR_DESTROY(file_path);
 }
 
-size_t get_matches(StringList *matches, Buffer *line, size_t cursor_pos) {
+ATTRIB_UNUSED
+static size_t
+get_matches(StringList *matches, Buffer *line, size_t cursor_pos) {
   size_t word_start = cursor_pos - 1;
 
   for (; word_start > 0; word_start--) {
@@ -206,7 +211,7 @@ size_t get_matches(StringList *matches, Buffer *line, size_t cursor_pos) {
   return word_start;
 }
 
-void pretty_print_strings(char *const strings[], const size_t length) {
+static void pretty_print_strings(char *const strings[], const size_t length) {
   size_t width = (size_t)get_terminal_width();
   size_t max_len = 2;
 
@@ -269,6 +274,7 @@ void auto_complete(LineReader *reader) {
   }
 
   if (matches.length == 0) {
+    VECTOR_DESTROY(matches);
     return;
   }
 
@@ -355,7 +361,7 @@ void auto_complete(LineReader *reader) {
     cursor_right_n(reader, n);
 
     PUTS(ANSI_CURSOR_POS_SAVE);
-    
+
     draw_active_buffer(reader);
 
     PUTS(ANSI_CURSOR_POS_RESTORE);

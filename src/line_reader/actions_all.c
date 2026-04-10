@@ -1,11 +1,13 @@
 #include "line_reader/actions_all.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "lib/ansi.h"
 #include "lib/buffer.h"
 #include "lib/utf_8.h"
+#include "lib/vector.h"
 #include "line_reader/action_utils.h"
 #include "line_reader/auto_complete.h"
 #include "line_reader/history.h"
@@ -104,8 +106,10 @@ int action_new_line(LineReader *reader) {
 }
 
 int action_history_up(LineReader *reader) {
-  if (reader->history_curr == NULL && reader->history_end != NULL) {
-    reader->history_curr = reader->history_end;
+  if (reader->history_curr == NULL) {
+    if (reader->history_end != NULL) {
+      reader->history_curr = reader->history_end;
+    }
   } else if (reader->history_curr->p_prev != NULL) {
     reader->history_curr = reader->history_curr->p_prev;
   } else {
@@ -348,8 +352,7 @@ int action_delete_word_right(LineReader *reader) {
 
   while (new_offset <= reader->active_buffer->length - 1 &&
          reader->active_buffer->data[new_offset] != ' ') {
-    new_offset =
-        utf8_next_codepoint(reader->active_buffer, new_offset);
+    new_offset = utf8_next_codepoint(reader->active_buffer, new_offset);
   }
 
   copy_hist_buf_if_needed(reader);

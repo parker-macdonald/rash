@@ -21,14 +21,14 @@ enum lexer_state {
   do {                                                                         \
     if (buffer.length != 0) {                                                  \
       VECTOR_PUSH(buffer, '\0');                                               \
-      VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));   \
+      VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));     \
       VECTOR_INIT(buffer);                                                     \
     }                                                                          \
     if (has_arguments) {                                                       \
-      VECTOR_PUSH(tokens, ((Token){.type = END_ARG}));                       \
+      VECTOR_PUSH(tokens, ((Token){.type = END_ARG}));                         \
       has_arguments = false;                                                   \
     }                                                                          \
-    VECTOR_PUSH(tokens, (Token){.type = (token_type)});                      \
+    VECTOR_PUSH(tokens, (Token){.type = (token_type)});                        \
   } while (0)
 
 Token *lex(const uint8_t *source) {
@@ -69,9 +69,7 @@ Token *lex(const uint8_t *source) {
           state = WHITESPACE;
           if (buffer.length != 0) {
             VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(
-                tokens, ((Token){.type = STRING, .data = buffer.data})
-            );
+            VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
 
             VECTOR_INIT(buffer);
           }
@@ -261,9 +259,7 @@ Token *lex(const uint8_t *source) {
 
           if (buffer.length != 0) {
             VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(
-                tokens, ((Token){.type = STRING, .data = buffer.data})
-            );
+            VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
             VECTOR_INIT(buffer);
           }
 
@@ -304,9 +300,7 @@ Token *lex(const uint8_t *source) {
 
           if (buffer.length != 0) {
             VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(
-                tokens, ((Token){.type = STRING, .data = buffer.data})
-            );
+            VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
             VECTOR_INIT(buffer);
           }
 
@@ -320,9 +314,7 @@ Token *lex(const uint8_t *source) {
           has_arguments = true;
           if (buffer.length != 0) {
             VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(
-                tokens, ((Token){.type = STRING, .data = buffer.data})
-            );
+            VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
             VECTOR_INIT(buffer);
           }
           VECTOR_PUSH(tokens, ((Token){.type = GLOB_WILDCARD}));

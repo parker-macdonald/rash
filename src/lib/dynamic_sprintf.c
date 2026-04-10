@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "lib/attrib.h"
 
 ATTRIB_PRINTF(1, 2)
@@ -19,7 +20,7 @@ char *dynamic_sprintf(const char *restrict format, ...) {
 
   va_list ap;
   va_start(ap, format);
-  
+
   int result = vfprintf(stream, format, ap);
 
   va_end(ap);

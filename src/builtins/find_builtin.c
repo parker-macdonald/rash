@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "builtins.h"
-#include "lib/buffer.h"
+#include "lib/string.h"
 #include "lib/vector.h"
 
 #define ALPHABET_SIZE 26

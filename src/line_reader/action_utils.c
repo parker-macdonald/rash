@@ -6,10 +6,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include <termios.h>
+#include <sys/select.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "lib/ansi.h"
+#include "lib/buffer.h"
 #include "lib/error.h"
 #include "lib/utf_8.h"
 #include "line_reader/actions.h"

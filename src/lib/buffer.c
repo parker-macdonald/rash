@@ -1,8 +1,12 @@
 #include "lib/buffer.h"
 
+#include <assert.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "lib/next_pow_2.h"
+#include "lib/vector.h"
 
 void buffer_append_string(Buffer *self, const char *str) {
   // if capacity is -1, this buffer is read only
@@ -81,11 +85,7 @@ void buffer_insert_bulk(
   // move previous data over
   // i think this is the first feature newer than c99 i've used so far (besides
   // static_assert)
-  memmove(
-      offset + src_len,
-      offset,
-      buffer->length - buffer_offset
-  );
+  memmove(offset + src_len, offset, buffer->length - buffer_offset);
 
   // copy new data in
   memcpy(offset, src, src_len);
@@ -95,7 +95,7 @@ void buffer_insert_bulk(
 
 void buffer_remove_bulk(Buffer *buffer, size_t offset, size_t count) {
   buffer->length -= count;
-  
+
   if (buffer->length == offset + count) {
     return;
   }

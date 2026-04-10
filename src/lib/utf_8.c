@@ -55,7 +55,7 @@ size_t utf8_codepoint_size(const Buffer *buffer, size_t buffer_offset) {
   if (buffer_offset >= buffer->length) {
     return 0;
   }
-  
+
   size_t start = buffer_offset;
   size_t char_size = (size_t)count_leading_ones(buffer->data[buffer_offset]);
 
@@ -112,7 +112,7 @@ size_t utf8_remove_codepoint(Buffer *buffer, size_t buffer_offset) {
   size_t codepoint_size = utf8_codepoint_size(buffer, buffer_offset);
 
   buffer->length -= codepoint_size;
-  
+
   if (buffer->length == buffer_offset + codepoint_size) {
     return codepoint_size;
   }

@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include "lib/error.h"
-#include "lib/buffer.h"
+#include "lib/string.h"
 #include "lib/vector.h"
 
 struct queue_node {
