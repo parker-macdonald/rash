@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+#include "lib/buffer.h"
+#include "lib/vector.h"
+
 typedef enum {
   STRING,
   // '<' used to redirect stdin from a file
@@ -51,10 +54,12 @@ typedef enum {
 
 typedef struct {
   TokenType type;
-  void *data;
+  char *data;
 } Token;
 
-Token *lex(const uint8_t *source);
+typedef VECTOR(Token) TokenList;
+
+Token *lex(const Buffer *source);
 
 void free_tokens(Token **tokens);
 

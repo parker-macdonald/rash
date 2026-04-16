@@ -15,8 +15,8 @@ typedef struct {
 
 void file_reader_init(FileReader *file, FILE *fp);
 
-const uint8_t *file_reader_read(FileReader *file);
+const Buffer *file_reader_read(FileReader *file);
 
-const uint8_t *file_reader_read_void(void *file_ptr);
+const Buffer *file_reader_read_void(void *file_ptr);
 
 #endif

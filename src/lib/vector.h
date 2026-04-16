@@ -132,16 +132,20 @@ printf("%s", string.data); // hi
   do {                                                                         \
     (vector)._capacity = capacity;                                             \
     (vector).length = 0;                                                       \
-    if (capacity != 0) {                                                       \
-      (vector).data = malloc(sizeof(*(vector).data) * capacity);               \
-      if ((vector).data == NULL)                                               \
-        abort();                                                               \
-    } else                                                                     \
-      (vector).data = NULL;                                                    \
+    (vector).data = malloc(sizeof(*(vector).data) * capacity);                 \
+    if ((vector).data == NULL)                                                 \
+      abort();                                                                 \
   } while (0)
 
 #define VECTOR_INIT(...)                                                       \
   USE_VECTOR_INIT_INSTEAD_OF_THIS(__VA_ARGS__, VECTOR_DEFAULT_SIZE, unused)
+
+#define VECTOR_INIT_EMPTY(vector)                                              \
+  do {                                                                         \
+    (vector)._capacity = 0;                                                    \
+    (vector).length = 0;                                                       \
+    (vector).data = NULL;                                                      \
+  } while (0)
 
 #define VECTOR_PUSH(vector, value)                                             \
   do {                                                                         \

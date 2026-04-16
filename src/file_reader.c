@@ -12,7 +12,7 @@ void file_reader_init(FileReader *file, FILE *fp) {
   VECTOR_INIT(file->line);
 }
 
-const uint8_t *file_reader_read(FileReader *file) {
+const Buffer *file_reader_read(FileReader *file) {
   if (file->eof) {
     VECTOR_DESTROY(file->line);
     if (fclose(file->file) == EOF) {
@@ -20,6 +20,8 @@ const uint8_t *file_reader_read(FileReader *file) {
     }
     return NULL;
   }
+
+  VECTOR_CLEAR(file->line);
 
   for (;;) {
     int c = fgetc(file->file);
@@ -29,9 +31,7 @@ const uint8_t *file_reader_read(FileReader *file) {
         continue;
       }
 
-      VECTOR_PUSH(file->line, '\0');
-      VECTOR_CLEAR(file->line);
-      return file->line.data;
+      return &file->line;
     }
 
     if (c == EOF) {
@@ -44,8 +44,7 @@ const uint8_t *file_reader_read(FileReader *file) {
       }
 
       file->eof = true;
-      VECTOR_PUSH(file->line, '\0');
-      return file->line.data;
+      return &file->line;
     }
 
     // don't capture lexer reserved characters
@@ -57,6 +56,6 @@ const uint8_t *file_reader_read(FileReader *file) {
   }
 }
 
-const uint8_t *file_reader_read_void(void *file_ptr) {
+const Buffer *file_reader_read_void(void *file_ptr) {
   return file_reader_read((FileReader *)file_ptr);
 }

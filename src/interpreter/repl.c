@@ -6,10 +6,11 @@
 #include "evaluate.h"
 #include "jobs.h"
 #include "lex.h"
+#include "lib/buffer.h"
 
-int repl(const uint8_t *(*reader)(void *), void *reader_data) {
+int repl(const Buffer *(*reader)(void *), void *reader_data) {
   while (1) {
-    const uint8_t *line = reader(reader_data);
+    const Buffer *line = reader(reader_data);
 
     clean_jobs();
 
@@ -28,7 +29,7 @@ int repl(const uint8_t *(*reader)(void *), void *reader_data) {
   return 0;
 }
 
-int repl_once(const uint8_t *line) {
+int repl_once(const Buffer *line) {
   int status = EXIT_SUCCESS;
 
   clean_jobs();

@@ -7,391 +7,335 @@
 #include <string.h>
 
 #include "lib/error.h"
+#include "lib/string.h"
 #include "lib/vector.h"
 
-enum lexer_state {
+typedef struct {
+  size_t start;
+  size_t current;
+  TokenList tokens;
+  String current_arg;
+  const Buffer *source;
+} LexerState;
+
+typedef enum {
   DEFAULT,
-  WHITESPACE,
   SINGLE_QUOTE,
-  DOUBLE_QUOTE,
-  SINGLE_LITERAL
-};
+  DOUBLE_QUOTE
+} ArgumentState;
 
-#define ADD_NONSTR_TOKEN(token_type)                                           \
-  do {                                                                         \
-    if (buffer.length != 0) {                                                  \
-      VECTOR_PUSH(buffer, '\0');                                               \
-      VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));     \
-      VECTOR_INIT(buffer);                                                     \
-    }                                                                          \
-    if (has_arguments) {                                                       \
-      VECTOR_PUSH(tokens, ((Token){.type = END_ARG}));                         \
-      has_arguments = false;                                                   \
-    }                                                                          \
-    VECTOR_PUSH(tokens, (Token){.type = (token_type)});                        \
-  } while (0)
+uint8_t advance(LexerState *state) {
+  return state->source->data[state->current++];
+}
 
-Token *lex(const uint8_t *source) {
-  VECTOR(Token) tokens;
-  VECTOR_INIT(tokens);
+void add_token(LexerState *state, TokenType type) {
+  VECTOR_PUSH(state->tokens, (Token){.type = type});
+}
 
-  VECTOR(uint8_t) buffer;
-  VECTOR_INIT(buffer);
+// data cannot be marked as const, this lint warning is a false positive
+void add_token_data(
+    LexerState *state,
+    TokenType type,
+    char *data // NOLINT(readability-non-const-parameter)
+) {
+  VECTOR_PUSH(state->tokens, ((Token){.type = type, .data = data}));
+}
 
-  bool has_arguments = false;
+bool is_at_end(LexerState *state) {
+  return state->current >= state->source->length;
+}
 
-  enum lexer_state state = WHITESPACE;
+bool match(LexerState *state, uint8_t expected) {
+  if (is_at_end(state)) {
+    return false;
+  }
 
-  for (size_t i = 0; source[i] != '\0'; i++) {
-    const uint8_t curr = source[i];
+  if (state->source->data[state->current] != expected) {
+    return false;
+  }
 
-    switch (state) {
+  state->current++;
+  return true;
+}
+
+uint8_t peek(LexerState *state) {
+  if (is_at_end(state)) {
+    return '\0';
+  }
+  return state->source->data[state->current];
+}
+
+void flush_current_arg(LexerState *state) {
+  if (state->current_arg.length != 0) {
+    VECTOR_PUSH(state->current_arg, '\0');
+
+    add_token_data(state, STRING, state->current_arg.data);
+
+    VECTOR_INIT_EMPTY(state->current_arg);
+  }
+}
+
+int parse_subshell(LexerState *state) {
+  size_t start = state->current;
+
+  while (peek(state) != ')' && !is_at_end(state)) {
+    advance(state);
+  }
+
+  if (is_at_end(state)) {
+    error_f("rash: expected closing ‘)’ character.\n");
+    return -1;
+  }
+
+  if (start == state->current) {
+    error_f("rash: subshell cannot be empty.\n");
+    return -1;
+  }
+
+  size_t subshell_len = state->current - start;
+  char *subshell_cmd = malloc(subshell_len + 1);
+  memcpy(subshell_cmd, state->source->data + start, subshell_len);
+  subshell_cmd[subshell_len] = '\0';
+
+  flush_current_arg(state);
+  add_token_data(state, SUBSHELL, subshell_cmd);
+
+  // closing )
+  advance(state);
+
+  return 0;
+}
+
+int parse_env(LexerState *state) {
+  size_t start;
+  size_t env_len;
+
+  if (match(state, '{')) {
+    start = state->current;
+
+    while (peek(state) != '}' && !is_at_end(state)) {
+      advance(state);
+    }
+
+    if (is_at_end(state)) {
+      error_f("rash: expected closing ‘}’ character.\n");
+      return -1;
+    }
+
+    if (start == state->current) {
+      error_f("rash: cannot expand empty enviroment variable.\n");
+      return -1;
+    }
+
+    env_len = state->current - start;
+
+    // closeing }
+    advance(state);
+  } else {
+    start = state->current;
+
+    while (1) {
+      if (!isalnum((int)peek(state)) && peek(state) != '_') {
+        break;
+      }
+
+      if (is_at_end(state)) {
+        break;
+      }
+
+      advance(state);
+    }
+
+    env_len = state->current - start;
+
+    if (start == state->current) {
+      VECTOR_PUSH(state->current_arg, '$');
+      return 0;
+    }
+  }
+
+  
+  char *env_name = malloc(env_len + 1);
+  memcpy(env_name, state->source->data + start, env_len);
+  env_name[env_len] = '\0';
+
+  flush_current_arg(state);
+  add_token_data(state, ENV_EXPANSION, env_name);
+  return 0;
+}
+
+int parse_var(LexerState *state) {
+  size_t start = state->current;
+
+  while (peek(state) != '}' && !is_at_end(state)) {
+    advance(state);
+  }
+
+  if (is_at_end(state)) {
+    error_f("rash: expected closing ‘}’ character.\n");
+    return 1;
+  }
+
+  if (start == state->current) {
+    error_f("rash: cannot expand empty shell variable.\n");
+    return 1;
+  }
+
+  size_t var_len = state->current - start;
+  char *var_name = malloc(var_len + 1);
+  memcpy(var_name, state->source->data + start, var_len);
+  var_name[var_len] = '\0';
+
+  flush_current_arg(state);
+  add_token_data(state, VAR_EXPANSION, var_name);
+  // closing }
+  advance(state);
+
+  return 0;
+}
+
+int parse_tilde(LexerState *state) {
+  size_t start = state->current;
+
+  while (1) {
+    if (peek(state) == '/' || isspace((int)peek(state)) || is_at_end(state)) {
+      break;
+    }
+
+    advance(state);
+  }
+
+  size_t user_len = state->current - start;
+  char *user = malloc(user_len + 1);
+  memcpy(user, state->source->data + start, user_len);
+  user[user_len] = '\0';
+
+  add_token_data(state, TILDE, user);
+  advance(state);
+  return 0;
+}
+
+int parse_argument(LexerState *state) {
+  ArgumentState arg_state = DEFAULT;
+
+  if (match(state, '~')) {
+    if (parse_tilde(state)) {
+      goto error;
+    }
+  }
+
+  while (1) {
+    if (is_at_end(state)) {
+      break;
+    }
+
+    uint8_t c = advance(state);
+
+    switch (arg_state) {
       case DEFAULT:
-        if (curr == '"') {
-          has_arguments = true;
-          state = DOUBLE_QUOTE;
+        if (c == '"') {
+          arg_state = DOUBLE_QUOTE;
           break;
         }
 
-        if (curr == '\'') {
-          has_arguments = true;
-          state = SINGLE_QUOTE;
+        if (c == '\'') {
+          arg_state = SINGLE_QUOTE;
           break;
         }
 
-        if (curr == '\\') {
-          has_arguments = true;
-          state = SINGLE_LITERAL;
-          break;
-        }
-
-        if (isspace((int)curr)) {
-          state = WHITESPACE;
-          if (buffer.length != 0) {
-            VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
-
-            VECTOR_INIT(buffer);
-          }
-          if (has_arguments) {
-            VECTOR_PUSH(tokens, ((Token){.type = END_ARG}));
-            has_arguments = false;
-          }
-
-          break;
-        }
-
-        // stdin redirection
-        if (curr == '<') {
-          if (source[i + 1] == '<' && source[i + 2] == '<') {
-            ADD_NONSTR_TOKEN(STDIN_REDIR_STRING);
-            i += 2;
-            break;
-          }
-          ADD_NONSTR_TOKEN(STDIN_REDIR);
-          break;
-        }
-
-        // stdout redirection
-        if (curr == '>') {
-          if (source[i + 1] == '>') {
-            ADD_NONSTR_TOKEN(STDOUT_REDIR_APPEND);
-            i++;
-            break;
-          }
-          ADD_NONSTR_TOKEN(STDOUT_REDIR);
-          break;
-        }
-
-        if (curr == '2') {
-          if (source[i + 1] == '>') {
-            if (source[i + 2] == '>') {
-              ADD_NONSTR_TOKEN(STDERR_REDIR_APPEND);
-              i += 2;
-              break;
-            }
-            ADD_NONSTR_TOKEN(STDERR_REDIR);
-            i++;
-            continue;
-          }
-        }
-
-        if (curr == '|') {
-          if (source[i + 1] == '|') {
-            ADD_NONSTR_TOKEN(LOGICAL_OR);
-            i++;
-            break;
-          }
-          ADD_NONSTR_TOKEN(PIPE);
-          break;
-        }
-
-        if (curr == ';') {
-          ADD_NONSTR_TOKEN(SEMI);
-          break;
-        }
-
-        if (curr == '&') {
-          if (source[i + 1] == '&') {
-            ADD_NONSTR_TOKEN(LOGICAL_AND);
-            i++;
-            break;
-          }
-          ADD_NONSTR_TOKEN(AMP);
-          break;
-        }
-
-        // crazy logic for enviroment variables and subshells
-        if (curr == '$') {
-          has_arguments = true;
-
-          i++;
-
-          // subshells
-          if (source[i] == '(') {
-            i++;
-
-            size_t subshell_len = 0;
-            const uint8_t *subshell_start = source + i;
-
-            for (;;) {
-              if (source[i] == ')') {
-                break;
-              }
-
-              if (source[i] == '\0') {
-                error_f("rash: expected closing ‘)’ character.\n");
-                goto error;
-              }
-
-              i++;
-              subshell_len++;
-            }
-
-            if (subshell_len == 0) {
-              error_f("rash: subshell cannot be empty.\n");
+        if (c == '$') {
+          if (match(state, '(')) {
+            if (parse_subshell(state)) {
               goto error;
             }
-
-            char *subshell_cmd = malloc(subshell_len + 1);
-            memcpy(subshell_cmd, subshell_start, subshell_len);
-            subshell_cmd[subshell_len] = '\0';
-
-            if (buffer.length != 0) {
-              VECTOR_PUSH(buffer, '\0');
-              VECTOR_PUSH(
-                  tokens, ((Token){.type = STRING, .data = buffer.data})
-              );
-              VECTOR_INIT(buffer);
-            }
-
-            VECTOR_PUSH(
-                tokens, ((Token){.type = SUBSHELL, .data = subshell_cmd})
-            );
             break;
           }
-
-          if (source[i] == '{') {
-            i++;
-
-            size_t env_len = 0;
-            const uint8_t *env_start = source + i;
-
-            for (;;) {
-              if (source[i] == '}') {
-                break;
-              }
-
-              if (source[i] == '\0') {
-                error_f("rash: expected closing ‘}’ character.\n");
-                goto error;
-              }
-
-              i++;
-              env_len++;
-            }
-
-            if (env_len == 0) {
-              error_f("rash: cannot expand empty enviroment variable.\n");
-              goto error;
-            }
-
-            char *env_name = malloc(env_len + 1);
-            memcpy(env_name, env_start, env_len);
-            env_name[env_len] = '\0';
-
-            if (buffer.length != 0) {
-              VECTOR_PUSH(buffer, '\0');
-              VECTOR_PUSH(
-                  tokens, ((Token){.type = STRING, .data = buffer.data})
-              );
-              VECTOR_INIT(buffer);
-            }
-
-            VECTOR_PUSH(
-                tokens, ((Token){.type = ENV_EXPANSION, .data = env_name})
-            );
-            break;
+          if (parse_env(state)) {
+            goto error;
           }
-
-          size_t env_len = 0;
-          const uint8_t *env_start = source + i;
-
-          for (;;) {
-            if ((!isalnum((int)source[i]) && source[i] != '_') ||
-                source[i] == '\0') {
-              i--;
-              break;
-            }
-
-            i++;
-            env_len++;
-          }
-
-          if (env_len == 0) {
-            VECTOR_PUSH(buffer, '$');
-            break;
-          }
-
-          char *env_name = malloc(env_len + 1);
-          memcpy(env_name, env_start, env_len);
-          env_name[env_len] = '\0';
-
-          if (buffer.length != 0) {
-            VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
-            VECTOR_INIT(buffer);
-          }
-
-          VECTOR_PUSH(
-              tokens, ((Token){.type = ENV_EXPANSION, .data = env_name})
-          );
           break;
         }
 
-        if (curr == '{') {
-          has_arguments = true;
-          i++;
-          const uint8_t *var_start = source + i;
-          size_t var_len = 0;
-
-          for (;;) {
-            if (source[i] == '}') {
-              break;
-            }
-
-            if (source[i] == '\0') {
-              error_f("rash: expected closing ‘}’ character.\n");
-              goto error;
-            }
-
-            i++;
-            var_len++;
+        if (c == '{') {
+          if (parse_var(state)) {
+            goto error;
           }
+          break;
+        }
 
-          if (var_len == 0) {
-            error_f("rash: cannot expand empty shell variable.\n");
+        if (c == '*') {
+          flush_current_arg(state);
+          add_token(state, GLOB_WILDCARD);
+          break;
+        }
+
+        if (c == '\\') {
+          char new = (char)advance(state);
+          if (is_at_end(state)) {
+            error_f("rash: Expected character after ‘\\’.\n");
             goto error;
           }
 
-          char *var_name = malloc(var_len + 1);
-          memcpy(var_name, var_start, var_len);
-          var_name[var_len] = '\0';
-
-          if (buffer.length != 0) {
-            VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
-            VECTOR_INIT(buffer);
-          }
-
-          VECTOR_PUSH(
-              tokens, ((Token){.type = VAR_EXPANSION, .data = var_name})
-          );
+          VECTOR_PUSH(state->current_arg, new);
           break;
         }
 
-        if (curr == '*') {
-          has_arguments = true;
-          if (buffer.length != 0) {
-            VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
-            VECTOR_INIT(buffer);
-          }
-          VECTOR_PUSH(tokens, ((Token){.type = GLOB_WILDCARD}));
-
-          break;
+        if (c == ' ') {
+          goto leave;
         }
 
-        if (curr == '#') {
-          goto success;
-        }
-
-        has_arguments = true;
-        VECTOR_PUSH(buffer, curr);
-        break;
-
-      case WHITESPACE:
-        if (curr == '~') {
-          i++;
-          const uint8_t *user_start = source + i;
-          size_t user_len = 0;
-
-          for (;;) {
-            if (source[i] == '/' || source[i] == '\0' ||
-                isspace((int)source[i])) {
-              break;
-            }
-            user_len++;
-            i++;
-          }
-
-          char *user = malloc(user_len + 1);
-          memcpy(user, user_start, user_len);
-          user[user_len] = '\0';
-
-          VECTOR_PUSH(tokens, ((Token){.type = TILDE, .data = user}));
-          i--;
-          state = DEFAULT;
-
-          has_arguments = true;
-          continue;
-        }
-
-        if (!isspace((int)curr)) {
-          state = DEFAULT;
-          i--;
-        }
+        VECTOR_PUSH(state->current_arg, (char)c);
         break;
 
       case DOUBLE_QUOTE:
-        if (curr == '"') {
-          state = DEFAULT;
+        if (c == '"') {
+          arg_state = DEFAULT;
           break;
         }
 
-        VECTOR_PUSH(buffer, curr);
+        if (c == '\\' && match(state, '"')) {
+          VECTOR_PUSH(state->current_arg, '"');
+          break;
+        }
+
+        if (c == '$') {
+          if (match(state, '(')) {
+            if (parse_subshell(state)) {
+              goto error;
+            }
+          }
+          parse_env(state);
+          break;
+        }
+
+        if (c == '{') {
+          if (parse_var(state)) {
+            goto error;
+          }
+          break;
+        }
+
+        VECTOR_PUSH(state->current_arg, (char)c);
         break;
 
       case SINGLE_QUOTE:
-        if (curr == '\'') {
-          state = DEFAULT;
+        if (c == '\\' && match(state, '\'')) {
+          VECTOR_PUSH(state->current_arg, '\'');
           break;
         }
 
-        VECTOR_PUSH(buffer, curr);
-        break;
+        if (c == '\'') {
+          arg_state = DEFAULT;
+          break;
+        }
 
-      case SINGLE_LITERAL:
-        VECTOR_PUSH(buffer, curr);
-        state = DEFAULT;
+        VECTOR_PUSH(state->current_arg, (char)c);
         break;
     }
   }
 
-  switch (state) {
-    case SINGLE_LITERAL:
-      error_f("rash: Expected character after ‘\\’.\n");
-      goto error;
+leave:
+  switch (arg_state) {
     case SINGLE_QUOTE:
       error_f("rash: Expected closing ‘'’ character.\n");
       goto error;
@@ -402,39 +346,95 @@ Token *lex(const uint8_t *source) {
       break;
   }
 
-success:
+  flush_current_arg(state);
 
-  if (buffer.length != 0) {
-    VECTOR_PUSH(buffer, '\0');
-    VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
-  } else {
-    VECTOR_DESTROY(buffer);
+  add_token(state, END_ARG);
+
+  return 0;
+error:
+  return -1;
+}
+
+int scan_token(LexerState *state) {
+  uint8_t c = advance(state);
+  switch (c) {
+    case '<':
+      // match has side effects, so it makes sense to have redundant expressions
+      if (match(state, '<') && // NOLINT(misc-redundant-expression)
+          match(state, '<')) {
+        add_token(state, STDIN_REDIR_STRING);
+        break;
+      }
+      add_token(state, STDIN_REDIR);
+      break;
+    case '>':
+      add_token(state, match(state, '>') ? STDOUT_REDIR_APPEND : STDOUT_REDIR);
+      break;
+    case '2':
+      if (match(state, '>')) {
+        add_token(
+            state, match(state, '>') ? STDERR_REDIR_APPEND : STDERR_REDIR
+        );
+      }
+      break;
+    case '|':
+      add_token(state, match(state, '|') ? LOGICAL_OR : PIPE);
+      break;
+    case '&':
+      add_token(state, match(state, '&') ? LOGICAL_AND : AMP);
+      break;
+    case ';':
+      add_token(state, SEMI);
+      break;
+    case ' ':
+    case '\n':
+    case '\r':
+    case '\t':
+      break;
+    default:
+      state->current--;
+      if (parse_argument(state)) {
+        goto error;
+      }
+      break;
   }
 
-  if (has_arguments) {
-    VECTOR_PUSH(tokens, ((Token){.type = END_ARG}));
-  }
-
-  VECTOR_PUSH(tokens, (Token){.type = END});
-
-  return tokens.data;
+  return 0;
 
 error:
-  VECTOR_DESTROY(buffer);
+  return -1;
+}
 
-  // pro tip: do not refactor this to use the free tokens function because
-  // tokens does not have an END token to mark the end of the array (ask me how
-  // i know).
-  for (size_t i = 0; i < tokens.length; i++) {
-    if (tokens.data[i].type == STRING || tokens.data[i].type == ENV_EXPANSION ||
-        tokens.data[i].type == VAR_EXPANSION || tokens.data[i].type == TILDE ||
-        tokens.data[i].type == SUBSHELL) {
-      free(tokens.data[i].data);
+Token *lex(const Buffer *source) {
+  LexerState state = {0};
+  state.source = source;
+
+  while (!is_at_end(&state)) {
+    if (scan_token(&state)) {
+      goto error;
     }
   }
 
-  VECTOR_DESTROY(tokens);
+  add_token(&state, END);
 
+  VECTOR_DESTROY(state.current_arg);
+
+  return state.tokens.data;
+
+error:
+  VECTOR_DESTROY(state.current_arg);
+
+  for (size_t i = 0; i < state.tokens.length; i++) {
+    if (state.tokens.data[i].type == STRING ||
+        state.tokens.data[i].type == ENV_EXPANSION ||
+        state.tokens.data[i].type == VAR_EXPANSION ||
+        state.tokens.data[i].type == TILDE ||
+        state.tokens.data[i].type == SUBSHELL) {
+      free(state.tokens.data[i].data);
+    }
+  }
+
+  VECTOR_DESTROY(state.tokens);
   return NULL;
 }
 

@@ -39,7 +39,7 @@ void line_reader_destroy(void) {
   history_clear(&reader);
 }
 
-const uint8_t *line_reader_read_void(void *_) {
+const Buffer *line_reader_read_void(void *_) {
   (void)_;
 
   return line_reader_read();
@@ -77,7 +77,7 @@ static void reader_end(void) {
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 }
 
-const uint8_t *line_reader_read(void) {
+const Buffer *line_reader_read(void) {
   reader_begin();
 
   while (1) {
@@ -94,7 +94,7 @@ const uint8_t *line_reader_read(void) {
   }
 
   reader_end();
-  return reader.buffer.data;
+  return &reader.buffer;
 }
 
 void line_reader_hist_print(int count) {
