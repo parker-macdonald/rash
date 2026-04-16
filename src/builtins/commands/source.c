@@ -33,7 +33,7 @@ int builtin_source(char **argv) {
     return EXIT_FAILURE;
   }
 
-  struct file_reader reader_data;
+  FileReader reader_data;
   file_reader_init(&reader_data, file);
 
   if (recursion_count > 10000) {
@@ -44,7 +44,7 @@ int builtin_source(char **argv) {
 
   recursion_count++;
 
-  int status_code = repl(file_reader_read, &reader_data);
+  int status_code = repl(file_reader_read_void, &reader_data);
 
   recursion_count--;
 

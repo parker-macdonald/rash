@@ -21,18 +21,18 @@ enum lexer_state {
   do {                                                                         \
     if (buffer.length != 0) {                                                  \
       VECTOR_PUSH(buffer, '\0');                                               \
-      VECTOR_PUSH(tokens, ((token_t){.type = STRING, .data = buffer.data}));   \
+      VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));     \
       VECTOR_INIT(buffer);                                                     \
     }                                                                          \
     if (has_arguments) {                                                       \
-      VECTOR_PUSH(tokens, ((token_t){.type = END_ARG}));                       \
+      VECTOR_PUSH(tokens, ((Token){.type = END_ARG}));                         \
       has_arguments = false;                                                   \
     }                                                                          \
-    VECTOR_PUSH(tokens, (token_t){.type = (token_type)});                      \
+    VECTOR_PUSH(tokens, (Token){.type = (token_type)});                        \
   } while (0)
 
-token_t *lex(const uint8_t *source) {
-  VECTOR(token_t) tokens;
+Token *lex(const uint8_t *source) {
+  VECTOR(Token) tokens;
   VECTOR_INIT(tokens);
 
   VECTOR(uint8_t) buffer;
@@ -69,14 +69,12 @@ token_t *lex(const uint8_t *source) {
           state = WHITESPACE;
           if (buffer.length != 0) {
             VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(
-                tokens, ((token_t){.type = STRING, .data = buffer.data})
-            );
+            VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
 
             VECTOR_INIT(buffer);
           }
           if (has_arguments) {
-            VECTOR_PUSH(tokens, ((token_t){.type = END_ARG}));
+            VECTOR_PUSH(tokens, ((Token){.type = END_ARG}));
             has_arguments = false;
           }
 
@@ -182,13 +180,13 @@ token_t *lex(const uint8_t *source) {
             if (buffer.length != 0) {
               VECTOR_PUSH(buffer, '\0');
               VECTOR_PUSH(
-                  tokens, ((token_t){.type = STRING, .data = buffer.data})
+                  tokens, ((Token){.type = STRING, .data = buffer.data})
               );
               VECTOR_INIT(buffer);
             }
 
             VECTOR_PUSH(
-                tokens, ((token_t){.type = SUBSHELL, .data = subshell_cmd})
+                tokens, ((Token){.type = SUBSHELL, .data = subshell_cmd})
             );
             break;
           }
@@ -225,13 +223,13 @@ token_t *lex(const uint8_t *source) {
             if (buffer.length != 0) {
               VECTOR_PUSH(buffer, '\0');
               VECTOR_PUSH(
-                  tokens, ((token_t){.type = STRING, .data = buffer.data})
+                  tokens, ((Token){.type = STRING, .data = buffer.data})
               );
               VECTOR_INIT(buffer);
             }
 
             VECTOR_PUSH(
-                tokens, ((token_t){.type = ENV_EXPANSION, .data = env_name})
+                tokens, ((Token){.type = ENV_EXPANSION, .data = env_name})
             );
             break;
           }
@@ -261,14 +259,12 @@ token_t *lex(const uint8_t *source) {
 
           if (buffer.length != 0) {
             VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(
-                tokens, ((token_t){.type = STRING, .data = buffer.data})
-            );
+            VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
             VECTOR_INIT(buffer);
           }
 
           VECTOR_PUSH(
-              tokens, ((token_t){.type = ENV_EXPANSION, .data = env_name})
+              tokens, ((Token){.type = ENV_EXPANSION, .data = env_name})
           );
           break;
         }
@@ -304,14 +300,12 @@ token_t *lex(const uint8_t *source) {
 
           if (buffer.length != 0) {
             VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(
-                tokens, ((token_t){.type = STRING, .data = buffer.data})
-            );
+            VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
             VECTOR_INIT(buffer);
           }
 
           VECTOR_PUSH(
-              tokens, ((token_t){.type = VAR_EXPANSION, .data = var_name})
+              tokens, ((Token){.type = VAR_EXPANSION, .data = var_name})
           );
           break;
         }
@@ -320,12 +314,10 @@ token_t *lex(const uint8_t *source) {
           has_arguments = true;
           if (buffer.length != 0) {
             VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(
-                tokens, ((token_t){.type = STRING, .data = buffer.data})
-            );
+            VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
             VECTOR_INIT(buffer);
           }
-          VECTOR_PUSH(tokens, ((token_t){.type = GLOB_WILDCARD}));
+          VECTOR_PUSH(tokens, ((Token){.type = GLOB_WILDCARD}));
 
           break;
         }
@@ -357,7 +349,7 @@ token_t *lex(const uint8_t *source) {
           memcpy(user, user_start, user_len);
           user[user_len] = '\0';
 
-          VECTOR_PUSH(tokens, ((token_t){.type = TILDE, .data = user}));
+          VECTOR_PUSH(tokens, ((Token){.type = TILDE, .data = user}));
           i--;
           state = DEFAULT;
 
@@ -414,16 +406,16 @@ success:
 
   if (buffer.length != 0) {
     VECTOR_PUSH(buffer, '\0');
-    VECTOR_PUSH(tokens, ((token_t){.type = STRING, .data = buffer.data}));
+    VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
   } else {
     VECTOR_DESTROY(buffer);
   }
 
   if (has_arguments) {
-    VECTOR_PUSH(tokens, ((token_t){.type = END_ARG}));
+    VECTOR_PUSH(tokens, ((Token){.type = END_ARG}));
   }
 
-  VECTOR_PUSH(tokens, (token_t){.type = END});
+  VECTOR_PUSH(tokens, (Token){.type = END});
 
   return tokens.data;
 
@@ -446,7 +438,7 @@ error:
   return NULL;
 }
 
-void free_tokens(token_t **tokens) {
+void free_tokens(Token **tokens) {
   for (size_t i = 0; (*tokens)[i].type != END; i++) {
     if ((*tokens)[i].type == STRING || (*tokens)[i].type == ENV_EXPANSION ||
         (*tokens)[i].type == VAR_EXPANSION || (*tokens)[i].type == TILDE ||

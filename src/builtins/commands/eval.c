@@ -3,7 +3,7 @@
 
 #include "builtins/builtins.h"
 #include "interpreter/repl.h"
-#include "lib/vec_types.h"
+#include "lib/buffer.h"
 #include "lib/vector.h"
 
 extern char **environ;
@@ -18,18 +18,20 @@ int builtin_eval(char **argv) {
     return 0;
   }
 
-  buf_t command;
+  Buffer command;
   VECTOR_INIT(command);
 
   argv++;
   while (1) {
-    buf_append_string(&command, *argv);
+    buffer_append_string(&command, *argv);
     argv++;
     if (*argv == NULL) {
       break;
     }
     VECTOR_PUSH(command, ' ');
   }
+
+  VECTOR_PUSH(command, '\0');
 
   int status = repl_once(command.data);
 

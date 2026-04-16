@@ -26,9 +26,9 @@ typedef struct {
   // fd to redirect stderr, or -1
   int stderr_fd;
   int flags;
-} execution_context;
+} ExecutionContext;
 
-int execute(execution_context context);
+int execute(ExecutionContext context);
 
 /**
  * @brief this function is called by execute to handle errors and wait on

@@ -43,19 +43,19 @@ typedef enum {
   AMP,
   // end a sequence of tokens
   END
-} token_type_t;
+} TokenType;
 
 #define IS_ARGUMENT_TOKENS(x)                                                  \
   ((x) == STRING || (x) == GLOB_WILDCARD || (x) == ENV_EXPANSION ||            \
    (x) == VAR_EXPANSION || (x) == TILDE || (x) == SUBSHELL)
 
 typedef struct {
-  token_type_t type;
+  TokenType type;
   void *data;
-} token_t;
+} Token;
 
-token_t *lex(const uint8_t *source);
+Token *lex(const uint8_t *source);
 
-void free_tokens(token_t **tokens);
+void free_tokens(Token **tokens);
 
 #endif

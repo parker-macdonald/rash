@@ -18,7 +18,7 @@
 
 extern char **environ;
 
-int execute(execution_context context) {
+int execute(ExecutionContext context) {
   if (context.argv == NULL) {
     return EXIT_SUCCESS;
   }
@@ -70,7 +70,7 @@ int execute(execution_context context) {
 
     if (context.stdin_fd != -1) {
       int res = dup2(context.stdin_fd, STDIN_FILENO);
-      close(context.stderr_fd);
+      close(context.stdin_fd);
 
       assert(res != -1);
     }
@@ -81,33 +81,26 @@ int execute(execution_context context) {
       _exit(builtin(context.argv));
     }
 
+    char *exec_path = context.argv[0];
+
     // search path for executable
     if (strchr(context.argv[0], '/') == NULL) {
-      char *argv0 = search_path(context.argv[0]);
+      // this is technically a memory leak since search_path returns a malloc'd
+      // string, but we exit unconditionally after this so it doesn't really
+      // matter
+      exec_path = search_path(context.argv[0]);
 
-      if (argv0 == NULL) {
+      if (exec_path == NULL) {
         error_f("%s: command not found\n", context.argv[0]);
         // using _exit instead of exit so we don't trigger the atexit function
         // which kills all child processes.
         _exit(EXIT_FAILURE);
       }
-
-      size_t argv_len;
-      for (argv_len = 0; context.argv[argv_len] != NULL; argv_len++)
-        ;
-      argv_len++;
-
-      char **new_argv = malloc(argv_len * sizeof(char *));
-      memcpy(new_argv, context.argv, argv_len * sizeof(char *));
-      new_argv[0] = argv0;
-
-      context.argv = new_argv;
     }
 
-    int status = execve(context.argv[0], context.argv, environ);
+    int status = execve(exec_path, context.argv, environ);
 
     if (status == -1) {
-
       if (errno != ENOENT) {
         error_f("rash: execve: %s\n", strerror(errno));
       } else {

@@ -11,18 +11,15 @@
 // string versions for job statuses
 extern const char *const JOB_STATUSES[NUM_JOB_STATUSES];
 
-typedef struct job {
+typedef struct job_t {
   pid_t pid;
   int id;
   int state;
-  struct job *p_next;
-} job_t;
+  struct job_t *p_next;
+} Job;
 
 // the file descriptor of the controlling tty
 extern int tty_fd;
-
-// this is used for the line reader to print a ^C on sigint
-extern volatile sig_atomic_t recv_sigint;
 
 /**
  * @brief initializes all signal handlers used by rash
@@ -49,7 +46,7 @@ int register_job(pid_t pid, int state);
  * the last job in the job list
  * @return a pointer to the job with the id, or null if no job exists
  */
-job_t *get_job(int id);
+Job *get_job(int id);
 
 /**
  * @brief gets the pid of the job with the given id and removes it from the job
@@ -67,24 +64,6 @@ pid_t get_pid_and_remove(int *id);
  * used by the jobs command.
  */
 void print_jobs(void);
-
-/**
- * @brief this function re-registers the sigint handler WITHOUT SA_RESTART set
- * in the flags, this is so you can preform an operation that must be aware a
- * sigint occured (such as reading a character). pretty much all of rash's code
- * does not handle the EINTR error, so calling this function, without later
- * calling restart_on_sigint will cause bugs.
- */
-void dont_restart_on_sigint(void);
-
-/**
- * @brief this function re-registers the sigint handler WITH SA_RESTART set
- * in the flags, this function must be called at some point after a call to
- * dont_restart_on_sigint since pretty much all of rash's code does not handle
- * the EINTR error. if you don't call this function after a call to
- * dont_restart_on_sigint, there WILL be bugs and other unintended consequences.
- */
-void restart_on_sigint(void);
 
 void reset_fg_process(void);
 

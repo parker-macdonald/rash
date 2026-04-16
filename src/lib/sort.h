@@ -1,8 +1,8 @@
 #ifndef SORT_H
 #define SORT_H
 
-#include "vec_types.h"
+#include "lib/string.h"
 
-void sort_strings(strings_t *vec);
+void sort_strings(StringList *vec);
 
 #endif

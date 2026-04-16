@@ -32,9 +32,7 @@ int builtin_exit(char **const argv) {
     exit(1);
   }
 
-  if (1) {
-    exit((int)status);
-  }
+  exit((int)status);
 
   return 0;
 }

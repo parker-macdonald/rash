@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "lib/vec_types.h"
+#include "lib/string.h"
 #include "vector.h"
 
 char *search_path(const char *file) {
@@ -15,7 +15,7 @@ char *search_path(const char *file) {
     path = "/usr/local/bin:/bin:/usr/bin";
   }
 
-  string_t file_path;
+  String file_path;
   VECTOR_INIT(file_path);
 
   for (size_t i = 0;; i++) {

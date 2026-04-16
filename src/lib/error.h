@@ -1,13 +1,18 @@
-#ifndef F_ERROR_H
+#ifndef ERROR_H
+#define ERROR_H
 
-void error(const char* str);
+#include "lib/attrib.h"
 
-__attribute__((__format__(__printf__, 1, 2)))
+void error(const char *str);
+
+ATTRIB_PRINTF(1, 2)
 void error_f(const char *restrict format, ...);
 
-void fatal(const char* str);
+ATTRIB_NORETURN
+void fatal(const char *str);
 
-__attribute__((__format__(__printf__, 1, 2)))
+ATTRIB_NORETURN
+ATTRIB_PRINTF(1, 2)
 void fatal_f(const char *restrict format, ...);
 
 #endif

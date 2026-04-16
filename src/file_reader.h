@@ -5,16 +5,18 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "lib/vec_types.h"
+#include "lib/buffer.h"
 
-struct file_reader {
+typedef struct {
   FILE *file;
-  buf_t line;
+  Buffer line;
   bool eof;
-};
+} FileReader;
 
-void file_reader_init(struct file_reader *file, FILE *fp);
+void file_reader_init(FileReader *file, FILE *fp);
 
-const uint8_t *file_reader_read(void *file_ptr);
+const uint8_t *file_reader_read(FileReader *file);
+
+const uint8_t *file_reader_read_void(void *file_ptr);
 
 #endif

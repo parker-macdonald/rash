@@ -1,8 +1,8 @@
 #ifndef GLOB_H
 #define GLOB_H
 
-#include "lib/vec_types.h"
+#include "lib/string.h"
 
-int glob(strings_t *vec, const char pattern[]);
+int glob(StringList *vec, const char pattern[]);
 
 #endif

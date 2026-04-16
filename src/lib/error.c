@@ -5,13 +5,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void error(const char* str) {
+#include "lib/attrib.h"
+
+void error(const char *str) {
   int res = fputs(str, stderr);
 
   assert(res != EOF);
 }
 
-__attribute__((__format__(__printf__, 1, 2))) 
+ATTRIB_PRINTF(1, 2)
 void error_f(const char *restrict format, ...) {
   va_list ap;
   va_start(ap, format);
@@ -22,7 +24,8 @@ void error_f(const char *restrict format, ...) {
   assert(res != -1);
 }
 
-void fatal(const char* str) {
+ATTRIB_NORETURN
+void fatal(const char *str) {
   int res = fputs(str, stderr);
 
   assert(res != EOF);
@@ -30,7 +33,8 @@ void fatal(const char* str) {
   exit(EXIT_FAILURE);
 }
 
-__attribute__((__format__(__printf__, 1, 2)))
+ATTRIB_NORETURN
+ATTRIB_PRINTF(1, 2)
 void fatal_f(const char *restrict format, ...) {
   va_list ap;
   va_start(ap, format);

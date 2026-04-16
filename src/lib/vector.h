@@ -43,8 +43,9 @@ VECTOR_INIT(my_floats);
 VECTOR_PUSH(my_floats, 1.2f); // adds 1.2f at position zero in the vector
 ```
 
-VECTOR_POP(vector, error): removes the last value from the vector, and returns the item
-removed. if the vector is empty, the value of `error` is returned instead.
+VECTOR_POP(vector, error): removes the last value from the vector, and returns
+the item removed. if the vector is empty, the value of `error` is returned
+instead.
 
 e.g.
 ```
