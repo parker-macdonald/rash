@@ -7,7 +7,7 @@
 #include "lib/vector.h"
 
 typedef enum {
-  STRING,
+  ARGUMENT,
   // '<' used to redirect stdin from a file
   STDIN_REDIR,
   // '<<<' used to redirect stdin from a string
@@ -22,18 +22,6 @@ typedef enum {
   STDERR_REDIR_APPEND,
   // '|' used to link one programs stdout to anothers stdin
   PIPE,
-  // '*' matches zero or more characters while globbing
-  GLOB_WILDCARD,
-  // environment variable to be expanded
-  ENV_EXPANSION,
-  // subshell i.e. $(example string)
-  SUBSHELL,
-  // shell variable to be expanded
-  VAR_EXPANSION,
-  // '~' used for home folder expansion
-  TILDE,
-  // used to end the current argument
-  END_ARG,
   // ';' used to run two commands sequentially
   SEMI,
   // '&&' used to run two commands sequencially, but only run the second if the
@@ -48,19 +36,38 @@ typedef enum {
   END
 } TokenType;
 
-#define IS_ARGUMENT_TOKENS(x)                                                  \
-  ((x) == STRING || (x) == GLOB_WILDCARD || (x) == ENV_EXPANSION ||            \
-   (x) == VAR_EXPANSION || (x) == TILDE || (x) == SUBSHELL)
-
 typedef struct {
   TokenType type;
-  char *data;
+  void *data;
 } Token;
+
+typedef enum {
+  STRING,
+  // '*' matches zero or more characters while globbing
+  GLOB_WILDCARD,
+  // environment variable to be expanded
+  ENV_EXPANSION,
+  // subshell i.e. $(example string)
+  SUBSHELL,
+  // shell variable to be expanded
+  VAR_EXPANSION,
+  // '~' used for home folder expansion
+  TILDE,
+  // used to end the current argument, like a null terminator
+  END_ARG
+} ArgumentPartType;
+
+typedef struct {
+  ArgumentPartType type;
+  char *data;
+} ArgumentPart;
 
 typedef VECTOR(Token) TokenList;
 
+typedef VECTOR(ArgumentPart) Argument;
+
 Token *lex(const Buffer *source);
 
-void free_tokens(Token **tokens);
+void free_tokens(Token *tokens);
 
 #endif

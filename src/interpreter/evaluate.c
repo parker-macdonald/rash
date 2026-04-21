@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -21,12 +22,8 @@
 #include "lib/vector.h"
 #include "shell_vars.h"
 
-#define READ_ARG                                                               \
-  while (tokens[i].type != END_ARG)                                            \
-  i++
-
 static bool bad_syntax(const Token *const tokens) {
-  if (!IS_ARGUMENT_TOKENS(tokens[0].type)) {
+  if (tokens[0].type != ARGUMENT) {
     error_f("rash: invalid first token.\n");
     return true;
   }
@@ -36,84 +33,83 @@ static bool bad_syntax(const Token *const tokens) {
   int stdin_count = 0;
 
   for (size_t i = 1; tokens[i].type != END; i++) {
-    if (IS_ARGUMENT_TOKENS(tokens[i].type)) {
-      READ_ARG;
+    if (tokens[i].type == ARGUMENT) {
       continue;
     }
 
     if (tokens[i].type == STDIN_REDIR) {
       i++;
-      if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
+      if (tokens[i].type != ARGUMENT) {
         error_f("rash: expected filename after ‘<’.\n");
         return true;
       }
 
-      READ_ARG;
       stdin_count++;
+      continue;
     }
 
     if (tokens[i].type == STDIN_REDIR_STRING) {
       i++;
-      if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
+      if (tokens[i].type != ARGUMENT) {
         error_f("rash: expected string after ‘<<<’.\n");
         return true;
       }
 
-      READ_ARG;
       stdin_count++;
+      continue;
     }
 
     if (tokens[i].type == STDOUT_REDIR) {
       i++;
-      if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
+      if (tokens[i].type != ARGUMENT) {
         error_f("rash: expected filename after ‘>’.\n");
         return true;
       }
 
-      READ_ARG;
       stdout_count++;
+      continue;
     }
 
     if (tokens[i].type == STDOUT_REDIR_APPEND) {
       i++;
-      if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
+      if (tokens[i].type != ARGUMENT) {
         error_f("rash: expected filename after ‘>>’.\n");
         return true;
       }
 
-      READ_ARG;
       stdout_count++;
+      continue;
     }
 
     if (tokens[i].type == STDERR_REDIR) {
       i++;
-      if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
+      if (tokens[i].type != ARGUMENT) {
         error_f("rash: expected filename after ‘2>’.\n");
         return true;
       }
 
-      READ_ARG;
       stderr_count++;
+      continue;
     }
 
     if (tokens[i].type == STDERR_REDIR_APPEND) {
       i++;
-      if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
+      if (tokens[i].type != ARGUMENT) {
         error_f("rash: expected filename after ‘2>>’.\n");
         return true;
       }
 
-      READ_ARG;
       stderr_count++;
+      continue;
     }
 
     if (tokens[i].type == PIPE) {
-      if (!IS_ARGUMENT_TOKENS(tokens[i + 1].type)) {
+      if (tokens[i + 1].type != ARGUMENT) {
         error_f("rash: expected command after ‘|’.\n");
         return true;
       }
 
-      if (tokens[i - 1].type != END_ARG) {
+      if (tokens[i - 1].type != ARGUMENT) {
         error_f("rash: bad placement of ‘|’.\n");
         return true;
       }
@@ -145,12 +141,12 @@ static bool bad_syntax(const Token *const tokens) {
     }
 
     if (tokens[i].type == LOGICAL_OR) {
-      if (!IS_ARGUMENT_TOKENS(tokens[i + 1].type)) {
+      if (tokens[i + 1].type != ARGUMENT) {
         error_f("rash: expected command after ‘||’.\n");
         return true;
       }
 
-      if (tokens[i - 1].type != END_ARG) {
+      if (tokens[i - 1].type != ARGUMENT) {
         error_f("rash: bad placement of ‘||’.\n");
         return true;
       }
@@ -161,12 +157,12 @@ static bool bad_syntax(const Token *const tokens) {
     }
 
     if (tokens[i].type == LOGICAL_AND) {
-      if (!IS_ARGUMENT_TOKENS(tokens[i + 1].type)) {
+      if (tokens[i + 1].type != ARGUMENT) {
         error_f("rash: expected command after ‘&&’.\n");
         return true;
       }
 
-      if (tokens[i - 1].type != END_ARG) {
+      if (tokens[i - 1].type != ARGUMENT) {
         error_f("rash: bad placement of ‘&&’.\n");
         return true;
       }
@@ -177,7 +173,7 @@ static bool bad_syntax(const Token *const tokens) {
     }
 
     if (tokens[i].type == SEMI) {
-      if (tokens[i - 1].type != END_ARG) {
+      if (tokens[i - 1].type != ARGUMENT) {
         error_f("rash: bad placement of ‘;’.\n");
         return true;
       }
@@ -188,7 +184,7 @@ static bool bad_syntax(const Token *const tokens) {
     }
 
     if (tokens[i].type == AMP) {
-      if (tokens[i - 1].type != END_ARG) {
+      if (tokens[i - 1].type != ARGUMENT) {
         error_f("rash: bad placement of ‘&’.\n");
         return true;
       }
@@ -209,25 +205,23 @@ static void set_exit_code_var(int code) {
   var_set("?", status_str);
 }
 
-static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
+static char *evaluate_arg(const ArgumentPart *argument, bool *needs_globbing) {
   String buffer;
   VECTOR_INIT(buffer);
 
-  for (;; (*tokens)++) {
-    if ((*tokens)->type == STRING) {
-      string_append(&buffer, (char *)((*tokens)->data));
+  for (size_t i = 0; argument[i].type != END_ARG; i++) {
+    if (argument[i].type == STRING) {
+      string_append(&buffer, argument[i].data);
 
       continue;
     }
 
-    if ((*tokens)->type == ENV_EXPANSION) {
-      const char *value = getenv((char *)(*tokens)->data);
+    if (argument[i].type == ENV_EXPANSION) {
+      const char *value = getenv(argument[i].data);
 
       if (value == NULL) {
-        error_f(
-            "rash: environment variable ‘%s’ does not exist.\n",
-            (char *)(*tokens)->data
-        );
+        error_f("rash: environment variable ‘%s’ does not exist.\n",
+                argument[i].data);
         goto error;
       }
 
@@ -236,8 +230,8 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
       continue;
     }
 
-    if ((*tokens)->type == TILDE) {
-      if (((char *)(*tokens)->data)[0] == '\0') {
+    if (argument[i].type == TILDE) {
+      if (argument[i].data[0] == '\0') {
         char *home = getenv("HOME");
         if (home != NULL) {
           string_append(&buffer, home);
@@ -247,9 +241,9 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
         goto error;
       }
 
-      struct passwd *pw = getpwnam((char *)(*tokens)->data);
+      struct passwd *pw = getpwnam(argument[i].data);
       if (pw == NULL || pw->pw_dir == NULL) {
-        error_f("rash: cannot access user ‘%s’.\n", (char *)(*tokens)->data);
+        error_f("rash: cannot access user ‘%s’.\n", argument[i].data);
         goto error;
       }
 
@@ -257,14 +251,12 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
       continue;
     }
 
-    if ((*tokens)->type == VAR_EXPANSION) {
-      const char *value = var_get((char *)(*tokens)->data);
+    if (argument[i].type == VAR_EXPANSION) {
+      const char *value = var_get(argument[i].data);
 
       if (value == NULL) {
-        error_f(
-            "rash: shell variable ‘%s’ does not exist.\n",
-            (char *)(*tokens)->data
-        );
+        error_f("rash: shell variable ‘%s’ does not exist.\n",
+                argument[i].data);
         goto error;
       }
 
@@ -273,8 +265,8 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
       continue;
     }
 
-    if ((*tokens)->type == SUBSHELL) {
-      char *argv[4] = {argv0, "-c", (*tokens)->data, NULL};
+    if (argument[i].type == SUBSHELL) {
+      char *argv[4] = {argv0, "-c", argument[i].data, NULL};
 
       int null_fd = open("/dev/null", O_RDWR);
 
@@ -305,13 +297,11 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
         goto error;
       }
 
-      ExecutionContext ec = {
-          .argv = argv,
-          .flags = EC_NO_WAIT,
-          .stderr_fd = null_fd,
-          .stdin_fd = null_fd2,
-          .stdout_fd = fds[1]
-      };
+      ExecutionContext ec = {.argv = argv,
+                             .flags = EC_NO_WAIT,
+                             .stderr_fd = null_fd,
+                             .stdin_fd = null_fd2,
+                             .stdout_fd = fds[1]};
 
       pid_t pid = execute(ec);
 
@@ -333,9 +323,9 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
           goto error;
         }
 
-        for (ssize_t i = 0; i < nread; i++) {
-          if (!iscntrl((int)read_bytes[i])) {
-            VECTOR_PUSH(buffer, read_bytes[i]);
+        for (ssize_t j = 0; j < nread; j++) {
+          if (!iscntrl((int)read_bytes[j])) {
+            VECTOR_PUSH(buffer, read_bytes[j]);
           }
         }
       } while (nread > 0);
@@ -344,7 +334,7 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
       continue;
     }
 
-    if ((*tokens)->type == GLOB_WILDCARD) {
+    if (argument[i].type == GLOB_WILDCARD) {
       // this is a really dumb solution to this problem, but the line reader
       // assures that '\033' never be in the string, so it's not bad unless i
       // forget to strip out '\033' when i implement shell scripts. also if
@@ -354,13 +344,11 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
       *needs_globbing = true;
       continue;
     }
-
-    if ((*tokens)->type == END_ARG) {
-      VECTOR_PUSH(buffer, '\0');
-
-      return buffer.data;
-    }
   }
+
+  VECTOR_PUSH(buffer, '\0');
+
+  return buffer.data;
 
 error:
   VECTOR_DESTROY(buffer);
@@ -387,10 +375,10 @@ int evaluate(const Token *tokens) {
 
   ExecutionContext ec = {NULL, -1, -1, -1, 0};
 
-  for (;; tokens++) {
-    if (IS_ARGUMENT_TOKENS(tokens->type)) {
+  for (size_t i = 0;; i++) {
+    if (tokens[i].type == ARGUMENT) {
       bool needs_globbing = false;
-      char *arg = evaluate_arg(&tokens, &needs_globbing);
+      char *arg = evaluate_arg(tokens[i].data, &needs_globbing);
 
       if (arg == NULL) {
         goto error;
@@ -399,9 +387,9 @@ int evaluate(const Token *tokens) {
       if (needs_globbing) {
         int args_added = glob(&argv, arg);
         if (args_added == 0) {
-          for (size_t i = 0; arg[i] != '\0'; i++) {
-            if (arg[i] == '\033') {
-              arg[i] = '*';
+          for (size_t j = 0; arg[j] != '\0'; j++) {
+            if (arg[j] == '\033') {
+              arg[j] = '*';
             }
           }
           error_f("rash: nothing matched glob pattern ‘%s’.\n", arg);
@@ -419,14 +407,14 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == STDIN_REDIR) {
+    if (tokens[i].type == STDIN_REDIR) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
-      assert(IS_ARGUMENT_TOKENS(tokens->type));
+      assert(tokens[i].type == ARGUMENT);
 
       bool needs_globbing = false;
-      char *filename = evaluate_arg(&tokens, &needs_globbing);
+      char *filename = evaluate_arg(tokens[i].data, &needs_globbing);
 
       if (filename == NULL) {
         goto error;
@@ -450,11 +438,11 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == STDIN_REDIR_STRING) {
+    if (tokens[i].type == STDIN_REDIR_STRING) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
-      assert(IS_ARGUMENT_TOKENS(tokens->type));
+      assert(tokens[i].type == ARGUMENT);
 
       int fds[2];
       if (pipe(fds) == -1) {
@@ -464,15 +452,14 @@ int evaluate(const Token *tokens) {
       }
 
       bool needs_globbing = false;
-      char *str = evaluate_arg(&tokens, &needs_globbing);
+      char *str = evaluate_arg(tokens[i].data, &needs_globbing);
 
       if (str == NULL) {
         goto error;
       }
       if (needs_globbing) {
         error_f(
-            "rash: expected string after ‘<<<’, but found glob expression.\n"
-        );
+            "rash: expected string after ‘<<<’, but found glob expression.\n");
         free(str);
         goto error;
       }
@@ -497,14 +484,14 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == STDOUT_REDIR) {
+    if (tokens[i].type == STDOUT_REDIR) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
-      assert(IS_ARGUMENT_TOKENS(tokens->type));
+      assert(tokens[i].type == ARGUMENT);
 
       bool needs_globbing = false;
-      char *filename = evaluate_arg(&tokens, &needs_globbing);
+      char *filename = evaluate_arg(tokens[i].data, &needs_globbing);
 
       if (filename == NULL) {
         goto error;
@@ -529,14 +516,14 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == STDOUT_REDIR_APPEND) {
+    if (tokens[i].type == STDOUT_REDIR_APPEND) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
-      assert(IS_ARGUMENT_TOKENS(tokens->type));
+      assert(tokens[i].type == ARGUMENT);
 
       bool needs_globbing = false;
-      char *filename = evaluate_arg(&tokens, &needs_globbing);
+      char *filename = evaluate_arg(tokens[i].data, &needs_globbing);
 
       if (filename == NULL) {
         goto error;
@@ -561,14 +548,14 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == STDERR_REDIR) {
+    if (tokens[i].type == STDERR_REDIR) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
-      assert(IS_ARGUMENT_TOKENS(tokens->type));
+      assert(tokens[i].type == ARGUMENT);
 
       bool needs_globbing = false;
-      char *filename = evaluate_arg(&tokens, &needs_globbing);
+      char *filename = evaluate_arg(tokens[i].data, &needs_globbing);
 
       if (filename == NULL) {
         goto error;
@@ -593,14 +580,14 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == STDERR_REDIR_APPEND) {
+    if (tokens[i].type == STDERR_REDIR_APPEND) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
-      assert(IS_ARGUMENT_TOKENS(tokens->type));
+      assert(tokens[i].type == ARGUMENT);
 
       bool needs_globbing = false;
-      char *filename = evaluate_arg(&tokens, &needs_globbing);
+      char *filename = evaluate_arg(tokens[i].data, &needs_globbing);
 
       if (filename == NULL) {
         goto error;
@@ -625,7 +612,7 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == PIPE) {
+    if (tokens[i].type == PIPE) {
       VECTOR_PUSH(argv, NULL);
 
       int fds[2];
@@ -649,7 +636,7 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == AMP) {
+    if (tokens[i].type == AMP) {
       ec.flags = EC_BACKGROUND_JOB;
       continue;
     }
@@ -661,22 +648,22 @@ int evaluate(const Token *tokens) {
       set_exit_code_var(last_status);
       ec = (ExecutionContext){NULL, -1, -1, -1, 0};
 
-      for (size_t i = 0; i < argv.length; i++) {
-        free(argv.data[i]);
+      for (size_t j = 0; j < argv.length; j++) {
+        free(argv.data[j]);
       }
       VECTOR_CLEAR(argv);
 
-      for (size_t i = 0; i < wait_for_me.length; i++) {
-        pid_t id = waitpid(wait_for_me.data[i], NULL, 0);
+      for (size_t j = 0; j < wait_for_me.length; j++) {
+        pid_t id = waitpid(wait_for_me.data[j], NULL, 0);
         // from my understanding, if waitpid fails, something in rash went wrong
         assert(id != -1);
       }
       VECTOR_CLEAR(wait_for_me);
     }
 
-    if (tokens->type == LOGICAL_AND) {
+    if (tokens[i].type == LOGICAL_AND) {
       if (last_status != 0) {
-        while ((tokens + 1)->type == END_ARG) {
+        while ((tokens + 1)->type == ARGUMENT) {
           tokens++;
         }
       }
@@ -684,9 +671,9 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == LOGICAL_OR) {
+    if (tokens[i].type == LOGICAL_OR) {
       if (last_status == 0) {
-        while ((tokens + 1)->type == END_ARG) {
+        while ((tokens + 1)->type == ARGUMENT) {
           tokens++;
         }
       }
@@ -694,11 +681,11 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == SEMI) {
+    if (tokens[i].type == SEMI) {
       continue;
     }
 
-    if (tokens->type == END) {
+    if (tokens[i].type == END) {
       break;
     }
   }

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "lib/buffer.h"
 #include "lib/vector.h"
 
 void file_reader_init(FileReader *file, FILE *fp) {

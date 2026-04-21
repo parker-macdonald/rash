@@ -22,7 +22,7 @@ int repl(const Buffer *(*reader)(void *), void *reader_data) {
 
     if (tokens != NULL) {
       evaluate(tokens);
-      free_tokens(&tokens);
+      free_tokens(tokens);
     }
   }
 
@@ -38,7 +38,7 @@ int repl_once(const Buffer *line) {
 
   if (tokens != NULL) {
     status = evaluate(tokens);
-    free_tokens(&tokens);
+    free_tokens(tokens);
   } else {
     status = EXIT_FAILURE;
   }

@@ -1,11 +1,13 @@
 #include "lex.h"
 
+#include <assert.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "lib/buffer.h"
 #include "lib/error.h"
 #include "lib/string.h"
 #include "lib/vector.h"
@@ -14,30 +16,63 @@ typedef struct {
   size_t start;
   size_t current;
   TokenList tokens;
-  String current_arg;
+  Argument argument;
+  String arg_buffer;
   const Buffer *source;
 } LexerState;
-
-typedef enum {
-  DEFAULT,
-  SINGLE_QUOTE,
-  DOUBLE_QUOTE
-} ArgumentState;
 
 uint8_t advance(LexerState *state) {
   return state->source->data[state->current++];
 }
 
+void add_arg_part(LexerState *state, ArgumentPartType type) {
+  if (state->arg_buffer.length != 0) {
+    VECTOR_PUSH(state->arg_buffer, '\0');
+
+    VECTOR_PUSH(
+        state->argument,
+        ((ArgumentPart){.type = STRING, .data = state->arg_buffer.data}));
+
+    VECTOR_INIT_EMPTY(state->arg_buffer);
+  }
+
+  VECTOR_PUSH(state->argument, (ArgumentPart){.type = type});
+}
+
+void add_arg_part_data(LexerState *state, ArgumentPartType type,
+                       char *data // NOLINT(readability-non-const-parameter)
+) {
+  if (state->arg_buffer.length != 0) {
+    VECTOR_PUSH(state->arg_buffer, '\0');
+
+    VECTOR_PUSH(
+        state->argument,
+        ((ArgumentPart){.type = STRING, .data = state->arg_buffer.data}));
+
+    VECTOR_INIT_EMPTY(state->arg_buffer);
+  }
+
+  VECTOR_PUSH(state->argument, ((ArgumentPart){.type = type, .data = data}));
+}
+
+void flush_argument(LexerState *state) {
+  if (state->arg_buffer.length != 0 || state->argument.length != 0) {
+    add_arg_part(state, END_ARG);
+
+    VECTOR_PUSH(state->tokens,
+                ((Token){.type = ARGUMENT, .data = state->argument.data}));
+
+    VECTOR_INIT_EMPTY(state->argument);
+  }
+}
+
 void add_token(LexerState *state, TokenType type) {
+  flush_argument(state);
   VECTOR_PUSH(state->tokens, (Token){.type = type});
 }
 
-// data cannot be marked as const, this lint warning is a false positive
-void add_token_data(
-    LexerState *state,
-    TokenType type,
-    char *data // NOLINT(readability-non-const-parameter)
-) {
+void add_token_data(LexerState *state, TokenType type, void *data) {
+  flush_argument(state);
   VECTOR_PUSH(state->tokens, ((Token){.type = type, .data = data}));
 }
 
@@ -65,14 +100,9 @@ uint8_t peek(LexerState *state) {
   return state->source->data[state->current];
 }
 
-void flush_current_arg(LexerState *state) {
-  if (state->current_arg.length != 0) {
-    VECTOR_PUSH(state->current_arg, '\0');
-
-    add_token_data(state, STRING, state->current_arg.data);
-
-    VECTOR_INIT_EMPTY(state->current_arg);
-  }
+void decrement(LexerState *state) {
+  assert(state->current != 0);
+  state->current--;
 }
 
 int parse_subshell(LexerState *state) {
@@ -97,8 +127,7 @@ int parse_subshell(LexerState *state) {
   memcpy(subshell_cmd, state->source->data + start, subshell_len);
   subshell_cmd[subshell_len] = '\0';
 
-  flush_current_arg(state);
-  add_token_data(state, SUBSHELL, subshell_cmd);
+  add_arg_part_data(state, SUBSHELL, subshell_cmd);
 
   // closing )
   advance(state);
@@ -149,18 +178,16 @@ int parse_env(LexerState *state) {
     env_len = state->current - start;
 
     if (start == state->current) {
-      VECTOR_PUSH(state->current_arg, '$');
+      VECTOR_PUSH(state->arg_buffer, '$');
       return 0;
     }
   }
 
-  
   char *env_name = malloc(env_len + 1);
   memcpy(env_name, state->source->data + start, env_len);
   env_name[env_len] = '\0';
 
-  flush_current_arg(state);
-  add_token_data(state, ENV_EXPANSION, env_name);
+  add_arg_part_data(state, ENV_EXPANSION, env_name);
   return 0;
 }
 
@@ -186,8 +213,7 @@ int parse_var(LexerState *state) {
   memcpy(var_name, state->source->data + start, var_len);
   var_name[var_len] = '\0';
 
-  flush_current_arg(state);
-  add_token_data(state, VAR_EXPANSION, var_name);
+  add_arg_part_data(state, VAR_EXPANSION, var_name);
   // closing }
   advance(state);
 
@@ -210,193 +236,168 @@ int parse_tilde(LexerState *state) {
   memcpy(user, state->source->data + start, user_len);
   user[user_len] = '\0';
 
-  add_token_data(state, TILDE, user);
-  advance(state);
+  add_arg_part_data(state, TILDE, user);
+
   return 0;
 }
 
-int parse_argument(LexerState *state) {
-  ArgumentState arg_state = DEFAULT;
-
-  if (match(state, '~')) {
-    if (parse_tilde(state)) {
-      goto error;
-    }
-  }
-
-  while (1) {
-    if (is_at_end(state)) {
-      break;
-    }
-
+int parse_double_quote(LexerState *state) {
+  while (!is_at_end(state)) {
     uint8_t c = advance(state);
 
-    switch (arg_state) {
-      case DEFAULT:
-        if (c == '"') {
-          arg_state = DOUBLE_QUOTE;
-          break;
-        }
-
-        if (c == '\'') {
-          arg_state = SINGLE_QUOTE;
-          break;
-        }
-
-        if (c == '$') {
-          if (match(state, '(')) {
-            if (parse_subshell(state)) {
-              goto error;
-            }
-            break;
-          }
-          if (parse_env(state)) {
-            goto error;
-          }
-          break;
-        }
-
-        if (c == '{') {
-          if (parse_var(state)) {
-            goto error;
-          }
-          break;
-        }
-
-        if (c == '*') {
-          flush_current_arg(state);
-          add_token(state, GLOB_WILDCARD);
-          break;
-        }
-
-        if (c == '\\') {
-          char new = (char)advance(state);
-          if (is_at_end(state)) {
-            error_f("rash: Expected character after ‘\\’.\n");
-            goto error;
-          }
-
-          VECTOR_PUSH(state->current_arg, new);
-          break;
-        }
-
-        if (c == ' ') {
-          goto leave;
-        }
-
-        VECTOR_PUSH(state->current_arg, (char)c);
-        break;
-
-      case DOUBLE_QUOTE:
-        if (c == '"') {
-          arg_state = DEFAULT;
-          break;
-        }
-
-        if (c == '\\' && match(state, '"')) {
-          VECTOR_PUSH(state->current_arg, '"');
-          break;
-        }
-
-        if (c == '$') {
-          if (match(state, '(')) {
-            if (parse_subshell(state)) {
-              goto error;
-            }
-          }
-          parse_env(state);
-          break;
-        }
-
-        if (c == '{') {
-          if (parse_var(state)) {
-            goto error;
-          }
-          break;
-        }
-
-        VECTOR_PUSH(state->current_arg, (char)c);
-        break;
-
-      case SINGLE_QUOTE:
-        if (c == '\\' && match(state, '\'')) {
-          VECTOR_PUSH(state->current_arg, '\'');
-          break;
-        }
-
-        if (c == '\'') {
-          arg_state = DEFAULT;
-          break;
-        }
-
-        VECTOR_PUSH(state->current_arg, (char)c);
-        break;
+    if (c == '"') {
+      return 0;
     }
+
+    if (c == '\\' && match(state, '"')) {
+      VECTOR_PUSH(state->arg_buffer, '"');
+      continue;
+    }
+
+    if (c == '$') {
+      if (match(state, '(')) {
+        if (parse_subshell(state)) {
+          return -1;
+        }
+      }
+      parse_env(state);
+      continue;
+    }
+
+    if (c == '{') {
+      if (parse_var(state)) {
+        return -1;
+      }
+      continue;
+    }
+
+    VECTOR_PUSH(state->arg_buffer, (char)c);
   }
 
-leave:
-  switch (arg_state) {
-    case SINGLE_QUOTE:
-      error_f("rash: Expected closing ‘'’ character.\n");
-      goto error;
-    case DOUBLE_QUOTE:
-      error_f("rash: Expected closing ‘\"’ character.\n");
-      goto error;
-    default:
-      break;
+  error_f("rash: Expected closing ‘\"’ character.\n");
+
+  return -1;
+}
+
+int parse_single_quote(LexerState *state) {
+  while (!is_at_end(state)) {
+    uint8_t c = advance(state);
+
+    if (c == '\\' && match(state, '\'')) {
+      VECTOR_PUSH(state->arg_buffer, '\'');
+      continue;
+    }
+
+    if (c == '\'') {
+      return 0;
+    }
+
+    VECTOR_PUSH(state->arg_buffer, (char)c);
   }
 
-  flush_current_arg(state);
+  error_f("rash: Expected closing ‘'’ character.\n");
 
-  add_token(state, END_ARG);
-
-  return 0;
-error:
   return -1;
 }
 
 int scan_token(LexerState *state) {
   uint8_t c = advance(state);
   switch (c) {
-    case '<':
-      // match has side effects, so it makes sense to have redundant expressions
-      if (match(state, '<') && // NOLINT(misc-redundant-expression)
-          match(state, '<')) {
+  case '<':
+    if (match(state, '<')) {
+      if (match(state, '<')) {
         add_token(state, STDIN_REDIR_STRING);
-        break;
       }
-      add_token(state, STDIN_REDIR);
+
+      string_append(&state->arg_buffer, "<<");
       break;
-    case '>':
-      add_token(state, match(state, '>') ? STDOUT_REDIR_APPEND : STDOUT_REDIR);
-      break;
-    case '2':
-      if (match(state, '>')) {
-        add_token(
-            state, match(state, '>') ? STDERR_REDIR_APPEND : STDERR_REDIR
-        );
-      }
-      break;
-    case '|':
-      add_token(state, match(state, '|') ? LOGICAL_OR : PIPE);
-      break;
-    case '&':
-      add_token(state, match(state, '&') ? LOGICAL_AND : AMP);
-      break;
-    case ';':
-      add_token(state, SEMI);
-      break;
-    case ' ':
-    case '\n':
-    case '\r':
-    case '\t':
-      break;
-    default:
-      state->current--;
-      if (parse_argument(state)) {
+    }
+    add_token(state, STDIN_REDIR);
+    break;
+
+  case '>':
+    add_token(state, match(state, '>') ? STDOUT_REDIR_APPEND : STDOUT_REDIR);
+    break;
+
+  case '2':
+    if (match(state, '>')) {
+      add_token(state, match(state, '>') ? STDERR_REDIR_APPEND : STDERR_REDIR);
+    }
+    break;
+
+  case '|':
+    add_token(state, match(state, '|') ? LOGICAL_OR : PIPE);
+    break;
+
+  case '&':
+    add_token(state, match(state, '&') ? LOGICAL_AND : AMP);
+    break;
+
+  case ';':
+    add_token(state, SEMI);
+    break;
+
+  case '"':
+    if (parse_double_quote(state)) {
+      goto error;
+    }
+    break;
+
+  case '\'':
+    if (parse_single_quote(state)) {
+      goto error;
+    }
+    break;
+
+  case '$':
+    if (match(state, '(')) {
+      if (parse_subshell(state)) {
         goto error;
       }
       break;
+    }
+    if (parse_env(state)) {
+      goto error;
+    }
+    break;
+
+  case '{':
+    if (parse_var(state)) {
+      goto error;
+    }
+    break;
+
+  case '~':
+    if (parse_tilde(state)) {
+      goto error;
+    }
+    break;
+
+  case '*':
+    add_arg_part(state, GLOB_WILDCARD);
+    break;
+
+  case '\\': {
+    char new = (char)advance(state);
+    if (is_at_end(state)) {
+      error_f("rash: Expected character after ‘\\’.\n");
+      goto error;
+    }
+
+    VECTOR_PUSH(state->arg_buffer, new);
+    break;
+  }
+
+  case ' ':
+  case '\n':
+  case '\r':
+  case '\t':
+    flush_argument(state);
+    break;
+
+  default:
+    VECTOR_PUSH(state->arg_buffer, (char)c);
+    break;
   }
 
   return 0;
@@ -417,20 +418,24 @@ Token *lex(const Buffer *source) {
 
   add_token(&state, END);
 
-  VECTOR_DESTROY(state.current_arg);
+  VECTOR_DESTROY(state.arg_buffer);
 
   return state.tokens.data;
 
 error:
-  VECTOR_DESTROY(state.current_arg);
+  VECTOR_DESTROY(state.arg_buffer);
 
   for (size_t i = 0; i < state.tokens.length; i++) {
-    if (state.tokens.data[i].type == STRING ||
-        state.tokens.data[i].type == ENV_EXPANSION ||
-        state.tokens.data[i].type == VAR_EXPANSION ||
-        state.tokens.data[i].type == TILDE ||
-        state.tokens.data[i].type == SUBSHELL) {
-      free(state.tokens.data[i].data);
+    if (state.tokens.data[i].type == ARGUMENT) {
+      Argument *arg = state.tokens.data[i].data;
+
+      for (size_t j = 0; j < arg->length; j++) {
+        if (arg->data[j].type == STRING || arg->data[j].type == ENV_EXPANSION ||
+            arg->data[j].type == SUBSHELL ||
+            arg->data[j].type == VAR_EXPANSION || arg->data[j].type == TILDE) {
+          free(arg[j].data);
+        }
+      }
     }
   }
 
@@ -438,14 +443,20 @@ error:
   return NULL;
 }
 
-void free_tokens(Token **tokens) {
-  for (size_t i = 0; (*tokens)[i].type != END; i++) {
-    if ((*tokens)[i].type == STRING || (*tokens)[i].type == ENV_EXPANSION ||
-        (*tokens)[i].type == VAR_EXPANSION || (*tokens)[i].type == TILDE ||
-        (*tokens)[i].type == SUBSHELL) {
-      free((*tokens)[i].data);
+void free_tokens(Token *tokens) {
+  for (size_t i = 0; tokens[i].type != END; i++) {
+    if (tokens[i].type == ARGUMENT) {
+      ArgumentPart *arg = tokens[i].data;
+
+      for (size_t j = 0; arg[j].type != END_ARG; j++) {
+        if (arg[j].type == STRING || arg[j].type == ENV_EXPANSION ||
+            arg[j].type == SUBSHELL || arg[j].type == VAR_EXPANSION ||
+            arg[j].type == TILDE) {
+          free(arg[j].data);
+        }
+      }
     }
   }
 
-  free(*tokens);
+  free(tokens);
 }
