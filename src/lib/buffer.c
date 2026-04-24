@@ -100,9 +100,7 @@ void buffer_remove_bulk(Buffer *buffer, size_t offset, size_t count) {
     return;
   }
 
-  for (size_t i = offset; i < buffer->length; i++) {
-    buffer->data[i] = buffer->data[i + count];
-  }
+  memmove(buffer->data, buffer->data + count, buffer->length);
 }
 
 Buffer buffer_from(const uint8_t *data, size_t length) {

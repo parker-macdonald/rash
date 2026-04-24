@@ -111,15 +111,7 @@ bool is_continuation_byte_utf8(const uint8_t byte) {
 size_t utf8_remove_codepoint(Buffer *buffer, size_t buffer_offset) {
   size_t codepoint_size = utf8_codepoint_size(buffer, buffer_offset);
 
-  buffer->length -= codepoint_size;
-
-  if (buffer->length == buffer_offset + codepoint_size) {
-    return codepoint_size;
-  }
-
-  for (size_t i = buffer_offset; i < buffer->length; i++) {
-    buffer->data[i] = buffer->data[i + codepoint_size];
-  }
+  buffer_remove_bulk(buffer, buffer_offset, codepoint_size);
 
   return codepoint_size;
 }
