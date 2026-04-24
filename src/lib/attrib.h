@@ -18,8 +18,12 @@
 
 #if (__STDC_VERSION__ >= 202311L)
   #define ATTRIB_NORETURN [[noreturn]]
-#else
+#elif (__STDC_VERSION__ >= 201112L)
   #define ATTRIB_NORETURN _Noreturn
+#elif defined(__GNUC__)
+  #define ATTRIB_NORETURN __attribute__((noreturn))
+#else
+  #define ATTRIB_NORETURN
 #endif
 
 #endif
