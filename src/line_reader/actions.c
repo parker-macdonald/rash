@@ -5,7 +5,7 @@
 #include "lib/ansi.h"
 #include "line_reader/action_utils.h"
 #include "line_reader/actions_all.h"
-#include "line_reader/line_reader_struct.h"
+#include "line_reader/types.h"
 
 int preform_action(LineReader *reader) {
   int ch = getch();

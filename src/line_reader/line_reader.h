@@ -1,8 +1,6 @@
 #ifndef LINE_READER_H
 #define LINE_READER_H
 
-#include <stdint.h>
-
 #include "lib/buffer.h"
 
 void line_reader_init(void);

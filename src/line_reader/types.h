@@ -2,21 +2,49 @@
 #define LINE_READER_STRUCT_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 #include "lib/buffer.h"
-#include "line_reader/actions.h"
+
+struct LineReader;
+
+typedef int (*Action)(struct LineReader *);
+
+typedef struct {
+  Action form_feed;
+  Action sigint;
+  Action arrow_left;
+  Action arrow_right;
+  Action delete;
+  Action ctrl_left_arrow;
+  Action ctrl_right_arrow;
+  Action arrow_up;
+  Action arrow_down;
+  Action home;
+  Action end;
+  Action new_line;
+  Action ctrl_delete;
+  Action page_up;
+  Action page_down;
+  Action shift_tab;
+  Action tab;
+  Action end_of_file;
+  Action backspace;
+  Action ctrl_backspace;
+  int (*insert)(struct LineReader *, uint8_t);
+} Actions;
 
 // a history node is a node in the linked list storing command history.
-typedef struct history_node_t {
-  struct history_node_t *p_next;
-  struct history_node_t *p_prev;
+typedef struct HistoryNode {
+  struct HistoryNode *p_next;
+  struct HistoryNode *p_prev;
   // buffer containing a line from history, this buffer is read only, this
   // buffer is null terminated, and the length does not include the null
   // terminator
   Buffer line;
 } HistoryNode;
 
-typedef struct line_reader_t {
+struct LineReader {
   // history is a linked list where root is the oldest this in history, end in
   // the newest thing in history, and current is where the user is in history
   // (by pressing up and down).
@@ -39,6 +67,8 @@ typedef struct line_reader_t {
   // length of the prompt in characters, remember, in utf-8, not all characters
   // are one byte.
   unsigned prompt_length;
-} LineReader;
+};
+
+typedef struct LineReader LineReader;
 
 #endif

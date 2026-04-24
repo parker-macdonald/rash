@@ -2,7 +2,7 @@
 #define ACTION_UTILS_H
 
 #include "lib/buffer.h"
-#include "line_reader_struct.h"
+#include "line_reader/types.h"
 
 #define PUTS(str) (void)fputs(str, stdout)
 #define FLUSH() (void)fflush(stdout)

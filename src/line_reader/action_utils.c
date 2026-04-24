@@ -14,8 +14,7 @@
 #include "lib/buffer.h"
 #include "lib/error.h"
 #include "lib/utf_8.h"
-#include "line_reader/actions.h"
-#include "line_reader/line_reader_struct.h"
+#include "line_reader/types.h"
 
 void cursor_left(LineReader *reader) {
   unsigned short width = get_terminal_width();

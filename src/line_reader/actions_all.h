@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "line_reader/line_reader_struct.h"
+#include "line_reader/types.h"
 
 int action_nop(LineReader *reader);
 

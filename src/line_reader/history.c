@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 #include "lib/vector.h"
-#include "line_reader/line_reader_struct.h"
+#include "line_reader/types.h"
 
 void history_clear(LineReader *reader) {
   HistoryNode *node = reader->history_root;

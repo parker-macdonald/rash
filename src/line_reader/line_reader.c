@@ -11,7 +11,7 @@
 #include "line_reader/actions.h"
 #include "line_reader/history.h"
 #include "line_reader/prompt.h"
-#include "line_reader_struct.h"
+#include "line_reader/types.h"
 #include "shell_vars.h"
 
 static LineReader reader;

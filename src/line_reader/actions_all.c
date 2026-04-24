@@ -1,4 +1,4 @@
-#include "line_reader/actions_all.h"
+#include "actions_all.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -11,7 +11,7 @@
 #include "line_reader/action_utils.h"
 #include "line_reader/auto_complete.h"
 #include "line_reader/history.h"
-#include "line_reader/line_reader_struct.h"
+#include "line_reader/types.h"
 
 int action_nop(LineReader *reader) {
   (void)reader;
