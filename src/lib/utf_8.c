@@ -33,8 +33,8 @@ size_t utf8_prev_codepoint(const Buffer *buffer, size_t buffer_offset) {
     // character as a byte. also, char size should not be four in this loop,
     // if it is the data is malformed, again just treat the bad character as
     // a byte
-    if (buffer == 0 || char_size == 4) {
-      return 1;
+    if (buffer_offset == 0 || char_size == 4) {
+      return start - 1;
     }
 
     buffer_offset--;

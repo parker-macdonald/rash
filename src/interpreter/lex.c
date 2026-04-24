@@ -447,6 +447,7 @@ error:
   }
 
   VECTOR_DESTROY(state.arg_buffer);
+  VECTOR_DESTROY(state.argument);
   VECTOR_DESTROY(state.tokens);
   return NULL;
 }

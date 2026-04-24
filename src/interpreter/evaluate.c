@@ -632,6 +632,9 @@ int evaluate(const Token *tokens) {
 
       ec = (ExecutionContext){NULL, -1, fds[0], -1, 0};
 
+      for (size_t j = 0; j < argv.length; j++) {
+        free(argv.data[j]);
+      }
       VECTOR_CLEAR(argv);
       continue;
     }
