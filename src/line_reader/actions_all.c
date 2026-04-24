@@ -98,8 +98,6 @@ int action_new_line(LineReader *reader) {
 
   copy_hist_buf_if_needed(reader);
 
-  VECTOR_PUSH(reader->buffer, '\0');
-
   history_add(reader);
 
   return 1;

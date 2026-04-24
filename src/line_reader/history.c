@@ -34,7 +34,7 @@ void history_print(LineReader *reader, int count) {
 
   if (count == -1) {
     for (unsigned int i = 1; node != NULL; i++) {
-      printf("%5u  %s\n", i, (char *)node->line.data);
+      printf("%5u  %.*s\n", i, (int)node->line.length, (char *)node->line.data);
       node = node->p_next;
     }
 
@@ -62,7 +62,7 @@ void history_print(LineReader *reader, int count) {
   }
 
   for (unsigned int i = (unsigned int)count - 1; node != NULL; i--) {
-    printf("%5u  %s\n", i, (char *)node->line.data);
+    printf("%5u  %.*s\n", i, (int)node->line.length, (char *)node->line.data);
     node = node->p_next;
   }
 }
@@ -71,8 +71,6 @@ void history_add(LineReader *reader) {
   HistoryNode *new_node = malloc(sizeof(HistoryNode));
 
   new_node->line = reader->buffer;
-  // since the length doesn't include the null terminator, we must subtract one
-  new_node->line.length--;
 
   new_node->p_next = NULL;
   new_node->p_prev = reader->history_end;

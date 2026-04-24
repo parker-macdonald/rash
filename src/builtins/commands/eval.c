@@ -31,8 +31,6 @@ int builtin_eval(char **argv) {
     VECTOR_PUSH(command, ' ');
   }
 
-  VECTOR_PUSH(command, '\0');
-
   int status = repl_once(&command);
 
   VECTOR_DESTROY(command);
