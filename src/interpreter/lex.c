@@ -12,6 +12,9 @@
 #include "lib/string.h"
 #include "lib/vector.h"
 
+void free_arg_part(ArgumentPart *part);
+void free_token(Token *token);
+
 typedef struct {
   size_t start;
   size_t current;
@@ -435,40 +438,47 @@ Token *lex(const Buffer *source) {
   return state.tokens.data;
 
 error:
-  VECTOR_DESTROY(state.arg_buffer);
-
   for (size_t i = 0; i < state.tokens.length; i++) {
-    if (state.tokens.data[i].type == ARGUMENT) {
-      ArgumentPart *arg = state.tokens.data[i].data;
-
-      for (size_t j = 0; arg[j].type != END_ARG; j++) {
-        if (arg[j].type == STRING || arg[j].type == ENV_EXPANSION ||
-            arg[j].type == SUBSHELL || arg[j].type == VAR_EXPANSION ||
-            arg[j].type == TILDE) {
-          free(arg[j].data);
-        }
-      }
-    }
+    free_token(state.tokens.data + i);
   }
 
+  for (size_t i = 0; i < state.argument.length; i++) {
+    free_arg_part(state.argument.data + i);
+  }
+
+  VECTOR_DESTROY(state.arg_buffer);
   VECTOR_DESTROY(state.tokens);
   return NULL;
 }
 
 void free_tokens(Token *tokens) {
   for (size_t i = 0; tokens[i].type != END; i++) {
-    if (tokens[i].type == ARGUMENT) {
-      ArgumentPart *arg = tokens[i].data;
-
-      for (size_t j = 0; arg[j].type != END_ARG; j++) {
-        if (arg[j].type == STRING || arg[j].type == ENV_EXPANSION ||
-            arg[j].type == SUBSHELL || arg[j].type == VAR_EXPANSION ||
-            arg[j].type == TILDE) {
-          free(arg[j].data);
-        }
-      }
-    }
+    free_token(tokens + i);
   }
 
   free(tokens);
+}
+
+void free_token(Token *token) {
+  if (token->type == ARGUMENT) {
+    ArgumentPart *part = token->data;
+
+    for (size_t j = 0; part[j].type != END_ARG; j++) {
+      free_arg_part(part + j);
+    }
+
+    free(part);
+  }
+}
+
+void free_arg_part(ArgumentPart *part) {
+  if (
+    part->type == STRING        || 
+    part->type == ENV_EXPANSION ||
+    part->type == SUBSHELL      || 
+    part->type == VAR_EXPANSION ||
+    part->type == TILDE
+  ) {
+    free(part->data);
+  }
 }
