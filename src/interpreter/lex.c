@@ -249,9 +249,21 @@ int parse_double_quote(LexerState *state) {
       return 0;
     }
 
-    if (c == '\\' && match(state, '"')) {
-      VECTOR_PUSH(state->arg_buffer, '"');
-      continue;
+    if (c == '\\') {
+      if (match(state, '"')) {
+        VECTOR_PUSH(state->arg_buffer, '"');
+        continue;
+      }
+
+      if (match(state, '$')) {
+        VECTOR_PUSH(state->arg_buffer, '$');
+        continue;
+      }
+
+      if (match(state, '{')) {
+        VECTOR_PUSH(state->arg_buffer, '{');
+        continue;
+      }
     }
 
     if (c == '$') {
@@ -427,12 +439,12 @@ error:
 
   for (size_t i = 0; i < state.tokens.length; i++) {
     if (state.tokens.data[i].type == ARGUMENT) {
-      Argument *arg = state.tokens.data[i].data;
+      ArgumentPart *arg = state.tokens.data[i].data;
 
-      for (size_t j = 0; j < arg->length; j++) {
-        if (arg->data[j].type == STRING || arg->data[j].type == ENV_EXPANSION ||
-            arg->data[j].type == SUBSHELL ||
-            arg->data[j].type == VAR_EXPANSION || arg->data[j].type == TILDE) {
+      for (size_t j = 0; arg[j].type != END_ARG; j++) {
+        if (arg[j].type == STRING || arg[j].type == ENV_EXPANSION ||
+            arg[j].type == SUBSHELL || arg[j].type == VAR_EXPANSION ||
+            arg[j].type == TILDE) {
           free(arg[j].data);
         }
       }
