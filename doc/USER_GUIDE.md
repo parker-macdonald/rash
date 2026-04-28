@@ -103,13 +103,12 @@ $ var
 {key2}: "value2"
 ```
 
-You might be wondering, what the `?` is doing in the list of shell variables. It contains the exit code of the last program to run. (For pipelines this is the exit code of the last program in the pipeline).
+You might be wondering what the `?` is doing in the list of shell variables. It contains the exit code of the last program to run. (For pipelines this is the exit code of the last program in the pipeline).
 
 For example:
 
 ```bash
 $ rash -c "exit 69" # use one-shot mode to run a process with an exit code of 69
-$ exit 69
 $ echo {?}
 69
 $ false
@@ -136,7 +135,7 @@ echo $A $B # prints hello world
 echo ${A} ${B} # also prints hello world
 ```
 
-The main difference between putting braces around the name of the variable, it that you can access variables that have more than just letters, numbers, and underscores in the.
+The reason you might want to putt braces around the name of the variable is so that you can access variables that have more than just letters, numbers, and underscores in the name.
 
 ```bash
 setenv 'what!?' value
@@ -154,9 +153,9 @@ For example, lets say you want to print the users name inside of an echo command
 echo i am $(whoami), thanks for asking
 ```
 
-The result of `whoami` gets set as the third argument to echo, so if `whoami` prints `parker`, `parker` ends up getting printed.
+The result of `whoami` gets set as the third argument to echo, so if `whoami` prints `root`, `i am root, thanks for asking` ends up getting printed.
 
-Another useful thing you can do with subshells is run a command with an set environment variable without changing environment variables of the current shell.
+Another useful thing you can do with subshells is run a command with a set environment variable without changing environment variables of the current shell.
 
 ```bash
 echo $(export a=5; echo $a) # 5
