@@ -32,7 +32,7 @@ typedef struct {
   Action backspace;
   Action ctrl_backspace;
   int (*insert)(struct LineReader *, uint8_t);
-} Actions;
+} ActionSet;
 
 // a history node is a node in the linked list storing command history.
 typedef struct HistoryNode {
@@ -52,7 +52,7 @@ struct LineReader {
   HistoryNode *history_end;
   HistoryNode *history_curr;
 
-  Actions acts;
+  ActionSet acts;
 
   Buffer buffer;
 

@@ -153,7 +153,7 @@ int preform_action(LineReader *reader) {
   return 0;
 }
 
-void actions_default(Actions *acts) {
+void actions_default(ActionSet *acts) {
   acts->form_feed = action_clear;
   acts->sigint = action_sigint;
   acts->arrow_left = action_cursor_left;

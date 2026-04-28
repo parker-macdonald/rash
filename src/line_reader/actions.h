@@ -5,6 +5,6 @@
 
 int preform_action(LineReader *);
 
-void actions_default(Actions *);
+void actions_default(ActionSet *);
 
 #endif
