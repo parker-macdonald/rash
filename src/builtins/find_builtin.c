@@ -123,10 +123,8 @@ builtin_t find_builtin(const char *const str) {
   return node->function;
 }
 
-void find_matching_builtins(
-    const char *prefix, size_t prefix_len, StringList *vec
-) {
-  TrieNode *node = find_node(prefix, prefix_len);
+void find_matching_builtins(const String *prefix, StringList *vec) {
+  TrieNode *node = find_node(prefix->data, prefix->length);
 
   if (node == NULL) {
     return;

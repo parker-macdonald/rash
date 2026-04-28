@@ -13,8 +13,6 @@ void trie_destroy(void);
 
 builtin_t find_builtin(const char *str);
 
-void find_matching_builtins(
-    const char *prefix, size_t prefix_len, StringList *vec
-);
+void find_matching_builtins(const String *prefix, StringList *vec);
 
 #endif
