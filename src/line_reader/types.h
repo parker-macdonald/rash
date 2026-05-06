@@ -48,8 +48,8 @@ struct LineReader {
   // history is a linked list where root is the oldest this in history, end in
   // the newest thing in history, and current is where the user is in history
   // (by pressing up and down).
-  HistoryNode *history_root;
-  HistoryNode *history_end;
+  HistoryNode *history_top;
+  HistoryNode *history_bottom;
   HistoryNode *history_curr;
 
   ActionSet acts;

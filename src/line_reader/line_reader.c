@@ -25,8 +25,8 @@ void line_reader_init(void) {
 
   reader.active_buffer = &reader.buffer;
 
-  reader.history_root = NULL;
-  reader.history_end = NULL;
+  reader.history_top = NULL;
+  reader.history_bottom = NULL;
   reader.history_curr = NULL;
 
   reader.cursor_pos = reader.prompt_length;
