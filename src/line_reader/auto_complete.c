@@ -10,6 +10,7 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <pwd.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,14 +19,13 @@
 
 #include "lib/ansi.h"
 #include "lib/attrib.h"
-#include "lib/is_ident.h"
 #include "lib/sort.h"
 #include "lib/utf_8.h"
 #include "line_reader/action_utils.h"
 #include "line_reader/types.h"
 
 #ifndef _DIRENT_HAVE_D_TYPE
-#include <sys/stat.h>
+  #include <sys/stat.h>
 #endif
 
 #include "builtins/find_builtin.h"
@@ -33,29 +33,80 @@
 #include "lib/string.h"
 #include "lib/vector.h"
 
-static void match_file(StringList *matches, String *word) {
-  DIR *dir;
-  String basename;
-  size_t last_slash = string_last_index_of(word, '/');
+static String tilde_expand(const String *path) {
+  if (path->length == 0) {
+    return (String){0};
+  }
 
-  // relative path
-  if (last_slash == (size_t)-1) {
-    dir = opendir(".");
-    basename = string_clone(word);
-  } else {
-    String path;
+  if (path->data[0] != '~') {
+    return string_clone(path);
+  }
 
-    if (last_slash == 0) {
-      path = string_from_cstr("/");
-    } else {
-      path = string_substring(word, 0, last_slash);
+  size_t first_slash = string_index_of(path, '/');
+
+  if (first_slash == (size_t)-1) {
+    first_slash = path->length;
+  }
+
+  // path == "~/..."
+  if (first_slash == 1) {
+    const char *home = getenv("HOME");
+
+    if (home == NULL) {
+      return string_clone(path);
     }
 
-    dir = opendir(string_cstr(&path));
+    String result = string_from_cstr(home);
+    string_append_ptr(&result, path->data + 1, path->length - 1);
 
-    string_destroy(&path);
+    return result;
+  }
 
-    basename = string_substring(word, last_slash + 1, word->length);
+  String username = string_substring(path, 1, first_slash);
+
+  struct passwd *pw = getpwnam(string_cstr(&username));
+
+  string_destroy(&username);
+
+  if (pw == NULL || pw->pw_dir == NULL) {
+    return string_clone(path);
+  }
+
+  String result = string_from_cstr(pw->pw_dir);
+  string_append_ptr(
+      &result, path->data + first_slash, path->length - first_slash
+  );
+
+  return result;
+}
+
+static void split_path(const String *path, String *dirname, String *basename) {
+  size_t last_slash = string_last_index_of(path, '/');
+
+  if (last_slash == (size_t)-1) {
+    *dirname = string_from_cstr(".");
+    *basename = string_clone(path);
+  } else {
+    if (last_slash == 0) {
+      *dirname = string_from_cstr("/");
+    } else {
+      *dirname = string_substring(path, 0, last_slash);
+    }
+
+    *basename = string_substring(path, last_slash + 1, path->length);
+  }
+}
+
+static void match_file(StringList *matches, const String *word) {
+  String dirname, basename;
+  DIR *dir;
+
+  split_path(word, &dirname, &basename);
+
+  {
+    String expanded = tilde_expand(&dirname);
+    dir = opendir(string_cstr(&expanded));
+    string_destroy(&expanded);
   }
 
   if (dir == NULL) {
@@ -73,16 +124,18 @@ static void match_file(StringList *matches, String *word) {
     char *file = ent->d_name;
 
     // must match hidden files explicitly
-    if (file[0] == '.' && basename.data[0] != '.') {
-      continue;
+    if (file[0] == '.') {
+      if (basename.length < 1 || basename.data[0] != '.') {
+        continue;
+      }
     }
 
     if (strncmp(file, basename.data, basename.length) != 0) {
       continue;
     }
 
-    String full_path = string_substring(word, 0, last_slash + 1);
-
+    String full_path = string_clone(&dirname);
+    string_append_char(&full_path, '/');
     string_append_cstr(&full_path, ent->d_name);
 
 #ifdef _DIRENT_HAVE_D_TYPE
@@ -103,26 +156,91 @@ static void match_file(StringList *matches, String *word) {
     }
 #endif
 
-    VECTOR_PUSH(*matches, string_cstr(&full_path));
+    VECTOR_PUSH(*matches, full_path);
   }
 
+  string_destroy(&dirname);
+  string_destroy(&basename);
   closedir(dir);
 }
 
-static void match_command(StringList *matches, String *word) {
+static void match_exec_file(StringList *matches, const String *word) {
+  String dirname, basename;
+
+  split_path(word, &dirname, &basename);
+
+  DIR *dir = opendir(string_cstr(&dirname));
+
+  if (dir == NULL) {
+    return;
+  }
+
+  int fd = dirfd(dir);
+  assert(fd != -1);
+  struct dirent *ent;
+
+  while ((ent = readdir(dir))) {
+    char *file = ent->d_name;
+
+    // must match hidden files explicitly
+    if (file[0] == '.') {
+      if (basename.length < 1 || basename.data[0] != '.') {
+        continue;
+      }
+    }
+
+    if (strncmp(file, basename.data, basename.length) != 0) {
+      continue;
+    }
+
+    // if file is not executable
+    if (faccessat(fd, file, X_OK, AT_EACCESS) != 0) {
+      continue;
+    }
+
+    String full_path = string_clone(&dirname);
+    string_append_char(&full_path, '/');
+    string_append_cstr(&full_path, ent->d_name);
+
+#ifdef _DIRENT_HAVE_D_TYPE
+    if (ent->d_type == DT_DIR) {
+      string_append_char(&full_path, '/');
+    } else {
+      string_append_char(&full_path, ' ');
+    }
+#else
+    {
+      struct stat sb = {0};
+      if (fstatat(fd, ent->d_name, &sb, AT_SYMLINK_NOFOLLOW) == 0 &&
+          S_ISDIR(sb.st_mode)) {
+        string_append_char(&full_path, '/');
+      } else {
+        string_append_char(&full_path, ' ');
+      }
+    }
+#endif
+
+    VECTOR_PUSH(*matches, full_path);
+  }
+
+  string_destroy(&dirname);
+  string_destroy(&basename);
+  closedir(dir);
+}
+
+static void match_command(StringList *matches, const String *word) {
   find_matching_builtins(word, matches);
-  const char *path = getenv("PATH");
+  char *path = getenv("PATH");
 
   if (path == NULL) {
     return;
   }
 
-  String file_path = {0};
+  path = strdup(path);
 
-  for (size_t i = 0; path[i] != '\0'; i++) {
-    char *
-    VECTOR_PUSH(file_path, '\0');
-    DIR *dir = opendir(file_path.data);
+  char *path_part = strtok(path, ":");
+  while (path_part != NULL) {
+    DIR *dir = opendir(path_part);
 
     if (dir == NULL) {
       continue;
@@ -133,43 +251,42 @@ static void match_command(StringList *matches, String *word) {
     struct dirent *ent;
 
     while ((ent = readdir(dir))) {
+      char *file = ent->d_name;
+
       // must match hidden files explicitly
-      if (ent->d_name[0] == '.' && word[0] != '.') {
+      if (file[0] == '.' && word->data[0] != '.') {
         continue;
       }
-      if (strncmp(ent->d_name, word, word_len) != 0) {
+
+      if (strncmp(file, word->data, word->length) != 0) {
         continue;
       }
+
       // if file is not executable
-      if (faccessat(fd, ent->d_name, X_OK, AT_EACCESS) != 0) {
+      if (faccessat(fd, file, X_OK, AT_EACCESS) != 0) {
         continue;
       }
 
-      size_t file_len = strlen(ent->d_name);
-      char *file = malloc(file_len + 2);
+      String command = string_from_cstr(file);
+      string_append_char(&command, ' ');
 
-      memcpy(file, ent->d_name, file_len);
-      file[file_len] = ' ';
-      file[file_len + 1] = '\0';
-
-      VECTOR_PUSH(*matches, file);
+      VECTOR_PUSH(*matches, command);
     }
 
     closedir(dir);
-
-    VECTOR_CLEAR(file_path);
+    path_part = strtok(NULL, ":");
   }
 
-  VECTOR_DESTROY(file_path);
+  free(path);
 }
 
-static void pretty_print_strings(char *const strings[], const size_t length) {
+static void pretty_print_strings(const StringList *strings) {
   size_t width = (size_t)get_terminal_width();
   size_t max_len = 2;
 
   size_t num_printed = 0;
-  for (; num_printed < length; num_printed++) {
-    const size_t new_len = strlen(strings[num_printed]) + 2;
+  for (; num_printed < strings->length; num_printed++) {
+    const size_t new_len = strings->data[num_printed].length + 2;
 
     if (new_len > max_len) {
       if ((num_printed + 2) * new_len / width > 3) {
@@ -187,14 +304,14 @@ static void pretty_print_strings(char *const strings[], const size_t length) {
   size_t col = width / max_len;
 
   for (size_t i = 0; i < num_printed; i++) {
-    printf("%-*s", (int)max_len, strings[i]);
+    printf("%-*s", (int)max_len, string_cstr(&strings->data[i]));
 
     if ((i + 1) % col == 0) {
       printf("\n");
     }
   }
 
-  if (num_printed != length) {
+  if (num_printed != strings->length) {
     printf("...");
   }
 }
@@ -203,16 +320,11 @@ typedef enum {
   DEFAULT,
   WHITESPACE,
   DOUBLE_QUOTE,
-  SINGLE_QUOTE,
-  SINGLE_LITERAL,
-  ENV_NO_BRACE,
-  ENV_BRACE,
-  VAR_EXPANSION,
-  TILDE,
-  SUBSHELL,
+  SINGLE_QUOTE
 } WordState;
 
-String find_last_word(LineReader *reader, bool *is_first_word, WordState *end_state) {
+static String
+find_last_word(LineReader *reader, bool *is_first_word, WordState *end_state) {
   WordState state = WHITESPACE;
   unsigned word_count = 0;
 
@@ -222,151 +334,77 @@ String find_last_word(LineReader *reader, bool *is_first_word, WordState *end_st
   size_t i;
   for (i = 0; i < reader->buffer_offset; i++) {
     const uint8_t curr = source[i];
-    const uint8_t next = source[i + 1];
 
     switch (state) {
-    case DEFAULT:
-      if (curr == '"') {
-        state = DOUBLE_QUOTE;
-        break;
-      }
-
-      if (curr == '\'') {
-        state = SINGLE_QUOTE;
-        break;
-      }
-
-      if (curr == '\\') {
-        state = SINGLE_LITERAL;
-        break;
-      }
-
-      if (isspace((int)curr)) {
-        state = WHITESPACE;
-        break;
-      }
-
-      if (curr == '$') {
-        switch (next) {
-        case '(':
-          state = SUBSHELL;
-          word_start = i + 2;
+      case DEFAULT:
+        if (curr == '"') {
+          state = DOUBLE_QUOTE;
           break;
-        case '{':
-          state = ENV_BRACE;
-          word_start = i + 2;
+        }
+
+        if (curr == '\'') {
+          state = SINGLE_QUOTE;
           break;
-        default:
-          if (is_ident(next)) {
-            word_start = i + 1;
-            state = ENV_NO_BRACE;
-            break;
-          }
+        }
+
+        if (isspace((int)curr)) {
+          state = WHITESPACE;
+          break;
+        }
+
+        break;
+
+      case WHITESPACE:
+        if (isspace((int)curr)) {
+          break;
+        }
+
+        word_count++;
+
+        state = DEFAULT;
+        word_start = i;
+        i--;
+        break;
+
+      case DOUBLE_QUOTE:
+        if (curr == '"') {
           state = DEFAULT;
           break;
         }
-      }
 
-      if (curr == '{') {
-        state = VAR_EXPANSION;
-        word_start = i + 1;
         break;
-      }
 
-      // comments
-      if (curr == '#' && next == ' ') {
-        goto leave;
-      }
+      case SINGLE_QUOTE:
+        if (curr == '\'') {
+          state = DEFAULT;
+          break;
+        }
 
-      break;
-
-    case WHITESPACE:
-      if (isspace((int)curr)) {
         break;
-      }
-
-      word_count++;
-
-      if (curr == '~') {
-        state = TILDE;
-        word_start = i + 1;
-        break;
-      }
-
-      state = DEFAULT;
-      word_start = i;
-      i--;
-      break;
-
-    case DOUBLE_QUOTE:
-      if (curr == '"') {
-        state = DEFAULT;
-        break;
-      }
-
-      break;
-
-    case SINGLE_QUOTE:
-      if (curr == '\'') {
-        state = DEFAULT;
-        break;
-      }
-
-      break;
-
-    case SINGLE_LITERAL:
-      state = DEFAULT;
-      break;
-
-    case ENV_NO_BRACE:
-      if (!is_ident(curr)) {
-        state = DEFAULT;
-        break;
-      }
-
-      break;
-
-    case ENV_BRACE:
-      if (curr == '}') {
-        state = DEFAULT;
-        break;
-      }
-
-      break;
-
-    case SUBSHELL:
-      if (curr == ')') {
-        state = DEFAULT;
-        break;
-      }
-
-      break;
-
-    case VAR_EXPANSION:
-      if (curr == '}') {
-        state = DEFAULT;
-        break;
-      }
-
-      break;
-
-    case TILDE:
-      if (curr == '/') {
-        state = DEFAULT;
-        break;
-      }
-
-      break;
     }
   }
 
   *is_first_word = (word_count == 1);
   *end_state = state;
 
-  return string_using_ptr((char *)(word_start + reader->active_buffer->data), reader->buffer_offset - word_start);
+  return string_using_ptr(
+      (char *)(word_start + reader->active_buffer->data),
+      reader->buffer_offset - word_start
+  );
+}
 
-leave:
-  return string_using_ptr(NULL, 0);
+ATTRIB_UNUSED
+static size_t common_prefix_len(const StringList *strings, size_t begin) {
+  for (size_t i = begin;; i++) {
+    for (size_t j = 0; j < strings->length - 1; j++) {
+      if (strings->data[j].data[i] != strings->data[j + 1].data[i]) {
+        return i;
+      }
+      if (i < strings->data[j].length || i < strings->data[j + 1].length) {
+        return i;
+      }
+    }
+  }
 }
 
 void auto_complete(LineReader *reader) {
@@ -383,12 +421,12 @@ void auto_complete(LineReader *reader) {
 
   if (is_first_word) {
     if (string_contains(&word, '/')) {
-      match_exec_file()
+      match_exec_file(&matches, &word);
     } else {
       match_command(&matches, &word);
     }
   } else {
-    match_file(&matches, word);
+    match_file(&matches, &word);
   }
 
   if (matches.length == 0) {
@@ -396,51 +434,62 @@ void auto_complete(LineReader *reader) {
     return;
   }
 
-  if (matches.length == 1) {
-    size_t match_len = strlen(matches.data[0]);
+  size_t bytes_written = 0;
 
-    if (match_len > word_len) {
-      bytes_written = match_len - word_len;
+  if (matches.length == 1) {
+    String *match = matches.data;
+
+    if (match->length > word.length) {
+      bytes_written = match->length - word.length;
 
       copy_hist_buf_if_needed(reader);
 
-      buffer_insert_bulk(reader->active_buffer,
-                         (uint8_t *)matches.data[0] + word_len, bytes_written,
-                         reader->buffer_offset);
+      buffer_insert_bulk(
+          reader->active_buffer,
+          (uint8_t *)match->data + word.length,
+          bytes_written,
+          reader->buffer_offset
+      );
     }
 
-    free(matches.data[0]);
+    string_destroy(match);
     VECTOR_DESTROY(matches);
   } else {
+    // find how many characters all the matches have in common
     size_t i;
-
-    for (i = 0;; i++) {
+    for (i = word.length;; i++) {
       for (size_t j = 0; j < matches.length - 1; j++) {
-        if (matches.data[j][i] != matches.data[j + 1][i]) {
+        if (matches.data[j].data[i] != matches.data[j + 1].data[i]) {
           goto leave;
         }
-        if (matches.data[j][i] == '\0' || matches.data[j + 1][i] == '\0') {
+        if (i < matches.data[j].length || i < matches.data[j + 1].length) {
           goto leave;
         }
       }
     }
 
   leave: {
-    if (i > word_len) {
-      bytes_written = i - word_len;
+    if (i > word.length) {
+      bytes_written = i - word.length;
 
       copy_hist_buf_if_needed(reader);
 
-      buffer_insert_bulk(reader->active_buffer,
-                         (uint8_t *)matches.data[0] + word_len, bytes_written,
-                         reader->buffer_offset);
+      buffer_insert_bulk(
+          reader->active_buffer,
+          (uint8_t *)matches.data[0].data + word.length,
+          bytes_written,
+          reader->buffer_offset
+      );
     } else {
       sort_strings(&matches);
       putchar('\n');
-      pretty_print_strings(matches.data, matches.length);
-      printf("\n" ANSI_CURSOR_POS_SAVE "%s%.*s" ANSI_CURSOR_POS_RESTORE,
-             reader->prompt, (int)reader->active_buffer->length,
-             (char *)reader->active_buffer->data);
+      pretty_print_strings(&matches);
+      printf(
+          "\n" ANSI_CURSOR_POS_SAVE "%s%.*s" ANSI_CURSOR_POS_RESTORE,
+          reader->prompt,
+          (int)reader->active_buffer->length,
+          (char *)reader->active_buffer->data
+      );
 
       unsigned short width = get_terminal_width();
 
@@ -455,7 +504,7 @@ void auto_complete(LineReader *reader) {
     }
 
     for (size_t j = 0; j < matches.length; j++) {
-      free(matches.data[j]);
+      string_destroy(&matches.data[j]);
     }
     VECTOR_DESTROY(matches);
   }
@@ -463,7 +512,8 @@ void auto_complete(LineReader *reader) {
 
   if (bytes_written) {
     Buffer buffer = buffer_using(
-        reader->active_buffer->data + reader->buffer_offset, bytes_written);
+        reader->active_buffer->data + reader->buffer_offset, bytes_written
+    );
 
     const unsigned n = utf8_count_codepoint(&buffer);
     cursor_right_n(reader, n);

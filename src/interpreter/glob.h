@@ -3,6 +3,6 @@
 
 #include "lib/string.h"
 
-int glob(StringList *vec, const char pattern[]);
+int glob(CStrList *vec, const char pattern[]);
 
 #endif

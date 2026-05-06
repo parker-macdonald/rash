@@ -20,6 +20,10 @@ typedef enum {
   STDERR_REDIR,
   // '2>>' used to redirect stderr to a file, append to file contents
   STDERR_REDIR_APPEND,
+  // '&>' used to redirect stdout and stderr to a file, replace file contents
+  STDOUT_ERR_REDIR,
+  // '&>>' used to redirect stdout and stderr to a file, append to file contents
+  STDOUT_ERR_REDIR_APPEND,
   // '|' used to link one programs stdout to anothers stdin
   PIPE,
   // ';' used to run two commands sequentially

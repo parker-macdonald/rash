@@ -7,13 +7,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "lib/attrib.h"
 #include "lib/buffer.h"
 #include "lib/error.h"
 #include "lib/string.h"
 #include "lib/vector.h"
-
-void free_arg_part(ArgumentPart *part);
-void free_token(Token *token);
 
 typedef struct {
   size_t start;
@@ -24,11 +22,14 @@ typedef struct {
   const Buffer *source;
 } LexerState;
 
-uint8_t advance(LexerState *state) {
+static void free_arg_part(ArgumentPart *part);
+static void free_token(Token *token);
+
+static uint8_t advance(LexerState *state) {
   return state->source->data[state->current++];
 }
 
-void add_arg_part(LexerState *state, ArgumentPartType type) {
+static void add_arg_part(LexerState *state, ArgumentPartType type) {
   if (state->arg_buffer.length != 0) {
     VECTOR_PUSH(state->arg_buffer, '\0');
 
@@ -42,7 +43,7 @@ void add_arg_part(LexerState *state, ArgumentPartType type) {
   VECTOR_PUSH(state->argument, (ArgumentPart){.type = type});
 }
 
-void add_arg_part_data(LexerState *state, ArgumentPartType type,
+static void add_arg_part_data(LexerState *state, ArgumentPartType type,
                        char *data // NOLINT(readability-non-const-parameter)
 ) {
   if (state->arg_buffer.length != 0) {
@@ -58,7 +59,7 @@ void add_arg_part_data(LexerState *state, ArgumentPartType type,
   VECTOR_PUSH(state->argument, ((ArgumentPart){.type = type, .data = data}));
 }
 
-void flush_argument(LexerState *state) {
+static void flush_argument(LexerState *state) {
   if (state->arg_buffer.length != 0 || state->argument.length != 0) {
     add_arg_part(state, END_ARG);
 
@@ -69,21 +70,23 @@ void flush_argument(LexerState *state) {
   }
 }
 
-void add_token(LexerState *state, TokenType type) {
+static void add_token(LexerState *state, TokenType type) {
   flush_argument(state);
   VECTOR_PUSH(state->tokens, (Token){.type = type});
 }
 
-void add_token_data(LexerState *state, TokenType type, void *data) {
+// unused for now, but useful
+ATTRIB_UNUSED
+static void add_token_data(LexerState *state, TokenType type, void *data) {
   flush_argument(state);
   VECTOR_PUSH(state->tokens, ((Token){.type = type, .data = data}));
 }
 
-bool is_at_end(LexerState *state) {
+static bool is_at_end(LexerState *state) {
   return state->current >= state->source->length;
 }
 
-bool match(LexerState *state, uint8_t expected) {
+static bool match(LexerState *state, uint8_t expected) {
   if (is_at_end(state)) {
     return false;
   }
@@ -96,19 +99,21 @@ bool match(LexerState *state, uint8_t expected) {
   return true;
 }
 
-uint8_t peek(LexerState *state) {
+static uint8_t peek(LexerState *state) {
   if (is_at_end(state)) {
     return '\0';
   }
   return state->source->data[state->current];
 }
 
-void decrement(LexerState *state) {
+// unused for now, but useful
+ATTRIB_UNUSED
+static void decrement(LexerState *state) {
   assert(state->current != 0);
   state->current--;
 }
 
-int parse_subshell(LexerState *state) {
+static int parse_subshell(LexerState *state) {
   size_t start = state->current;
 
   while (peek(state) != ')' && !is_at_end(state)) {
@@ -138,7 +143,7 @@ int parse_subshell(LexerState *state) {
   return 0;
 }
 
-int parse_env(LexerState *state) {
+static int parse_env(LexerState *state) {
   size_t start;
   size_t env_len;
 
@@ -194,7 +199,7 @@ int parse_env(LexerState *state) {
   return 0;
 }
 
-int parse_var(LexerState *state) {
+static int parse_var(LexerState *state) {
   size_t start = state->current;
 
   while (peek(state) != '}' && !is_at_end(state)) {
@@ -223,7 +228,7 @@ int parse_var(LexerState *state) {
   return 0;
 }
 
-int parse_tilde(LexerState *state) {
+static int parse_tilde(LexerState *state) {
   size_t start = state->current;
 
   while (1) {
@@ -244,7 +249,7 @@ int parse_tilde(LexerState *state) {
   return 0;
 }
 
-int parse_double_quote(LexerState *state) {
+static int parse_double_quote(LexerState *state) {
   while (!is_at_end(state)) {
     uint8_t c = advance(state);
 
@@ -294,7 +299,7 @@ int parse_double_quote(LexerState *state) {
   return -1;
 }
 
-int parse_single_quote(LexerState *state) {
+static int parse_single_quote(LexerState *state) {
   while (!is_at_end(state)) {
     uint8_t c = advance(state);
 
@@ -315,7 +320,7 @@ int parse_single_quote(LexerState *state) {
   return -1;
 }
 
-int scan_token(LexerState *state) {
+static int scan_token(LexerState *state) {
   uint8_t c = advance(state);
   switch (c) {
   case '<':
@@ -324,7 +329,7 @@ int scan_token(LexerState *state) {
         add_token(state, STDIN_REDIR_STRING);
       }
 
-      string_append(&state->arg_buffer, "<<");
+      string_append_cstr(&state->arg_buffer, "<<");
       break;
     }
     add_token(state, STDIN_REDIR);
@@ -345,7 +350,22 @@ int scan_token(LexerState *state) {
     break;
 
   case '&':
-    add_token(state, match(state, '&') ? LOGICAL_AND : AMP);
+    if (match(state, '>')) {
+      if (match(state, '>')) {
+        add_token(state, STDOUT_ERR_REDIR);
+        break;
+      }
+
+      add_token(state, STDOUT_ERR_REDIR_APPEND);
+      break;
+    }
+
+    if (match(state, '&')) {
+      add_token(state, LOGICAL_AND);
+      break;
+    }
+
+    add_token(state, AMP);
     break;
 
   case ';':

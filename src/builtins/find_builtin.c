@@ -135,11 +135,8 @@ void find_matching_builtins(const String *prefix, StringList *vec) {
 
   do {
     if (node->function != NULL) {
-      size_t name_len = strlen(node->name);
-      char *name = malloc(name_len + 2);
-      memcpy(name, node->name, name_len);
-      name[name_len] = ' ';
-      name[name_len + 1] = '\0';
+      String name = string_from_cstr(node->name);
+      string_append_char(&name, ' ');
 
       VECTOR_PUSH(*vec, name);
       continue;

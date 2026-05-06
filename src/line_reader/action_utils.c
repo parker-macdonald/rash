@@ -85,7 +85,7 @@ void draw_active_buffer(LineReader *reader) {
   }
 
   printf(
-      "\r\033[0J%s%.*s ",
+      "\r" ANSI_REMOVE_BELOW_CURSOR "%s%.*s ",
       reader->prompt,
       (int)reader->active_buffer->length,
       (char *)reader->active_buffer->data

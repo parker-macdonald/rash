@@ -211,7 +211,7 @@ static char *evaluate_arg(const ArgumentPart *argument, bool *needs_globbing) {
 
   for (size_t i = 0; argument[i].type != END_ARG; i++) {
     if (argument[i].type == STRING) {
-      string_append(&buffer, argument[i].data);
+      string_append_cstr(&buffer, argument[i].data);
 
       continue;
     }
@@ -225,7 +225,7 @@ static char *evaluate_arg(const ArgumentPart *argument, bool *needs_globbing) {
         goto error;
       }
 
-      string_append(&buffer, value);
+      string_append_cstr(&buffer, value);
 
       continue;
     }
@@ -234,7 +234,7 @@ static char *evaluate_arg(const ArgumentPart *argument, bool *needs_globbing) {
       if (argument[i].data[0] == '\0') {
         char *home = getenv("HOME");
         if (home != NULL) {
-          string_append(&buffer, home);
+          string_append_cstr(&buffer, home);
           continue;
         }
         error_f("cannot expand ‘~’, HOME is not set.\n");
@@ -247,7 +247,7 @@ static char *evaluate_arg(const ArgumentPart *argument, bool *needs_globbing) {
         goto error;
       }
 
-      string_append(&buffer, pw->pw_dir);
+      string_append_cstr(&buffer, pw->pw_dir);
       continue;
     }
 
@@ -260,7 +260,7 @@ static char *evaluate_arg(const ArgumentPart *argument, bool *needs_globbing) {
         goto error;
       }
 
-      string_append(&buffer, value);
+      string_append_cstr(&buffer, value);
 
       continue;
     }
@@ -364,7 +364,7 @@ int evaluate(const Token *tokens) {
     return EXIT_FAILURE;
   }
 
-  StringList argv;
+  CStrList argv;
   VECTOR_INIT(argv);
 
   int last_status = -1;
