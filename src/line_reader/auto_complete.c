@@ -397,10 +397,10 @@ ATTRIB_UNUSED
 static size_t common_prefix_len(const StringList *strings, size_t begin) {
   for (size_t i = begin;; i++) {
     for (size_t j = 0; j < strings->length - 1; j++) {
-      if (strings->data[j].data[i] != strings->data[j + 1].data[i]) {
+      if (i >= strings->data[j].length || i >= strings->data[j + 1].length) {
         return i;
       }
-      if (i < strings->data[j].length || i < strings->data[j + 1].length) {
+      if (strings->data[j].data[i] != strings->data[j + 1].data[i]) {
         return i;
       }
     }
@@ -451,24 +451,10 @@ void auto_complete(LineReader *reader) {
           reader->buffer_offset
       );
     }
-
-    string_destroy(match);
-    VECTOR_DESTROY(matches);
   } else {
     // find how many characters all the matches have in common
-    size_t i;
-    for (i = word.length;; i++) {
-      for (size_t j = 0; j < matches.length - 1; j++) {
-        if (matches.data[j].data[i] != matches.data[j + 1].data[i]) {
-          goto leave;
-        }
-        if (i < matches.data[j].length || i < matches.data[j + 1].length) {
-          goto leave;
-        }
-      }
-    }
+    size_t i = common_prefix_len(&matches, word.length);
 
-  leave: {
     if (i > word.length) {
       bytes_written = i - word.length;
 
@@ -500,14 +486,8 @@ void auto_complete(LineReader *reader) {
         printf(ANSI_CURSOR_DOWN_N("%u"), moves_down);
       }
       printf("\r" ANSI_CURSOR_RIGHT_N("%u"), reader->cursor_pos % width);
-      (void)fflush(stdout);
+      FLUSH();
     }
-
-    for (size_t j = 0; j < matches.length; j++) {
-      string_destroy(&matches.data[j]);
-    }
-    VECTOR_DESTROY(matches);
-  }
   }
 
   if (bytes_written) {
@@ -528,4 +508,6 @@ void auto_complete(LineReader *reader) {
 
     reader->buffer_offset += bytes_written;
   }
+
+  stringlist_destroy(&matches);
 }
