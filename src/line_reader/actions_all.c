@@ -105,8 +105,8 @@ int action_new_line(LineReader *reader) {
 
 int action_history_up(LineReader *reader) {
   if (reader->history_curr == NULL) {
-    if (reader->history_top != NULL) {
-      reader->history_curr = reader->history_top;
+    if (reader->history_bottom != NULL) {
+      reader->history_curr = reader->history_bottom;
     } else {
       return 0;
     }

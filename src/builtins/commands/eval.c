@@ -23,7 +23,7 @@ int builtin_eval(char **argv) {
 
   argv++;
   while (1) {
-    buffer_append_string(&command, *argv);
+    buffer_append_cstr(&command, *argv);
     argv++;
     if (*argv == NULL) {
       break;

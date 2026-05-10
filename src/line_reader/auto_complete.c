@@ -18,7 +18,6 @@
 #include <unistd.h>
 
 #include "lib/ansi.h"
-#include "lib/attrib.h"
 #include "lib/sort.h"
 #include "lib/utf_8.h"
 #include "line_reader/action_utils.h"
@@ -33,16 +32,16 @@
 #include "lib/string.h"
 #include "lib/vector.h"
 
-static String tilde_expand(const String *path) {
+static Buffer tilde_expand(const Buffer *path) {
   if (path->length == 0) {
-    return (String){0};
+    return (Buffer){0};
   }
 
   if (path->data[0] != '~') {
-    return string_clone(path);
+    return buffer_clone(path);
   }
 
-  size_t first_slash = string_index_of(path, '/');
+  size_t first_slash = span_index_of((Span*)path, '/');
 
   if (first_slash == (size_t)-1) {
     first_slash = path->length;
@@ -53,60 +52,63 @@ static String tilde_expand(const String *path) {
     const char *home = getenv("HOME");
 
     if (home == NULL) {
-      return string_clone(path);
+      return buffer_clone(path);
     }
 
-    String result = string_from_cstr(home);
-    string_append_ptr(&result, path->data + 1, path->length - 1);
+    Buffer result = buffer_from_cstr(home);
+    buffer_append_ptr(&result, path->data + 1, path->length - 1);
 
     return result;
   }
 
-  String username = string_substring(path, 1, first_slash);
+  Span username_span = buffer_slice(path, 1, first_slash);
+  Buffer username = buffer_from_span(&username_span);
 
-  struct passwd *pw = getpwnam(string_cstr(&username));
+  struct passwd *pw = getpwnam(buffer_cstr(&username));
 
-  string_destroy(&username);
+  buffer_destroy(&username);
 
   if (pw == NULL || pw->pw_dir == NULL) {
-    return string_clone(path);
+    return buffer_clone(path);
   }
 
-  String result = string_from_cstr(pw->pw_dir);
-  string_append_ptr(
+  Buffer result = buffer_from_cstr(pw->pw_dir);
+  buffer_append_ptr(
       &result, path->data + first_slash, path->length - first_slash
   );
 
   return result;
 }
 
-static void split_path(const String *path, String *dirname, String *basename) {
-  size_t last_slash = string_last_index_of(path, '/');
+static void split_path(const Buffer *path, Buffer *dirname, Buffer *basename) {
+  size_t last_slash = span_last_index_of((Span*)path, '/');
 
   if (last_slash == (size_t)-1) {
-    *dirname = string_from_cstr(".");
-    *basename = string_clone(path);
+    *dirname = buffer_from_cstr(".");
+    *basename = buffer_clone(path);
   } else {
     if (last_slash == 0) {
-      *dirname = string_from_cstr("/");
+      *dirname = buffer_from_cstr("/");
     } else {
-      *dirname = string_substring(path, 0, last_slash);
+      Span span = buffer_slice(path, 0, last_slash);
+      *dirname = buffer_from_span(&span);
     }
 
-    *basename = string_substring(path, last_slash + 1, path->length);
+    Span span = buffer_slice(path, last_slash + 1, path->length);
+    *basename = buffer_from_span(&span);
   }
 }
 
-static void match_file(StringList *matches, const String *word) {
-  String dirname, basename;
+static void match_file(BufferList *matches, const Buffer *word) {
+  Buffer dirname, basename;
   DIR *dir;
 
   split_path(word, &dirname, &basename);
 
   {
-    String expanded = tilde_expand(&dirname);
-    dir = opendir(string_cstr(&expanded));
-    string_destroy(&expanded);
+    Buffer expanded = tilde_expand(&dirname);
+    dir = opendir(buffer_cstr(&expanded));
+    buffer_destroy(&expanded);
   }
 
   if (dir == NULL) {
@@ -130,28 +132,28 @@ static void match_file(StringList *matches, const String *word) {
       }
     }
 
-    if (strncmp(file, basename.data, basename.length) != 0) {
+    if (strncmp(file, (char*)basename.data, basename.length) != 0) {
       continue;
     }
 
-    String full_path = string_clone(&dirname);
-    string_append_char(&full_path, '/');
-    string_append_cstr(&full_path, ent->d_name);
+    Buffer full_path = buffer_clone(&dirname);
+    buffer_append_byte(&full_path, '/');
+    buffer_append_cstr(&full_path, ent->d_name);
 
 #ifdef _DIRENT_HAVE_D_TYPE
     if (ent->d_type == DT_DIR) {
-      string_append_char(&full_path, '/');
+      buffer_append_char(&full_path, '/');
     } else {
-      string_append_char(&full_path, ' ');
+      buffer_append_char(&full_path, ' ');
     }
 #else
     {
       struct stat sb = {0};
       if (fstatat(fd, ent->d_name, &sb, AT_SYMLINK_NOFOLLOW) == 0 &&
           S_ISDIR(sb.st_mode)) {
-        string_append_char(&full_path, '/');
+        buffer_append_char(&full_path, '/');
       } else {
-        string_append_char(&full_path, ' ');
+        buffer_append_char(&full_path, ' ');
       }
     }
 #endif
@@ -159,17 +161,17 @@ static void match_file(StringList *matches, const String *word) {
     VECTOR_PUSH(*matches, full_path);
   }
 
-  string_destroy(&dirname);
-  string_destroy(&basename);
+  buffer_destroy(&dirname);
+  buffer_destroy(&basename);
   closedir(dir);
 }
 
-static void match_exec_file(StringList *matches, const String *word) {
-  String dirname, basename;
+static void match_exec_file(BufferList *matches, const Buffer *word) {
+  Buffer dirname, basename;
 
   split_path(word, &dirname, &basename);
 
-  DIR *dir = opendir(string_cstr(&dirname));
+  DIR *dir = opendir(buffer_cstr(&dirname));
 
   if (dir == NULL) {
     return;
@@ -198,24 +200,24 @@ static void match_exec_file(StringList *matches, const String *word) {
       continue;
     }
 
-    String full_path = string_clone(&dirname);
-    string_append_char(&full_path, '/');
-    string_append_cstr(&full_path, ent->d_name);
+    Buffer full_path = buffer_clone(&dirname);
+    buffer_append_char(&full_path, '/');
+    buffer_append_cstr(&full_path, ent->d_name);
 
 #ifdef _DIRENT_HAVE_D_TYPE
     if (ent->d_type == DT_DIR) {
-      string_append_char(&full_path, '/');
+      buffer_append_char(&full_path, '/');
     } else {
-      string_append_char(&full_path, ' ');
+      buffer_append_char(&full_path, ' ');
     }
 #else
     {
       struct stat sb = {0};
       if (fstatat(fd, ent->d_name, &sb, AT_SYMLINK_NOFOLLOW) == 0 &&
           S_ISDIR(sb.st_mode)) {
-        string_append_char(&full_path, '/');
+        buffer_append_char(&full_path, '/');
       } else {
-        string_append_char(&full_path, ' ');
+        buffer_append_char(&full_path, ' ');
       }
     }
 #endif
@@ -223,12 +225,12 @@ static void match_exec_file(StringList *matches, const String *word) {
     VECTOR_PUSH(*matches, full_path);
   }
 
-  string_destroy(&dirname);
-  string_destroy(&basename);
+  buffer_destroy(&dirname);
+  buffer_destroy(&basename);
   closedir(dir);
 }
 
-static void match_command(StringList *matches, const String *word) {
+static void match_command(BufferList *matches, const Buffer *word) {
   find_matching_builtins(word, matches);
   char *path = getenv("PATH");
 
@@ -267,8 +269,8 @@ static void match_command(StringList *matches, const String *word) {
         continue;
       }
 
-      String command = string_from_cstr(file);
-      string_append_char(&command, ' ');
+      Buffer command = buffer_from_cstr(file);
+      buffer_append_char(&command, ' ');
 
       VECTOR_PUSH(*matches, command);
     }
@@ -280,7 +282,7 @@ static void match_command(StringList *matches, const String *word) {
   free(path);
 }
 
-static void pretty_print_strings(const StringList *strings) {
+static void pretty_print_strings(const BufferList *strings) {
   size_t width = (size_t)get_terminal_width();
   size_t max_len = 2;
 
@@ -304,7 +306,7 @@ static void pretty_print_strings(const StringList *strings) {
   size_t col = width / max_len;
 
   for (size_t i = 0; i < num_printed; i++) {
-    printf("%-*s", (int)max_len, string_cstr(&strings->data[i]));
+    printf("%-*s", (int)max_len, buffer_cstr(&strings->data[i]));
 
     if ((i + 1) % col == 0) {
       printf("\n");
@@ -323,7 +325,7 @@ typedef enum {
   SINGLE_QUOTE
 } WordState;
 
-static String
+static Buffer
 find_last_word(LineReader *reader, bool *is_first_word, WordState *end_state) {
   WordState state = WHITESPACE;
   unsigned word_count = 0;
@@ -387,14 +389,13 @@ find_last_word(LineReader *reader, bool *is_first_word, WordState *end_state) {
   *is_first_word = (word_count == 1);
   *end_state = state;
 
-  return string_using_ptr(
+  return buffer_using_ptr(
       (char *)(word_start + reader->active_buffer->data),
       reader->buffer_offset - word_start
   );
 }
 
-ATTRIB_UNUSED
-static size_t common_prefix_len(const StringList *strings, size_t begin) {
+static size_t common_prefix_len(const BufferList *strings, size_t begin) {
   for (size_t i = begin;; i++) {
     for (size_t j = 0; j < strings->length - 1; j++) {
       if (i >= strings->data[j].length || i >= strings->data[j + 1].length) {
@@ -415,12 +416,12 @@ void auto_complete(LineReader *reader) {
 
   bool is_first_word;
   WordState end_state;
-  String word = find_last_word(reader, &is_first_word, &end_state);
+  Buffer word = find_last_word(reader, &is_first_word, &end_state);
 
-  StringList matches = {0};
+  BufferList matches = {0};
 
   if (is_first_word) {
-    if (string_contains(&word, '/')) {
+    if (buffer_contains(&word, '/')) {
       match_exec_file(&matches, &word);
     } else {
       match_command(&matches, &word);
@@ -437,7 +438,7 @@ void auto_complete(LineReader *reader) {
   size_t bytes_written = 0;
 
   if (matches.length == 1) {
-    String *match = matches.data;
+    Buffer *match = matches.data;
 
     if (match->length > word.length) {
       bytes_written = match->length - word.length;
