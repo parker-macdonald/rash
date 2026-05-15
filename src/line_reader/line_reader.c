@@ -11,7 +11,7 @@
 #include "line_reader/actions.h"
 #include "line_reader/history.h"
 #include "line_reader/prompt.h"
-#include "line_reader_struct.h"
+#include "line_reader/types.h"
 #include "shell_vars.h"
 
 static LineReader reader;
@@ -25,7 +25,7 @@ void line_reader_init(void) {
 
   reader.active_buffer = &reader.buffer;
 
-  reader.history_root = NULL;
+  reader.history_begin = NULL;
   reader.history_end = NULL;
   reader.history_curr = NULL;
 

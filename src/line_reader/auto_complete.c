@@ -20,7 +20,7 @@
 #include "lib/sort.h"
 #include "lib/utf_8.h"
 #include "line_reader/action_utils.h"
-#include "line_reader/line_reader_struct.h"
+#include "line_reader/types.h"
 
 #ifndef _DIRENT_HAVE_D_TYPE
   #include <sys/stat.h>

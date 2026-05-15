@@ -5,7 +5,7 @@
 #include "lib/ansi.h"
 #include "line_reader/action_utils.h"
 #include "line_reader/actions_all.h"
-#include "line_reader/line_reader_struct.h"
+#include "line_reader/types.h"
 
 int preform_action(LineReader *reader) {
   int ch = getch();
@@ -153,7 +153,7 @@ int preform_action(LineReader *reader) {
   return 0;
 }
 
-void actions_default(Actions *acts) {
+void actions_default(ActionSet *acts) {
   acts->form_feed = action_clear;
   acts->sigint = action_sigint;
   acts->arrow_left = action_cursor_left;

@@ -5,10 +5,10 @@
 #include <stdlib.h>
 
 #include "lib/vector.h"
-#include "line_reader/line_reader_struct.h"
+#include "line_reader/types.h"
 
 void history_clear(LineReader *reader) {
-  HistoryNode *node = reader->history_root;
+  HistoryNode *node = reader->history_begin;
 
   while (node != NULL) {
     HistoryNode *next_node = node->p_next;
@@ -18,7 +18,7 @@ void history_clear(LineReader *reader) {
 
     node = next_node;
   }
-  reader->history_root = NULL;
+  reader->history_begin = NULL;
   reader->history_end = NULL;
   reader->history_curr = NULL;
 }
@@ -30,7 +30,7 @@ void history_print(LineReader *reader, int count) {
     return;
   }
 
-  HistoryNode *node = reader->history_root;
+  HistoryNode *node = reader->history_begin;
 
   if (count == -1) {
     for (unsigned int i = 1; node != NULL; i++) {
@@ -57,7 +57,7 @@ void history_print(LineReader *reader, int count) {
       node = node->p_prev;
     }
   } else {
-    node = reader->history_root;
+    node = reader->history_begin;
     count = length;
   }
 
@@ -79,7 +79,7 @@ void history_add(LineReader *reader) {
   if (reader->history_end != NULL) {
     reader->history_end->p_next = new_node;
   } else {
-    reader->history_root = new_node;
+    reader->history_begin = new_node;
   }
   reader->history_end = new_node;
 }
