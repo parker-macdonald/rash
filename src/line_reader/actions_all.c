@@ -143,7 +143,7 @@ int action_history_down(LineReader *reader) {
 int action_insert(LineReader *reader, uint8_t byte) {
   copy_hist_buf_if_needed(reader);
 
-  buffer_insert(&reader->buffer, reader->buffer_offset, byte);
+  buffer_insert_byte(&reader->buffer, reader->buffer_offset, byte);
   reader->buffer_offset++;
 
   if (!is_continuation_byte_utf8(byte)) {
@@ -323,7 +323,7 @@ int action_delete_word_left(LineReader *reader) {
 
   copy_hist_buf_if_needed(reader);
 
-  buffer_remove_bulk(
+  buffer_remove_n(
       reader->active_buffer,
       reader->buffer_offset,
       saved_offset - reader->buffer_offset
@@ -357,7 +357,7 @@ int action_delete_word_right(LineReader *reader) {
 
   copy_hist_buf_if_needed(reader);
 
-  buffer_remove_bulk(
+  buffer_remove_n(
       reader->active_buffer,
       reader->buffer_offset,
       new_offset - reader->buffer_offset

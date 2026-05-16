@@ -8,24 +8,65 @@
 
 typedef VECTOR(uint8_t) Buffer;
 
-void buffer_append_string(Buffer *self, const char *str);
+/*
+ * Helper functions to create a new buffer
+ */
 
-void buffer_copy(Buffer *dest, const Buffer *src);
+// constructs a buffer by copying the data at `data` of length `length` bytes.
+Buffer buffer_from_ptr(const void *data, size_t length);
 
-void buffer_insert(Buffer *buffer, size_t buffer_offset, uint8_t byte);
+// constructs a buffer by copying the data at `cstr` of length `strlen(cstr)`.
+Buffer buffer_from_cstr(const char *cstr);
 
-void buffer_insert_bulk(
-    Buffer *buffer, const uint8_t *src, size_t src_len, size_t buffer_offset
+// clone a buffer, creating a new one referencing a copy of the old ones data.
+Buffer buffer_clone(const Buffer *other);
+
+// destructor
+void buffer_destroy(Buffer *self);
+
+/*
+ * Helper functions to append something to the end of an existing buffer
+ */
+
+void buffer_append_byte(Buffer *self, uint8_t byte);
+
+void buffer_append_cstr(Buffer *self, const char *cstr);
+
+void buffer_append_ptr(Buffer *self, const void *data, size_t length);
+
+/*
+ * Helper functions to insert into an arbitrary place in an existing buffer
+ */
+
+void buffer_insert_byte(Buffer *self, size_t at, uint8_t byte);
+
+void buffer_insert_cstr(Buffer *self, size_t at, const char *cstr);
+
+void buffer_insert_ptr(
+    Buffer *self, size_t at, const void *data, size_t length
 );
 
-void buffer_remove_bulk(Buffer *buffer, size_t offset, size_t count);
+/*
+ * Extra helper functions
+ */
 
-// constructs a buffer by copying the data at `data` of length `length`. if this
-// were rust i would say that the returned buffer owns it's data.
-Buffer buffer_from(const uint8_t *data, size_t length);
+// remove n bytes from an arbitrary place in an existing buffer
+void buffer_remove_n(Buffer *self, size_t at, size_t count);
 
-// constructs a buffer using the pointer `data` and the length `length`. if this
-// were rust i would say the the returned buffer borrows it's data.
-Buffer buffer_using(const uint8_t *data, size_t length);
+// copy the contents of one buffer into another existing buffer
+void buffer_copy(Buffer *self, const Buffer *other);
+
+// construct a buffer by "slicing" another from index `from` to index `to`.
+// `from` is inclusive, `to` is exclusive. i.e. Buffer buffer =
+// buffer_from_cstr("hi there"); Buffer slice = buffer_slice(3, buffer.length);
+// slice is now "there"
+Buffer buffer_slice(const Buffer *self, size_t from, size_t to);
+
+// similar to strcmp, but with buffers
+int buffer_compare(const Buffer *self, const Buffer *other);
+
+// resize the buffer to hold at least `grow_to` bytes. nothing is done if the
+// buffer can already hold `grow_to` bytes
+void buffer_grow(Buffer *self, size_t grow_to);
 
 #endif

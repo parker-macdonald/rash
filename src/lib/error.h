@@ -15,4 +15,6 @@ ATTRIB_NORETURN
 ATTRIB_PRINTF(1, 2)
 void fatal_f(const char *restrict format, ...);
 
+#define PANIC(str) fatal_f("%s:%d: %s", __FILE__, __LINE__, str)
+
 #endif
