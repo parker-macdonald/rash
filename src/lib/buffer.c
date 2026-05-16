@@ -80,6 +80,8 @@ void buffer_insert_ptr(
 
   memmove(offset + length, offset, self->length - at);
   memcpy(offset, data, length);
+
+  self->length = new_length;
 }
 
 void buffer_insert_byte(Buffer *self, size_t at, uint8_t byte) {
@@ -106,14 +108,15 @@ void buffer_remove_n(Buffer *self, size_t at, size_t count) {
     PANIC("index out of bounds on remove");
   }
 
-  self->length -= count;
+  size_t new_length = self->length - count;
 
   // removed from the end, no work needs to be done
   if (self->length == at) {
     return;
   }
 
-  memmove(self->data + at, self->data + at + count, count);
+  memmove(self->data + at, self->data + at + count, self->length - at - count);
+  self->length = new_length;
 }
 
 // copy the contents of one buffer into another existing buffer
@@ -129,7 +132,7 @@ void buffer_copy(Buffer *self, const Buffer *other) {
 // buffer_from_cstr("hi there"); Buffer slice = buffer_slice(3, buffer.length);
 // slice is now "there"
 Buffer buffer_slice(const Buffer *self, size_t from, size_t to) {
-  return buffer_from_ptr(self->data, to - from);
+  return buffer_from_ptr(self->data + from, to - from);
 }
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
