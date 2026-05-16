@@ -109,6 +109,8 @@ int action_history_up(LineReader *reader) {
   if (reader->history_curr == NULL) {
     if (reader->history_end != NULL) {
       reader->history_curr = reader->history_end;
+    } else {
+      return 0;
     }
   } else if (reader->history_curr->p_prev != NULL) {
     reader->history_curr = reader->history_curr->p_prev;
