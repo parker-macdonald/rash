@@ -33,8 +33,8 @@ size_t utf8_prev_codepoint(const Buffer *buffer, size_t buffer_offset) {
     // character as a byte. also, char size should not be four in this loop,
     // if it is the data is malformed, again just treat the bad character as
     // a byte
-    if (buffer == 0 || char_size == 4) {
-      return 1;
+    if (buffer_offset == 0 || char_size == 4) {
+      return start - 1;
     }
 
     buffer_offset--;
@@ -111,15 +111,7 @@ bool is_continuation_byte_utf8(const uint8_t byte) {
 size_t utf8_remove_codepoint(Buffer *buffer, size_t buffer_offset) {
   size_t codepoint_size = utf8_codepoint_size(buffer, buffer_offset);
 
-  buffer->length -= codepoint_size;
-
-  if (buffer->length == buffer_offset + codepoint_size) {
-    return codepoint_size;
-  }
-
-  for (size_t i = buffer_offset; i < buffer->length; i++) {
-    buffer->data[i] = buffer->data[i + codepoint_size];
-  }
+  buffer_remove_n(buffer, buffer_offset, codepoint_size);
 
   return codepoint_size;
 }

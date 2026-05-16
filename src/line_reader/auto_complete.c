@@ -248,6 +248,11 @@ static void pretty_print_strings(char *const strings[], const size_t length) {
 }
 
 void auto_complete(LineReader *reader) {
+  // cannot auto complete nothing
+  if (reader->buffer_offset == 0) {
+    return;
+  }
+
   size_t word_start = reader->buffer_offset - 1;
 
   for (; word_start > 0; word_start--) {
