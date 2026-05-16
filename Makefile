@@ -81,3 +81,12 @@ install:
 	mkdir -p ${DESTDIR}${PREFIX}/bin
 	cp -f ${BUILD}/${OUT} ${DESTDIR}${PREFIX}/bin
 	chmod 755 ${DESTDIR}${PREFIX}/bin/${out}
+
+test_buffer:
+	mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) $(CFLAG_ERRORS) test/test_buffer.c src/lib/buffer.c src/lib/next_pow_2.c src/lib/error.c -o $(BUILD)/$@
+
+.PHONY: test test_buffer
+
+test: test_buffer
+	$(BUILD)/test_buffer

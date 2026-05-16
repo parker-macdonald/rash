@@ -1,7 +1,7 @@
 #ifndef HISTORY_H
 #define HISTORY_H
 
-#include "line_reader/line_reader_struct.h"
+#include "line_reader/types.h"
 
 void history_clear(LineReader *);
 

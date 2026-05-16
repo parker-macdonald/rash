@@ -11,7 +11,7 @@
 #include "line_reader/action_utils.h"
 #include "line_reader/auto_complete.h"
 #include "line_reader/history.h"
-#include "line_reader/line_reader_struct.h"
+#include "line_reader/types.h"
 
 int action_nop(LineReader *reader) {
   (void)reader;
@@ -109,6 +109,8 @@ int action_history_up(LineReader *reader) {
   if (reader->history_curr == NULL) {
     if (reader->history_end != NULL) {
       reader->history_curr = reader->history_end;
+    } else {
+      return 0;
     }
   } else if (reader->history_curr->p_prev != NULL) {
     reader->history_curr = reader->history_curr->p_prev;
@@ -143,7 +145,7 @@ int action_history_down(LineReader *reader) {
 int action_insert(LineReader *reader, uint8_t byte) {
   copy_hist_buf_if_needed(reader);
 
-  buffer_insert(&reader->buffer, reader->buffer_offset, byte);
+  buffer_insert_byte(&reader->buffer, reader->buffer_offset, byte);
   reader->buffer_offset++;
 
   if (!is_continuation_byte_utf8(byte)) {
@@ -323,7 +325,7 @@ int action_delete_word_left(LineReader *reader) {
 
   copy_hist_buf_if_needed(reader);
 
-  buffer_remove_bulk(
+  buffer_remove_n(
       reader->active_buffer,
       reader->buffer_offset,
       saved_offset - reader->buffer_offset
@@ -357,7 +359,7 @@ int action_delete_word_right(LineReader *reader) {
 
   copy_hist_buf_if_needed(reader);
 
-  buffer_remove_bulk(
+  buffer_remove_n(
       reader->active_buffer,
       reader->buffer_offset,
       new_offset - reader->buffer_offset

@@ -5,125 +5,174 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "lib/error.h"
 #include "lib/next_pow_2.h"
 #include "lib/vector.h"
 
-void buffer_append_string(Buffer *self, const char *str) {
-  // if capacity is -1, this buffer is read only
-  assert(self->_capacity != (size_t)-1);
+/*
+ * Helper functions to create a new buffer
+ */
 
-  for (size_t i = 0; str[i] != '\0'; i++) {
-    VECTOR_PUSH(*self, (uint8_t)str[i]);
-  }
-}
-
-void buffer_copy(Buffer *dest, const Buffer *src) {
-  // if capacity is -1, this buffer is read only
-  assert(dest->_capacity != (size_t)-1);
-
-  if (dest->_capacity < src->length) {
-    free(dest->data);
-    dest->_capacity = next_pow_2(src->length);
-    dest->data = malloc(dest->_capacity);
-  }
-
-  dest->length = src->length;
-  memcpy(dest->data, src->data, src->length);
-}
-
-void buffer_insert(Buffer *buffer, size_t buffer_offset, uint8_t byte) {
-  // if capacity is -1, this buffer is read only
-  assert(buffer->_capacity != (size_t)-1);
-
-  if (buffer_offset >= buffer->length) {
-    VECTOR_PUSH((*buffer), byte);
-    return;
-  }
-
-  uint8_t old_value = buffer->data[buffer_offset];
-  buffer->data[buffer_offset] = byte;
-
-  for (size_t i = buffer_offset + 1; i < buffer->length; i++) {
-    const uint8_t saved = buffer->data[i];
-
-    buffer->data[i] = old_value;
-
-    old_value = saved;
-  }
-
-  VECTOR_PUSH((*buffer), old_value);
-}
-
-void buffer_insert_bulk(
-    Buffer *buffer, const uint8_t *src, size_t src_len, size_t buffer_offset
-) {
-  // if capacity is -1, this buffer is read only
-  assert(buffer->_capacity != (size_t)-1);
-
-  size_t new_length = src_len + buffer->length;
-
-  if (buffer->_capacity < new_length) {
-    buffer->_capacity = next_pow_2(new_length);
-    uint8_t *data = realloc(buffer->data, buffer->_capacity);
-    if (data == NULL) {
-      abort();
-    }
-    buffer->data = data;
-  }
-
-  if (buffer_offset == buffer->length) {
-    uint8_t *line_end = buffer->data + buffer->length;
-
-    memcpy(line_end, src, src_len);
-
-    buffer->length = new_length;
-    return;
-  }
-
-  uint8_t *offset = buffer->data + buffer_offset;
-
-  // move previous data over
-  // i think this is the first feature newer than c99 i've used so far (besides
-  // static_assert)
-  memmove(offset + src_len, offset, buffer->length - buffer_offset);
-
-  // copy new data in
-  memcpy(offset, src, src_len);
-
-  buffer->length = new_length;
-}
-
-void buffer_remove_bulk(Buffer *buffer, size_t offset, size_t count) {
-  buffer->length -= count;
-
-  if (buffer->length == offset + count) {
-    return;
-  }
-
-  for (size_t i = offset; i < buffer->length; i++) {
-    buffer->data[i] = buffer->data[i + count];
-  }
-}
-
-Buffer buffer_from(const uint8_t *data, size_t length) {
+// constructs a buffer by copying the data at `data` of length `length` bytes.
+Buffer buffer_from_ptr(const void *data, size_t length) {
   Buffer buffer;
 
   buffer._capacity = next_pow_2(length);
-  buffer.data = malloc(buffer._capacity);
   buffer.length = length;
+  buffer.data = malloc(buffer._capacity);
 
   memcpy(buffer.data, data, length);
 
   return buffer;
 }
 
-Buffer buffer_using(const uint8_t *data, size_t length) {
-  Buffer buffer;
+// constructs a buffer by copying the data at `cstr` of length `strlen(cstr)`.
+Buffer buffer_from_cstr(const char *cstr) {
+  size_t length = strlen(cstr);
+  return buffer_from_ptr(cstr, length);
+}
 
-  buffer._capacity = (size_t)-1;
-  // scary cast that discards const
-  buffer.data = (uint8_t *)data;
-  buffer.length = length;
+// clone a buffer, creating a new one referencing a copy of the old ones data.
+Buffer buffer_clone(const Buffer *other) {
+  return buffer_from_ptr(other->data, other->length);
+}
 
-  return buffer;
+// destructor
+void buffer_destroy(Buffer *self) {
+  VECTOR_DESTROY(*self);
+}
+
+/*
+ * Helper functions to append something to the end of an existing buffer
+ */
+
+void buffer_append_byte(Buffer *self, uint8_t byte) {
+  VECTOR_PUSH(*self, byte);
+}
+
+void buffer_append_ptr(Buffer *self, const void *data, size_t length) {
+  size_t new_length = self->length + length;
+
+  buffer_grow(self, length);
+
+  memcpy(self->data + self->length, data, length);
+
+  self->length = new_length;
+}
+
+void buffer_append_cstr(Buffer *self, const char *cstr) {
+  size_t length = strlen(cstr);
+  buffer_append_ptr(self, cstr, length);
+}
+
+/*
+ * Helper functions to insert into an arbitrary place in an existing buffer
+ */
+
+void buffer_insert_ptr(
+    Buffer *self, size_t at, const void *data, size_t length
+) {
+  size_t new_length = self->length + length;
+
+  buffer_grow(self, new_length);
+
+  uint8_t *offset = self->data + at;
+
+  memmove(offset + length, offset, self->length - at);
+  memcpy(offset, data, length);
+
+  self->length = new_length;
+}
+
+void buffer_insert_byte(Buffer *self, size_t at, uint8_t byte) {
+  if (at == self->length) {
+    buffer_append_byte(self, byte);
+    return;
+  }
+
+  buffer_insert_ptr(self, at, &byte, 1);
+}
+
+void buffer_insert_cstr(Buffer *self, size_t at, const char *cstr) {
+  size_t length = strlen(cstr);
+  buffer_insert_ptr(self, at, cstr, length);
+}
+
+/*
+ * Extra helper functions
+ */
+
+// remove n bytes from an arbitrary place in an existing buffer
+void buffer_remove_n(Buffer *self, size_t at, size_t count) {
+  if (self->length < at + count) {
+    PANIC("index out of bounds on remove");
+  }
+
+  size_t new_length = self->length - count;
+
+  // removed from the end, no work needs to be done
+  if (self->length == at) {
+    return;
+  }
+
+  memmove(self->data + at, self->data + at + count, self->length - at - count);
+  self->length = new_length;
+}
+
+// copy the contents of one buffer into another existing buffer
+void buffer_copy(Buffer *self, const Buffer *other) {
+  buffer_grow(self, other->length);
+
+  memcpy(self->data, other->data, other->length);
+  self->length = other->length;
+}
+
+// construct a buffer by "slicing" another from index `from` to index `to`.
+// `from` is inclusive, `to` is exclusive. i.e. Buffer buffer =
+// buffer_from_cstr("hi there"); Buffer slice = buffer_slice(3, buffer.length);
+// slice is now "there"
+Buffer buffer_slice(const Buffer *self, size_t from, size_t to) {
+  return buffer_from_ptr(self->data + from, to - from);
+}
+
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
+// similar to strcmp, but with buffers
+int buffer_compare(const Buffer *self, const Buffer *other) {
+ size_t min_length = MIN(self->length, other->length);
+	
+	  for (size_t i = 0; i < min_length; i++) {
+	    int diff = self->data[i] - other->data[i];
+	
+	    if (diff != 0) {
+	      return diff;
+	    }
+	  }
+	
+	  if (self->length < other->length) {
+	    return -1;
+	  }
+	  if (self->length > other->length) {
+	    return 1;
+	  }
+	
+	  return 0; 
+}
+
+void buffer_grow(Buffer *self, size_t grow_to) {
+  size_t new_capacity = next_pow_2(grow_to);
+
+  if (new_capacity <= self->_capacity) {
+    return;
+  }
+
+  self->_capacity = new_capacity;
+
+  void *ptr = realloc(self->data, self->_capacity);
+
+  if (ptr == NULL) {
+    PANIC("realloc failed\n");
+  }
+
+  self->data = ptr;
 }

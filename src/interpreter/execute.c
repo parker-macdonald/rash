@@ -40,6 +40,10 @@ int execute(ExecutionContext context) {
 
   // child
   if (pid == 0) {
+    sigset_t set;
+    sigemptyset(&set);
+    sigprocmask(SIG_SETMASK, &set, NULL);
+    
     if (tty_fd != -1 && !((context.flags & EC_BACKGROUND_JOB) ||
                           (context.flags & EC_DONT_REGISTER_FOREGROUND))) {
       pid_t new_pid = getpid();

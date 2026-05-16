@@ -20,7 +20,7 @@
 #include "lib/sort.h"
 #include "lib/utf_8.h"
 #include "line_reader/action_utils.h"
-#include "line_reader/line_reader_struct.h"
+#include "line_reader/types.h"
 
 #ifndef _DIRENT_HAVE_D_TYPE
   #include <sys/stat.h>
@@ -248,6 +248,11 @@ static void pretty_print_strings(char *const strings[], const size_t length) {
 }
 
 void auto_complete(LineReader *reader) {
+  // cannot auto complete nothing
+  if (reader->buffer_offset == 0) {
+    return;
+  }
+
   size_t word_start = reader->buffer_offset - 1;
 
   for (; word_start > 0; word_start--) {
@@ -286,11 +291,11 @@ void auto_complete(LineReader *reader) {
 
       copy_hist_buf_if_needed(reader);
 
-      buffer_insert_bulk(
+      buffer_insert_ptr(
           reader->active_buffer,
+          reader->buffer_offset,
           (uint8_t *)matches.data[0] + word_len,
-          bytes_written,
-          reader->buffer_offset
+          bytes_written
       );
     }
 
@@ -316,11 +321,11 @@ void auto_complete(LineReader *reader) {
 
       copy_hist_buf_if_needed(reader);
 
-      buffer_insert_bulk(
+      buffer_insert_ptr(
           reader->active_buffer,
+          reader->buffer_offset,
           (uint8_t *)matches.data[0] + word_len,
-          bytes_written,
-          reader->buffer_offset
+          bytes_written
       );
     } else {
       sort_strings(&matches);
@@ -353,11 +358,16 @@ void auto_complete(LineReader *reader) {
   }
 
   if (bytes_written) {
-    Buffer buffer = buffer_using(
-        reader->active_buffer->data + reader->buffer_offset, bytes_written
+    Buffer buffer = buffer_slice(
+        reader->active_buffer,
+        reader->buffer_offset,
+        reader->buffer_offset + bytes_written
     );
 
     const unsigned n = utf8_count_codepoint(&buffer);
+
+    buffer_destroy(&buffer);
+
     cursor_right_n(reader, n);
 
     PUTS(ANSI_CURSOR_POS_SAVE);
