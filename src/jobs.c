@@ -68,13 +68,16 @@ void sig_handler_init(void) {
 
   sigaction(SIGINT, &sigint_act, NULL);
 
-  sigset_t set;
-  sigemptyset(&set);
-  sigaddset(&set, SIGINT);
-  sigaddset(&set, SIGTSTP);
-  sigaddset(&set, SIGTTOU);
+  (void)signal(SIGTSTP, SIG_IGN);
+  (void)signal(SIGTTOU, SIG_IGN);
 
-  sigprocmask(SIG_SETMASK, &set, NULL);
+  // sigset_t set;
+  // sigemptyset(&set);
+  // sigaddset(&set, SIGINT);
+  // sigaddset(&set, SIGTSTP);
+  // sigaddset(&set, SIGTTOU);
+
+  // sigprocmask(SIG_BLOCK, &set, NULL);
 
   int atexit_return = atexit(kill_all_children);
   assert(atexit_return == 0);
