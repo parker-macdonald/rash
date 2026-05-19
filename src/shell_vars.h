@@ -1,6 +1,8 @@
 #ifndef SHELL_VARS_H
 #define SHELL_VARS_H
 
+void var_init(void);
+
 /**
  * @brief set a shell variable given a key and a value. in case it isn't
  * obvious, the data passed in is cloned.
