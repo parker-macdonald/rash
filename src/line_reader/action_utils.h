@@ -7,9 +7,6 @@
 #define PUTS(str) (void)fputs(str, stdout)
 #define FLUSH() (void)fflush(stdout)
 
-// returned by getch when a sigint interrupted the read.
-#define SIGINT_ON_READ (-1)
-
 void cursor_left(LineReader *reader);
 
 void cursor_right(LineReader *reader);
@@ -24,13 +21,9 @@ void update_active_buffer(LineReader *reader, Buffer *buffer);
 
 void copy_hist_buf_if_needed(LineReader *reader);
 
-/**
- * @brief reads a byte from stdin without printing it to the screen or moving
- * the cursor.
- * @return returns a uint8_t casted to an int or RECV_SIGINT, when a sigint is
- * recieved.
- */
-int getch(void);
+size_t read_n_bytes(uint8_t *buf, size_t count);
+
+uint8_t read_byte(void);
 
 unsigned short get_terminal_width(void);
 

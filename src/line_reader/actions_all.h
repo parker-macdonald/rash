@@ -15,9 +15,9 @@ int action_cursor_right(LineReader *reader);
 
 int action_backspace(LineReader *reader);
 
-int action_sigint(LineReader *reader);
+int action_clear_line(LineReader *reader);
 
-int action_end_of_file(LineReader *reader);
+int action_stop(LineReader *reader);
 
 int action_new_line(LineReader *reader);
 

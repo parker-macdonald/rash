@@ -2,6 +2,7 @@
 #define LINE_READER_TYPES_H
 
 #include <stdint.h>
+
 #include "lib/buffer.h"
 
 struct LineReader;
@@ -9,8 +10,6 @@ struct LineReader;
 typedef int (*Action)(struct LineReader *);
 
 typedef struct {
-  Action form_feed;
-  Action sigint;
   Action arrow_left;
   Action arrow_right;
   Action delete;
@@ -26,9 +25,34 @@ typedef struct {
   Action page_down;
   Action shift_tab;
   Action tab;
-  Action end_of_file;
   Action backspace;
   Action ctrl_backspace;
+  Action ctrl_a;
+  Action ctrl_b;
+  Action ctrl_c;
+  Action ctrl_d;
+  Action ctrl_e;
+  Action ctrl_f;
+  Action ctrl_g;
+  Action ctrl_h;
+  Action ctrl_i;
+  Action ctrl_j;
+  Action ctrl_k;
+  Action ctrl_l;
+  Action ctrl_m;
+  Action ctrl_n;
+  Action ctrl_o;
+  Action ctrl_p;
+  Action ctrl_q;
+  Action ctrl_r;
+  Action ctrl_s;
+  Action ctrl_t;
+  Action ctrl_u;
+  Action ctrl_v;
+  // there is no ctrl+w since it's the same as ctrl+backspace
+  Action ctrl_x;
+  Action ctrl_y;
+  Action ctrl_z;
   int (*insert)(struct LineReader *, uint8_t);
 } ActionSet;
 

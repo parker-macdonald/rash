@@ -1,13 +1,10 @@
 #include "action_utils.h"
 
 #include <errno.h>
-#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include <sys/select.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 #include "lib/ansi.h"
@@ -114,35 +111,26 @@ unsigned short get_terminal_width(void) {
   return 80;
 }
 
-int getch(void) {
-  fd_set fds;
-  FD_ZERO(&fds);
-  FD_SET(STDIN_FILENO, &fds);
-
-  sigset_t set;
-  sigemptyset(&set);
-
-  if (pselect(1, &fds, NULL, NULL, NULL, &set) == -1) {
-    if (errno == EINTR) {
-      return SIGINT_ON_READ;
-    }
-
-    fatal_f("pselect: %s\n", strerror(errno));
-  }
-
-  uint8_t byte = 0;
-  ssize_t nread = read(STDIN_FILENO, &byte, sizeof(byte));
+size_t read_n_bytes(uint8_t *buf, size_t count) {
+  ssize_t nread = read(STDIN_FILENO, buf, count);
 
   if (nread == 0) {
-    return ASCII_END_OF_TRANSMISSION;
+    fatal("\nread: no characters were read, something crazy happened.\n");
   }
 
   if (nread == -1) {
-    error_f("read: %s\n", strerror(errno));
-    return ASCII_END_OF_TRANSMISSION;
+    fatal_f("\nread: %s\n", strerror(errno));
   }
 
-  return (int)byte;
+  return (size_t)nread;
+}
+
+uint8_t read_byte(void) {
+  uint8_t byte = 0;
+  
+  read_n_bytes(&byte, 1);
+
+  return byte;
 }
 
 void copy_hist_buf_if_needed(LineReader *reader) {

@@ -56,28 +56,10 @@ static void kill_all_children(void) {
 //   errno = saved_errno;
 // }
 
-static void sigint_handler(int sig) {
-  (void)sig;
-}
-
 void sig_handler_init(void) {
-  struct sigaction sigint_act;
-  sigint_act.sa_handler = sigint_handler;
-  sigint_act.sa_flags = 0;
-  sigemptyset(&sigint_act.sa_mask);
-
-  sigaction(SIGINT, &sigint_act, NULL);
-
+  (void)signal(SIGINT, SIG_IGN);
   (void)signal(SIGTSTP, SIG_IGN);
   (void)signal(SIGTTOU, SIG_IGN);
-
-  // sigset_t set;
-  // sigemptyset(&set);
-  // sigaddset(&set, SIGINT);
-  // sigaddset(&set, SIGTSTP);
-  // sigaddset(&set, SIGTTOU);
-
-  // sigprocmask(SIG_BLOCK, &set, NULL);
 
   int atexit_return = atexit(kill_all_children);
   assert(atexit_return == 0);

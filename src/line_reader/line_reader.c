@@ -11,6 +11,7 @@
 #include "line_reader/actions.h"
 #include "line_reader/history.h"
 #include "line_reader/prompt.h"
+#include "line_reader/raw_mode.h"
 #include "line_reader/types.h"
 #include "shell_vars.h"
 
@@ -45,8 +46,8 @@ const uint8_t *line_reader_read_void(void *_) {
   return line_reader_read();
 }
 
-static struct termios oldt = {0};
 static void reader_begin(void) {
+  enable_raw_mode();
   const char *prompt = var_get("PS1");
 
   if (prompt == NULL) {
@@ -63,18 +64,11 @@ static void reader_begin(void) {
 
   printf("%s", reader.prompt);
   (void)fflush(stdout);
-
-  struct termios newt = {0};
-
-  tcgetattr(STDIN_FILENO, &oldt);
-  newt = oldt;
-  newt.c_lflag &= ~(unsigned int)(ICANON | ECHO);
-  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 }
 
 static void reader_end(void) {
   free(reader.prompt);
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+  disable_raw_mode();
 }
 
 const uint8_t *line_reader_read(void) {

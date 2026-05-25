@@ -65,13 +65,13 @@ int action_cursor_right(LineReader *reader) {
   return 0;
 }
 
-int action_end_of_file(LineReader *reader) {
+int action_stop(LineReader *reader) {
   cursor_to_bottom(reader);
   putchar('\n');
   return -1;
 }
 
-int action_sigint(LineReader *reader) {
+int action_clear_line(LineReader *reader) {
   cursor_to_bottom(reader);
   printf("\n%s", reader->prompt);
   FLUSH();
