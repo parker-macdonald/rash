@@ -1,6 +1,7 @@
 #include "actions.h"
 
 #include <stdint.h>
+#include <string.h>
 
 #include "lib/ansi.h"
 #include "line_reader/action_utils.h"
@@ -42,84 +43,60 @@ int preform_action(LineReader *reader) {
   }
 
   if (byte == ANSI_ESCAPE) {
-    byte = read_byte();
+    char seq[16] = {0};
 
-    if (byte == 'd') {
+    read_n_bytes((uint8_t *)seq, 15);
+
+    if (strcmp(seq, "d") == 0) {
       return reader->acts.ctrl_delete(reader);
     }
 
-    if (byte != '[') {
-      return 0;
+    if (strcmp(seq, "[A") == 0) {
+      return reader->acts.arrow_up(reader);
     }
 
-    switch (read_byte()) {
-      // arrow up
-      case 'A':
-        return reader->acts.arrow_up(reader);
+    if (strcmp(seq, "[B") == 0) {
+      return reader->acts.arrow_down(reader);
+    }
 
-      // arrow down
-      case 'B':
-        return reader->acts.arrow_down(reader);
+    if (strcmp(seq, "[C") == 0) {
+      return reader->acts.arrow_right(reader);
+    }
 
-      // right arrow
-      case 'C':
-        return reader->acts.arrow_right(reader);
+    if (strcmp(seq, "[D") == 0) {
+      return reader->acts.arrow_left(reader);
+    }
 
-      // left arrow
-      case 'D':
-        return reader->acts.arrow_left(reader);
+    if (strcmp(seq, "[H") == 0) {
+      return reader->acts.home(reader);
+    }
 
-      case '1':
-        if (read_byte() == ';') {
-          if (read_byte() == '5') {
-            const uint8_t arrow_char = read_byte();
-            // ctrl right arrow
-            if (arrow_char == 'C') {
-              return reader->acts.ctrl_right_arrow(reader);
-            }
-            // ctrl left arrow
-            if (arrow_char == 'D') {
-              return reader->acts.ctrl_left_arrow(reader);
-            }
-          }
-        }
-        return 0;
+    if (strcmp(seq, "[F") == 0) {
+      return reader->acts.end(reader);
+    }
 
-      case '3':
-        // delete key
-        if (read_byte() == '~') {
-          return reader->acts.delete(reader);
-        }
-        return 0;
+    if (strcmp(seq, "[Z") == 0) {
+      return reader->acts.shift_tab(reader);
+    }
 
-      case '5':
-        // page up
-        if (read_byte() == '~') {
-          return reader->acts.page_up(reader);
-        }
-        return 0;
+    if (strcmp(seq, "[1;5C") == 0) {
+      return reader->acts.ctrl_right_arrow(reader);
+    }
+    
+    if (strcmp(seq, "[1;5D") == 0) {
+      return reader->acts.ctrl_left_arrow(reader);
+    }
 
-      case '6':
-        // page down
-        if (read_byte() == '~') {
-          return reader->acts.page_down(reader);
-        }
-        return 0;
+    if (strcmp(seq, "[3~") == 0) {
+      return reader->acts.delete(reader);
+    }
 
-      // home key
-      case 'H':
-        return reader->acts.home(reader);
+    if (strcmp(seq, "[5~") == 0) {
+      return reader->acts.page_up(reader);
+    }
 
-      // end key
-      case 'F':
-        return reader->acts.end(reader);
-
-      // shift+tab
-      case 'Z':
-        return reader->acts.shift_tab(reader);
-
-      default:
-        break;
+    if (strcmp(seq, "[6~") == 0) {
+      return reader->acts.page_down(reader);
     }
   }
 
