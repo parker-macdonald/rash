@@ -6,10 +6,11 @@
 #include "evaluate.h"
 #include "jobs.h"
 #include "lex.h"
+#include "lib/buffer.h"
 
-int repl(const uint8_t *(*reader)(void *), void *reader_data) {
+int repl(const Buffer *(*reader)(void *), void *reader_data) {
   while (1) {
-    const uint8_t *line = reader(reader_data);
+    const Buffer *line = reader(reader_data);
 
     clean_jobs();
 
@@ -17,7 +18,13 @@ int repl(const uint8_t *(*reader)(void *), void *reader_data) {
       break;
     }
 
-    Token *tokens = lex(line);
+    // need to refactor lex to use a buffer instead of a null terminated string
+    Buffer null_terminated_line = buffer_clone(line);
+    buffer_append_byte(&null_terminated_line, '\0');
+
+    Token *tokens = lex(null_terminated_line.data);
+
+    buffer_destroy(&null_terminated_line);
 
     if (tokens != NULL) {
       evaluate(tokens);
@@ -28,12 +35,18 @@ int repl(const uint8_t *(*reader)(void *), void *reader_data) {
   return 0;
 }
 
-int repl_once(const uint8_t *line) {
+int repl_once(const Buffer *line) {
   int status = EXIT_SUCCESS;
 
   clean_jobs();
 
-  Token *tokens = lex(line);
+  // need to refactor lex to use a buffer instead of a null terminated string
+  Buffer null_terminated_line = buffer_clone(line);
+  buffer_append_byte(&null_terminated_line, '\0');
+
+  Token *tokens = lex(null_terminated_line.data);
+
+  buffer_destroy(&null_terminated_line);
 
   if (tokens != NULL) {
     status = evaluate(tokens);

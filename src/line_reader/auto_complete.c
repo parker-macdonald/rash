@@ -20,6 +20,7 @@
 #include "lib/sort.h"
 #include "lib/utf_8.h"
 #include "line_reader/action_utils.h"
+#include "line_reader/draw.h"
 #include "line_reader/types.h"
 
 #ifndef _DIRENT_HAVE_D_TYPE
@@ -245,6 +246,8 @@ static void pretty_print_strings(char *const strings[], const size_t length) {
   if (num_printed != length) {
     printf("...");
   }
+
+  printf("\r\n");
 }
 
 void auto_complete(LineReader *reader) {
@@ -329,25 +332,12 @@ void auto_complete(LineReader *reader) {
       );
     } else {
       sort_strings(&matches);
-      putchar('\n');
+      draw_cursor_post_line(reader);
       pretty_print_strings(matches.data, matches.length);
-      printf(
-          "\n" ANSI_CURSOR_POS_SAVE "%s%.*s" ANSI_CURSOR_POS_RESTORE,
-          reader->prompt,
-          (int)reader->active_buffer->length,
-          (char *)reader->active_buffer->data
-      );
 
-      unsigned short width = get_terminal_width();
-
-      unsigned moves_down =
-          ((reader->cursor_pos + reader->cursor_pos) / width) -
-          (reader->cursor_pos / width);
-      if (moves_down > 0) {
-        printf(ANSI_CURSOR_DOWN_N("%u"), moves_down);
-      }
-      printf("\r" ANSI_CURSOR_RIGHT_N("%u"), reader->cursor_pos % width);
-      (void)fflush(stdout);
+      PUTS(ANSI_CURSOR_SAVE);
+      draw_entire_state(reader);
+      FLUSH();
     }
 
     for (size_t j = 0; j < matches.length; j++) {
@@ -368,16 +358,10 @@ void auto_complete(LineReader *reader) {
 
     buffer_destroy(&buffer);
 
-    cursor_right_n(reader, n);
-
-    PUTS(ANSI_CURSOR_POS_SAVE);
-
-    draw_active_buffer(reader);
-
-    PUTS(ANSI_CURSOR_POS_RESTORE);
-
-    FLUSH();
-
     reader->buffer_offset += bytes_written;
+    reader->cursor_pos += n;
+
+    draw_entire_state(reader);
+    FLUSH();
   }
 }

@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
       }
     }
 
-    int status = repl_once(command.data);
+    int status = repl_once(&command);
     VECTOR_DESTROY(command);
 
     return status;

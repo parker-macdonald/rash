@@ -155,7 +155,7 @@ int action_backspace(LineReader *reader) {
   size_t previous = utf8_prev_codepoint(&reader->buffer, reader->buffer_offset);
   utf8_remove_codepoint(&reader->buffer, previous);
   reader->buffer_offset = previous;
-  reader->cursor_pos++;
+  reader->cursor_pos--;
 
   draw_entire_state(reader);
 
