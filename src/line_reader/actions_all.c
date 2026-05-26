@@ -76,7 +76,7 @@ int action_clear_line(LineReader *reader) {
   printf("\n%s", reader->prompt);
   FLUSH();
 
-  reader->history_curr = NULL;
+  reader->history_curr = reader->history.length;
   reader->active_buffer = &reader->buffer;
 
   reader->cursor_pos = reader->prompt_length;
@@ -106,38 +106,30 @@ int action_new_line(LineReader *reader) {
 }
 
 int action_history_up(LineReader *reader) {
-  if (reader->history_curr == NULL) {
-    if (reader->history_end != NULL) {
-      reader->history_curr = reader->history_end;
-    } else {
-      return 0;
-    }
-  } else if (reader->history_curr->p_prev != NULL) {
-    reader->history_curr = reader->history_curr->p_prev;
-  } else {
-    // there is no more history
+  if (reader->history_curr == 0) {
     return 0;
   }
 
-  update_active_buffer(reader, &reader->history_curr->line);
+  reader->history_curr--;
+
+  update_active_buffer(reader, &reader->history.data[reader->history_curr]);
 
   return 0;
 }
 
 int action_history_down(LineReader *reader) {
-  if (reader->history_curr != NULL) {
-    if (reader->history_curr->p_next != NULL) {
-      reader->history_curr = reader->history_curr->p_next;
+  if (reader->history_curr == reader->history.length) {
+    return 0;
+  }
 
-      update_active_buffer(reader, &reader->history_curr->line);
-      return 0;
-    }
+  reader->history_curr++;
 
-    reader->history_curr = NULL;
-
+  if (reader->history_curr == reader->history.length) {
     update_active_buffer(reader, &reader->buffer);
     return 0;
   }
+
+  update_active_buffer(reader, &reader->history.data[reader->history_curr]);
 
   return 0;
 }

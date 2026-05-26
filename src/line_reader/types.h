@@ -57,22 +57,14 @@ typedef struct {
 } ActionSet;
 
 // a history node is a node in the linked list storing command history.
-typedef struct HistoryNode {
-  struct HistoryNode *p_next;
-  struct HistoryNode *p_prev;
-  // buffer containing a line from history, this buffer is read only, this
-  // buffer is null terminated, and the length does not include the null
-  // terminator
-  Buffer line;
-} HistoryNode;
+typedef VECTOR(Buffer) History;
 
 struct LineReader {
-  // history is a linked list where begin is the oldest this in history, end in
-  // the newest thing in history, and current is where the user is in history
-  // (by pressing up and down).
-  HistoryNode *history_begin;
-  HistoryNode *history_end;
-  HistoryNode *history_curr;
+  // history is a array where the beginning is the oldest this in history, the
+  // end in the newest thing in history, and history_curr is where the user is
+  // in history (by pressing up and down).
+  History history;
+  size_t history_curr;
 
   ActionSet acts;
 

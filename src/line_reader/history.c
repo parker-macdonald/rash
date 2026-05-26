@@ -8,19 +8,13 @@
 #include "line_reader/types.h"
 
 void history_clear(LineReader *reader) {
-  HistoryNode *node = reader->history_begin;
+  VECTOR_DESTROY(reader->history);
 
-  while (node != NULL) {
-    HistoryNode *next_node = node->p_next;
+  reader->history._capacity = 0;
+  reader->history.length = 0;
+  reader->history.data = NULL;
 
-    VECTOR_DESTROY(node->line);
-    free(node);
-
-    node = next_node;
-  }
-  reader->history_begin = NULL;
-  reader->history_end = NULL;
-  reader->history_curr = NULL;
+  reader->history_curr = 0;
 }
 
 void history_print(LineReader *reader, int count) {
@@ -83,3 +77,10 @@ void history_add(LineReader *reader) {
   }
   reader->history_end = new_node;
 }
+
+Buffer *history_curr(LineReader *reader) {
+  assert(reader->history_curr < reader->history.length);
+
+  return &reader->history.data[reader->history_curr];
+}
+

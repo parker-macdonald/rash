@@ -11,6 +11,7 @@
 #include "lib/buffer.h"
 #include "lib/error.h"
 #include "lib/utf_8.h"
+#include "line_reader/history.h"
 #include "line_reader/types.h"
 
 void cursor_left(LineReader *reader) {
@@ -134,10 +135,10 @@ uint8_t read_byte(void) {
 }
 
 void copy_hist_buf_if_needed(LineReader *reader) {
-  if (reader->history_curr != NULL) {
-    buffer_copy(&reader->buffer, &reader->history_curr->line);
+  if (reader->history_curr != reader->history.length) {
+    buffer_copy(&reader->buffer, history_curr(reader));
     reader->active_buffer = &reader->buffer;
-    reader->history_curr = NULL;
+    reader->history_curr = reader->history.length;
   }
 }
 

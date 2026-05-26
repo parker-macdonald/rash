@@ -9,4 +9,6 @@ void history_print(LineReader *reader, int count);
 
 void history_add(LineReader *);
 
+Buffer *history_curr(LineReader *);
+
 #endif
