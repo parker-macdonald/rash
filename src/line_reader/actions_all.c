@@ -32,11 +32,10 @@ int action_cursor_left(LineReader *reader) {
     return 0;
   }
 
-  reader->cursor_pos--;
   reader->buffer_offset =
       utf8_prev_codepoint(reader->active_buffer, reader->buffer_offset);
 
-  draw_cursor_left(reader);
+  move_cursor_left(reader);
   FLUSH();
 
   return 0;
@@ -47,11 +46,10 @@ int action_cursor_right(LineReader *reader) {
     return 0;
   }
 
-  reader->cursor_pos++;
   reader->buffer_offset =
       utf8_next_codepoint(reader->active_buffer, reader->buffer_offset);
 
-  draw_cursor_right(reader);
+  move_cursor_right(reader);
   FLUSH();
 
   return 0;
@@ -190,9 +188,8 @@ int action_word_left(LineReader *reader) {
   prev_word(reader->active_buffer, reader->buffer_offset, &char_count, &index);
 
   reader->buffer_offset = index;
-  reader->cursor_pos += char_count;
 
-  draw_cursor_left_n(reader, char_count);
+  move_cursor_left_n(reader, char_count);
   FLUSH();
   return 0;
 }
@@ -207,9 +204,8 @@ int action_word_right(LineReader *reader) {
   next_word(reader->active_buffer, reader->buffer_offset, &char_count, &index);
 
   reader->buffer_offset = index;
-  reader->cursor_pos += char_count;
 
-  draw_cursor_right_n(reader, char_count);
+  move_cursor_right_n(reader, char_count);
   FLUSH();
   return 0;
 }
@@ -218,8 +214,7 @@ int action_home(LineReader *reader) {
   reader->buffer_offset = 0;
   reader->cursor_pos = reader->prompt_length;
 
-  PUTS(ANSI_CURSOR_RESTORE);
-  draw_cursor_right_n(reader, reader->prompt_length);
+  draw_cursor_at(reader, reader->prompt_length);
   FLUSH();
 
   return 0;
@@ -231,7 +226,7 @@ int action_end(LineReader *reader) {
   reader->buffer_offset = reader->active_buffer->length;
   reader->cursor_pos = length;
 
-  draw_cursor_right_n(reader, length);
+  draw_cursor_at(reader, length);
   FLUSH();
 
   return 0;
@@ -276,8 +271,11 @@ int action_delete_word_right(LineReader *reader) {
 
   copy_hist_buf_if_needed(reader);
 
-  buffer_remove_n(reader->active_buffer, reader->buffer_offset,
-                  index - reader->buffer_offset);
+  buffer_remove_n(
+      reader->active_buffer,
+      reader->buffer_offset,
+      index - reader->buffer_offset
+  );
 
   draw_entire_state(reader);
   FLUSH();
