@@ -239,7 +239,7 @@ static void pretty_print_strings(char *const strings[], const size_t length) {
     printf("%-*s", (int)max_len, strings[i]);
 
     if ((i + 1) % col == 0) {
-      printf("\n");
+      printf("\r\n");
     }
   }
 
