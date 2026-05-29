@@ -4,7 +4,7 @@
 #include "types.h"
 
 #define PUTS(str) (void)fputs(str, stdout)
-#define FLUSH() (void)fflush(stdout)
+#define draw_flush() (void)fflush(stdout)
 
 unsigned get_line_width(const LineReader *reader);
 

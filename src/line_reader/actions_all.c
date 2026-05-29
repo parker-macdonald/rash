@@ -22,7 +22,7 @@ int action_clear(LineReader *reader) {
   PUTS(ANSI_CURSOR_HOME ANSI_ERASE_SCREEN ANSI_CURSOR_SAVE);
 
   draw_entire_state(reader);
-  FLUSH();
+  draw_flush();
 
   return 0;
 }
@@ -36,7 +36,7 @@ int action_cursor_left(LineReader *reader) {
       utf8_prev_codepoint(reader->active_buffer, reader->buffer_offset);
 
   move_cursor_left(reader);
-  FLUSH();
+  draw_flush();
 
   return 0;
 }
@@ -50,7 +50,7 @@ int action_cursor_right(LineReader *reader) {
       utf8_next_codepoint(reader->active_buffer, reader->buffer_offset);
 
   move_cursor_right(reader);
-  FLUSH();
+  draw_flush();
 
   return 0;
 }
@@ -73,7 +73,7 @@ int action_clear_line(LineReader *reader) {
   draw_cursor_post_line(reader);
   PUTS(ANSI_CURSOR_SAVE);
   draw_entire_state(reader);
-  FLUSH();
+  draw_flush();
 
   return 0;
 }
@@ -81,7 +81,7 @@ int action_clear_line(LineReader *reader) {
 int action_new_line(LineReader *reader) {
   if (reader->active_buffer->length == 0) {
     printf("\n%s", reader->prompt);
-    FLUSH();
+    draw_flush();
     return 0;
   }
 
@@ -90,7 +90,7 @@ int action_new_line(LineReader *reader) {
   history_add(reader);
 
   draw_cursor_post_line(reader);
-  FLUSH();
+  draw_flush();
 
   return 1;
 }
@@ -104,6 +104,7 @@ int action_history_up(LineReader *reader) {
 
   update_active_buffer(reader, &reader->history.data[reader->history_curr]);
   draw_entire_state(reader);
+  draw_flush();
 
   return 0;
 }
@@ -139,7 +140,7 @@ int action_insert(LineReader *reader, uint8_t byte) {
 
   draw_entire_state(reader);
 
-  FLUSH();
+  draw_flush();
   return 0;
 }
 
@@ -157,7 +158,7 @@ int action_backspace(LineReader *reader) {
 
   draw_entire_state(reader);
 
-  FLUSH();
+  draw_flush();
 
   return 0;
 }
@@ -173,7 +174,7 @@ int action_delete(LineReader *reader) {
 
   draw_entire_state(reader);
 
-  FLUSH();
+  draw_flush();
 
   return 0;
 }
@@ -190,7 +191,7 @@ int action_word_left(LineReader *reader) {
   reader->buffer_offset = index;
 
   move_cursor_left_n(reader, char_count);
-  FLUSH();
+  draw_flush();
   return 0;
 }
 
@@ -206,7 +207,7 @@ int action_word_right(LineReader *reader) {
   reader->buffer_offset = index;
 
   move_cursor_right_n(reader, char_count);
-  FLUSH();
+  draw_flush();
   return 0;
 }
 
@@ -215,7 +216,7 @@ int action_home(LineReader *reader) {
   reader->cursor_pos = reader->prompt_length;
 
   draw_cursor_at(reader, reader->prompt_length);
-  FLUSH();
+  draw_flush();
 
   return 0;
 }
@@ -227,7 +228,7 @@ int action_end(LineReader *reader) {
   reader->cursor_pos = length;
 
   draw_cursor_at(reader, length);
-  FLUSH();
+  draw_flush();
 
   return 0;
 }
@@ -255,7 +256,7 @@ int action_delete_word_left(LineReader *reader) {
   reader->cursor_pos -= char_count;
 
   draw_entire_state(reader);
-  FLUSH();
+  draw_flush();
 
   return 0;
 }
@@ -278,7 +279,7 @@ int action_delete_word_right(LineReader *reader) {
   );
 
   draw_entire_state(reader);
-  FLUSH();
+  draw_flush();
 
   return 0;
 }

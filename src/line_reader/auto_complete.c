@@ -337,7 +337,7 @@ void auto_complete(LineReader *reader) {
 
       PUTS(ANSI_CURSOR_SAVE);
       draw_entire_state(reader);
-      FLUSH();
+      draw_flush();
     }
 
     for (size_t j = 0; j < matches.length; j++) {
@@ -362,6 +362,6 @@ void auto_complete(LineReader *reader) {
     reader->cursor_pos += n;
 
     draw_entire_state(reader);
-    FLUSH();
+    draw_flush();
   }
 }
