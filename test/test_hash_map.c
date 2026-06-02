@@ -59,32 +59,33 @@ TEST_SUITE("hash_map", {
     hash_map_init(&map, free);
 
     hash_map_set(&map, "sup", strdup("a"));
-    ASSERT_EQ(strcmp(hash_map_get(&map, "sup"), "a"), 0);
-
+    
     hash_map_set(&map, "grrr", strdup("b"));
-    ASSERT_EQ(strcmp(hash_map_get(&map, "grrr"), "b"), 0);
-
+    
     hash_map_set(&map, "heheheha", strdup("c"));
-    ASSERT_EQ(strcmp(hash_map_get(&map, "heheheha"), "c"), 0);
-
+    
     hash_map_set(&map, "lool", strdup("d"));
-    ASSERT_EQ(strcmp(hash_map_get(&map, "lool"), "d"), 0);
-
+    
     hash_map_set(&map, "haha", strdup("e"));
-    ASSERT_EQ(strcmp(hash_map_get(&map, "haha"), "e"), 0);
-
+    
     hash_map_set(&map, "fart", strdup("f"));
-    ASSERT_EQ(strcmp(hash_map_get(&map, "fart"), "f"), 0);
-
+    
     hash_map_set(&map, "crap", strdup("g"));
-    ASSERT_EQ(strcmp(hash_map_get(&map, "crap"), "g"), 0);
-
+    
     hash_map_set(&map, "long long long long long long long long", strdup("h"));
-    ASSERT_EQ(strcmp(hash_map_get(&map, "long long long long long long long long"), "h"), 0);
-
+    
     hash_map_set(&map, "pee", strdup("i"));
+    
+    ASSERT_EQ(strcmp(hash_map_get(&map, "sup"), "a"), 0);
+    ASSERT_EQ(strcmp(hash_map_get(&map, "grrr"), "b"), 0);
+    ASSERT_EQ(strcmp(hash_map_get(&map, "heheheha"), "c"), 0);
+    ASSERT_EQ(strcmp(hash_map_get(&map, "lool"), "d"), 0);
+    ASSERT_EQ(strcmp(hash_map_get(&map, "haha"), "e"), 0);
+    ASSERT_EQ(strcmp(hash_map_get(&map, "fart"), "f"), 0);
+    ASSERT_EQ(strcmp(hash_map_get(&map, "crap"), "g"), 0);
+    ASSERT_EQ(strcmp(hash_map_get(&map, "long long long long long long long long"), "h"), 0);
     ASSERT_EQ(strcmp(hash_map_get(&map, "pee"), "i"), 0);
-
+    
     hash_map_destroy(&map);
   });
 })
