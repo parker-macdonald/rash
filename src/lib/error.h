@@ -1,6 +1,9 @@
 #ifndef ERROR_H
 #define ERROR_H
 
+#include <errno.h>
+#include <string.h>
+
 #include "lib/attrib.h"
 
 void error(const char *str);
@@ -15,6 +18,8 @@ ATTRIB_NORETURN
 ATTRIB_PRINTF(1, 2)
 void fatal_f(const char *restrict format, ...);
 
-#define PANIC(str) fatal_f("%s:%d: %s", __FILE__, __LINE__, str)
+#define rash_assert(expr, str) do { if (expr) fatal_f("%s:%d: %s\n", __FILE__, __LINE__, str); } while (0)
+
+#define rash_panic(expr) do { if (expr) fatal_f("%s:%d: errno is %d (%s)\n", __FILE__, __LINE__, errno, strerror(errno)); } while (0)
 
 #endif

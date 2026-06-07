@@ -40,29 +40,32 @@ int builtin_fg(char **argv) {
     job_id = (int)num;
   }
 
-  pid_t pid = get_pid_and_remove(&job_id);
+  Job *job = aquire_job(job_id);
 
-  if (pid == 0) {
-    if (job_id == -1) {
-      error_f("fg: no running jobs\n");
-    } else {
-      error_f("fg: %d: no such job\n", job_id);
-    }
+  if (job == 0) {
+    error_f("fg: %d: no such job\n", job_id);
 
+    release_job();
     return EXIT_FAILURE;
   }
 
-  if (kill(pid, SIGCONT) != 0) {
+  if (kill(job->pid, SIGCONT) != 0) {
     perror("fg: kill");
+
+    release_job();
     return EXIT_FAILURE;
   }
 
-  printf("[%d] PID: %d, continued in foreground\n", job_id, pid);
+  printf("[%d] PID: %d, continued in foreground\n", job_id, job->pid);
 
   if (tty_fd != -1) {
-    int status = tcsetpgrp(tty_fd, pid);
+    int status = tcsetpgrp(tty_fd, job->pid);
     assert(status == 0);
   }
+
+  pid_t pid = job->pid;
+
+  release_job();
 
   return wait_process(pid);
 }
