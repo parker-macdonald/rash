@@ -15,7 +15,6 @@
 #include "jobs.h"
 #include "lib/error.h"
 #include "lib/search_path.h"
-#include "lib/sys.h"
 
 extern char **environ;
 
@@ -40,13 +39,7 @@ int execute(ExecutionContext context) {
   pid_t pid = fork();
 
   // child
-  if (pid == 0) {
-    sigset_t set = {0};
-    sigemptyset(&set);
-    sigaddset(&set, SIGUSR1);
-    int sig;
-    sigwait(&set, &sig);
-
+  if (pid == 0) {    
     if (tty_fd != -1 && !((context.flags & EC_BACKGROUND_JOB) ||
                           (context.flags & EC_DONT_REGISTER_FOREGROUND))) {
       pid_t new_pid = getpid();
@@ -141,39 +134,33 @@ int execute(ExecutionContext context) {
   }
   // parent process
   else {
-    rash_kill(pid, SIGUSR1);
-
     if (context.stderr_fd != -1) {
-      rash_close(context.stderr_fd);
+      close(context.stderr_fd);
     }
     if (context.stdin_fd != -1) {
-      rash_close(context.stdin_fd);
+      close(context.stdin_fd);
     }
     if (context.stdout_fd != -1) {
-      rash_close(context.stdout_fd);
+      close(context.stdout_fd);
     }
-
-    int id = register_job(pid, JOB_RUNNING);
-    assert(id != -1);
 
     if (context.flags & EC_NO_WAIT) {
       return pid;
     }
 
     if (context.flags & EC_BACKGROUND_JOB) {
+      register_job(pid, JOB_RUNNING);
+
       return EXIT_SUCCESS;
     }
   }
-  
+
   return wait_process(pid);
 }
 
 int wait_process(pid_t pid) {
   int status = 0;
 
-  // while (1) {
-  //   // bool has_job_ended(void)
-  // }
   int wait_status = waitpid(pid, &status, WUNTRACED);
   reset_fg_process();
 
