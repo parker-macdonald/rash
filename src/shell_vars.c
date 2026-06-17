@@ -1,8 +1,9 @@
 #include "shell_vars.h"
-#include "lib/hash_map.h"
 
 #include <stdio.h>
 #include <string.h>
+
+#include "lib/hash_map.h"
 
 static HashMap map;
 

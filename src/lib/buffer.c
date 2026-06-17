@@ -137,24 +137,24 @@ Buffer buffer_slice(const Buffer *self, size_t from, size_t to) {
 
 // similar to strcmp, but with buffers
 int buffer_compare(const Buffer *self, const Buffer *other) {
- size_t min_length = MIN(self->length, other->length);
-	
-	  for (size_t i = 0; i < min_length; i++) {
-	    int diff = self->data[i] - other->data[i];
-	
-	    if (diff != 0) {
-	      return diff;
-	    }
-	  }
-	
-	  if (self->length < other->length) {
-	    return -1;
-	  }
-	  if (self->length > other->length) {
-	    return 1;
-	  }
-	
-	  return 0; 
+  size_t min_length = MIN(self->length, other->length);
+
+  for (size_t i = 0; i < min_length; i++) {
+    int diff = self->data[i] - other->data[i];
+
+    if (diff != 0) {
+      return diff;
+    }
+  }
+
+  if (self->length < other->length) {
+    return -1;
+  }
+  if (self->length > other->length) {
+    return 1;
+  }
+
+  return 0;
 }
 
 void buffer_grow(Buffer *self, size_t grow_to) {

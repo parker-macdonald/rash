@@ -14,8 +14,18 @@ size_t read_n_bytes(uint8_t *buf, size_t count);
 
 uint8_t read_byte(void);
 
-void next_word(const Buffer *buffer, size_t offset, unsigned *out_char_count, size_t *out_index);
+void next_word(
+    const Buffer *buffer,
+    size_t offset,
+    unsigned *out_char_count,
+    size_t *out_index
+);
 
-void prev_word(const Buffer *buffer, size_t offset, unsigned *out_char_count, size_t *out_index);
+void prev_word(
+    const Buffer *buffer,
+    size_t offset,
+    unsigned *out_char_count,
+    size_t *out_index
+);
 
 #endif

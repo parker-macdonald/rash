@@ -82,7 +82,7 @@ int preform_action(LineReader *reader) {
     if (strcmp(seq, "[1;5C") == 0) {
       return reader->acts.ctrl_right_arrow(reader);
     }
-    
+
     if (strcmp(seq, "[1;5D") == 0) {
       return reader->acts.ctrl_left_arrow(reader);
     }
@@ -212,7 +212,7 @@ int preform_action(LineReader *reader) {
   if (byte == CTRL_Z) {
     return reader->acts.ctrl_z(reader);
   }
-  
+
   // check if byte is an ascii control character
   if (byte <= 31) {
     return 0;
@@ -241,7 +241,7 @@ void actions_default(ActionSet *acts) {
   acts->tab = action_complete;
   acts->insert = action_insert;
   acts->backspace = action_backspace;
-  
+
   acts->ctrl_d = action_stop;
   acts->ctrl_l = action_clear;
   acts->ctrl_c = action_clear_line;

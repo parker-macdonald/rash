@@ -28,7 +28,7 @@ size_t read_n_bytes(uint8_t *buf, size_t count) {
 
 uint8_t read_byte(void) {
   uint8_t byte = 0;
-  
+
   read_n_bytes(&byte, 1);
 
   return byte;
@@ -49,7 +49,12 @@ void update_active_buffer(LineReader *reader, Buffer *buffer) {
   reader->cursor_pos = get_line_width(reader);
 }
 
-void next_word(const Buffer *buffer, size_t offset, unsigned *out_char_count, size_t *out_index) {
+void next_word(
+    const Buffer *buffer,
+    size_t offset,
+    unsigned *out_char_count,
+    size_t *out_index
+) {
   if (buffer->length == offset) {
     *out_char_count = 0;
     *out_index = offset;
@@ -58,13 +63,10 @@ void next_word(const Buffer *buffer, size_t offset, unsigned *out_char_count, si
 
   unsigned count = 1;
 
-  offset =
-      utf8_next_codepoint(buffer, offset);
+  offset = utf8_next_codepoint(buffer, offset);
 
-  while (offset <= buffer->length - 1 &&
-         buffer->data[offset] != ' ') {
-    offset =
-        utf8_next_codepoint(buffer, offset);
+  while (offset <= buffer->length - 1 && buffer->data[offset] != ' ') {
+    offset = utf8_next_codepoint(buffer, offset);
     count++;
   }
 
@@ -72,7 +74,12 @@ void next_word(const Buffer *buffer, size_t offset, unsigned *out_char_count, si
   *out_char_count = count;
 }
 
-void prev_word(const Buffer *buffer, size_t offset, unsigned *out_char_count, size_t *out_index) {
+void prev_word(
+    const Buffer *buffer,
+    size_t offset,
+    unsigned *out_char_count,
+    size_t *out_index
+) {
   if (offset == 0) {
     *out_index = 0;
     *out_char_count = 0;
@@ -81,13 +88,10 @@ void prev_word(const Buffer *buffer, size_t offset, unsigned *out_char_count, si
 
   unsigned count = 1;
 
-  offset =
-      utf8_prev_codepoint(buffer, offset);
+  offset = utf8_prev_codepoint(buffer, offset);
 
-  while (offset > 0 &&
-         buffer->data[offset - 1] != ' ') {
-    offset =
-        utf8_prev_codepoint(buffer, offset);
+  while (offset > 0 && buffer->data[offset - 1] != ' ') {
+    offset = utf8_prev_codepoint(buffer, offset);
     count++;
   }
 

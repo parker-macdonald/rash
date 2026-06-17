@@ -1,9 +1,10 @@
 #ifndef HASH_MAP_H
 #define HASH_MAP_H
 
-#include "lib/linked_list.h"
 #include <stdbool.h>
 #include <stddef.h>
+
+#include "lib/linked_list.h"
 
 typedef struct {
   char *key;

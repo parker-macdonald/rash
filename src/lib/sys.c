@@ -1,6 +1,8 @@
 #include "lib/sys.h"
-#include "lib/error.h"
+
 #include <unistd.h>
+
+#include "lib/error.h"
 
 void rash_kill(pid_t pid, int sig) {
   int res = kill(pid, sig);

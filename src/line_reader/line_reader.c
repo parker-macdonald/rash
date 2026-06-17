@@ -31,7 +31,7 @@ void line_reader_init(void) {
   reader.history._capacity = 0;
   reader.history.length = 0;
   reader.history.data = NULL;
-  
+
   reader.history_curr = 0;
 
   reader.cursor_pos = reader.prompt_length;

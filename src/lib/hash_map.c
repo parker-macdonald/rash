@@ -1,8 +1,10 @@
 #include "hash_map.h"
-#include "lib/linked_list.h"
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "lib/linked_list.h"
 
 // Jenkins's hash function
 // https://en.wikipedia.org/wiki/Jenkins_hash_function

@@ -31,9 +31,14 @@ void history_print(LineReader *reader, int count) {
   } else {
     i = (size_t)count;
   }
-  
+
   for (i = 0; i < reader->history.length; i++) {
-    printf("%5zu  %.*s\n", i + 1, (int)reader->history.data[i].length, reader->history.data[i].data);
+    printf(
+        "%5zu  %.*s\n",
+        i + 1,
+        (int)reader->history.data[i].length,
+        reader->history.data[i].data
+    );
   }
 }
 
@@ -46,4 +51,3 @@ Buffer *history_curr(LineReader *reader) {
 
   return &reader->history.data[reader->history_curr];
 }
-

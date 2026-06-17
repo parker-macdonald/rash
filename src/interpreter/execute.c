@@ -39,7 +39,7 @@ int execute(ExecutionContext context) {
   pid_t pid = fork();
 
   // child
-  if (pid == 0) {    
+  if (pid == 0) {
     if (tty_fd != -1 && !((context.flags & EC_BACKGROUND_JOB) ||
                           (context.flags & EC_DONT_REGISTER_FOREGROUND))) {
       pid_t new_pid = getpid();

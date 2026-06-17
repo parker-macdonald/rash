@@ -1,15 +1,15 @@
 #include "draw.h"
-#include "lib/ansi.h"
-#include "lib/utf_8.h"
+
 #include <stdio.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#include "lib/ansi.h"
+#include "lib/utf_8.h"
+
 void draw_entire_state(const LineReader *reader) {
   printf(
-      ANSI_CURSOR_RESTORE
-      ANSI_REMOVE_BELOW_CURSOR
-      "%s%.*s ",
+      ANSI_CURSOR_RESTORE ANSI_REMOVE_BELOW_CURSOR "%s%.*s ",
       reader->prompt,
       (int)reader->active_buffer->length,
       (char *)reader->active_buffer->data
@@ -95,7 +95,6 @@ void draw_cursor_post_line(const LineReader *reader) {
   PUTS("\r\n");
 }
 
-
 unsigned short get_terminal_width(void) {
   struct winsize win;
   if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &win) != -1) {
@@ -120,16 +119,10 @@ void draw_cursor_at(const LineReader *reader, unsigned cursor_pos) {
   PUTS(ANSI_CURSOR_RESTORE);
 
   if (down) {
-    printf(
-      ANSI_CURSOR_DOWN_N("%u"),
-      down
-    );
+    printf(ANSI_CURSOR_DOWN_N("%u"), down);
   }
 
   if (right) {
-    printf(
-      ANSI_CURSOR_RIGHT_N("%u"),
-      right
-    );
+    printf(ANSI_CURSOR_RIGHT_N("%u"), right);
   }
 }
