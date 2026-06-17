@@ -37,7 +37,7 @@ int builtin_bg(char **argv) {
     job_id = (int)num;
   }
 
-  Job *job = aquire_job(job_id);
+  Job *job = get_job(job_id);
 
   if (job == NULL) {
     if (job_id == -1) {
@@ -45,30 +45,22 @@ int builtin_bg(char **argv) {
     } else {
       error_f("bg: %d: no such job\n", job_id);
     }
-
-    release_job();
     return EXIT_FAILURE;
   }
 
   if (job->state == JOB_RUNNING) {
     error_f("bg: %d: job already running\n", job_id);
-
-    release_job();
     return EXIT_FAILURE;
   }
 
   if (kill(job->pid, SIGCONT) != 0) {
     perror("bg: kill");
-
-    release_job();
     return EXIT_FAILURE;
   }
 
   job->state = JOB_RUNNING;
 
   printf("[%d] PID: %d, continued in background\n", job_id, job->pid);
-
-  release_job();
 
   return EXIT_SUCCESS;
 }

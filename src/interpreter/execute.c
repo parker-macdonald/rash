@@ -37,11 +37,6 @@ int execute(ExecutionContext context) {
     return builtin(context.argv);
   }
 
-  if (!can_register_job()) {
-    error("rash: cannot start another process, job table is full.\n");
-    return -1;
-  }
-
   pid_t pid = fork();
 
   // child
@@ -176,9 +171,9 @@ int execute(ExecutionContext context) {
 int wait_process(pid_t pid) {
   int status = 0;
 
-  while (1) {
-    bool has_job_ended(void)
-  }
+  // while (1) {
+  //   // bool has_job_ended(void)
+  // }
   int wait_status = waitpid(pid, &status, WUNTRACED);
   reset_fg_process();
 

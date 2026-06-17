@@ -2,10 +2,8 @@
 #define SIG_HANDLERS_H
 
 #include <signal.h>
-#include <stdbool.h>
 
-// JOB_ENDED: job no longer exists either because it called exit or was terminated by a signal
-#define JOB_ENDED 0
+#define JOB_EXITED 0
 #define JOB_STOPPED 1
 #define JOB_RUNNING 2
 #define NUM_JOB_STATUSES 3
@@ -15,10 +13,9 @@ extern const char *const JOB_STATUSES[NUM_JOB_STATUSES];
 
 typedef struct job_t {
   pid_t pid;
+  int id;
   int state;
-  // only populated once the child is waited for
-  int wait_status;
-  bool was_updated;
+  struct job_t *p_next;
 } Job;
 
 // the file descriptor of the controlling tty
@@ -43,20 +40,24 @@ void clean_jobs(void);
  */
 int register_job(pid_t pid, int state);
 
-// checks whether the job table is full to allow a new job to be added.
-bool can_register_job(void);
-
 /**
  * @brief returns a job with the given id
  * @param id the id of the job to retrieve, you can pass -1 if you want to get
  * the last job in the job list
  * @return a pointer to the job with the id, or null if no job exists
  */
-Job *aquire_job(int id);
+Job *get_job(int id);
 
-void release_job(void);
-
-void wait_job(int id);
+/**
+ * @brief gets the pid of the job with the given id and removes it from the job
+ * list. this is useful if you are bringing a job to the foreground since it is
+ * no longer needed on the job list.
+ * @param id a pointer to the job id, when this function returns it puts the
+ * real job id of the returned job in id, so if you pass -1 as your job id, id
+ * will contain the job id of the last job in the job list on return.
+ * @return the pid of the found job, or 0 if no such job exists.
+ */
+pid_t get_pid_and_remove(int *id);
 
 /**
  * @brief prints all jobs in the job list in a nicely formatted way. this is

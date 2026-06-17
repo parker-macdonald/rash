@@ -40,19 +40,15 @@ int builtin_fg(char **argv) {
     job_id = (int)num;
   }
 
-  Job *job = aquire_job(job_id);
+  Job *job = get_job(job_id);
 
   if (job == 0) {
     error_f("fg: %d: no such job\n", job_id);
-
-    release_job();
     return EXIT_FAILURE;
   }
 
   if (kill(job->pid, SIGCONT) != 0) {
     perror("fg: kill");
-
-    release_job();
     return EXIT_FAILURE;
   }
 
@@ -64,8 +60,6 @@ int builtin_fg(char **argv) {
   }
 
   pid_t pid = job->pid;
-
-  release_job();
 
   return wait_process(pid);
 }

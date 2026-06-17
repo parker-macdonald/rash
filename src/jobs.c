@@ -1,7 +1,6 @@
 #include "jobs.h"
 
 #include <assert.h>
-#include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
@@ -12,128 +11,73 @@
 
 #include "interactive.h"
 #include "lib/error.h"
-#include "lib/sys.h"
 
-#define JOB_TABLE_SIZE 1024
+const char *const JOB_STATUSES[NUM_JOB_STATUSES] = {
+    "Exited", "Stopped", "Running"
+};
 
-Job job_table[JOB_TABLE_SIZE];
-
-const char *const JOB_STATUSES[NUM_JOB_STATUSES] = {"Exited", "Stopped",
-                                                    "Running"};
+static Job *root_job = NULL;
+static Job *last_job = NULL;
 
 static pid_t root_pid;
 int tty_fd = -1;
 
-static sigset_t oldset;
-
 static void kill_all_children(void) {
+  Job *current = root_job;
 
-  for (size_t i = 0; i < JOB_TABLE_SIZE; i++) {
-    Job *current = job_table + i;
-
+  while (current != NULL) {
     switch (current->state) {
-    case JOB_STOPPED:
-      rash_kill(current->pid, SIGCONT);
-    case JOB_RUNNING:
-      rash_kill(current->pid, SIGHUP);
-      break;
-    // this is to get clang to stop complaining
-    default:
-      break;
+      case JOB_STOPPED:
+        kill(current->pid, SIGCONT);
+        kill(current->pid, SIGHUP);
+        break;
+      case JOB_RUNNING:
+        kill(current->pid, SIGHUP);
+        break;
+      // this is to get clang to stop complaining
+      default:
+        break;
     }
+
+    current = current->p_next;
   }
 
   clean_jobs();
 }
 
-ssize_t write_all(int fd, const void *buf, size_t count) {
-  size_t written = 0;
+// static void sigchld_handler(int sig) {
+//   (void)sig;
 
-  do {
-    ssize_t result = write(fd, (char *)buf + written, count - written);
+//   int saved_errno = errno;
 
-    if (result == -1) {
-      return -1;
-    }
-  } while (written < count);
+//   int status;
+//   pid_t pid = waitpid(-1, &status, WNOHANG | WCONTINUED | WUNTRACED);
 
-  return (ssize_t)written;
-}
+//   errno = saved_errno;
+// }
 
-#define STR(x) _STR(x)
-#define _STR(x) #x
-#define LOCATION __FILE__ ":" STR(__LINE__)
-
-static void sigchld_handler(int sig) {
+static void sigint_handler(int sig) {
   (void)sig;
-
-  int saved_errno = errno;
-
-  int status;
-  pid_t pid = waitpid(-1, &status, WNOHANG | WCONTINUED | WUNTRACED);
-
-  if (pid == 0) {
-    return;
-  }
-
-  if (pid == -1) {
-    // cant use printf or strerror in a signal handler
-    char *msg = LOCATION " fatal: waitpid failed in signal handler.\n";
-    write_all(STDOUT_FILENO, msg, strlen(msg));
-    _exit(-1);
-  }
-
-  Job *job = NULL;
-
-  for (size_t i = 0; i < JOB_TABLE_SIZE; i++) {
-    if (job_table[i].pid == pid) {
-      job = job_table + i;
-    }
-  }
-
-  if (job == NULL) {
-    char *msg = LOCATION
-        " fatal: job could not be found by pid. reached unreachable state.\n";
-    write_all(STDOUT_FILENO, msg, strlen(msg));
-    _exit(-1);
-  }
-
-  job->was_updated = true;
-
-  if (WIFEXITED(status) || WIFSIGNALED(status)) {
-    job->state = JOB_ENDED;
-    job->wait_status = status;
-  } else if (WIFCONTINUED(status)) {
-    job->state = JOB_RUNNING;
-  } else if (WIFSTOPPED(status)) {
-    job->state = JOB_STOPPED;
-  } else {
-    char *msg = LOCATION " fatal: job is in unknown state.\n";
-    write_all(STDOUT_FILENO, msg, strlen(msg));
-    _exit(-1);
-  }
-
-  errno = saved_errno;
 }
 
 void sig_handler_init(void) {
-  for (size_t i = 0; i < JOB_TABLE_SIZE; i++) {
-    job_table[i].pid = -1;
-  }
+  struct sigaction sigint_act;
+  sigint_act.sa_handler = sigint_handler;
+  sigint_act.sa_flags = 0;
+  sigemptyset(&sigint_act.sa_mask);
 
-  (void)signal(SIGINT, SIG_IGN);
+  sigaction(SIGINT, &sigint_act, NULL);
+
   (void)signal(SIGTSTP, SIG_IGN);
   (void)signal(SIGTTOU, SIG_IGN);
 
-  struct sigaction sigchld_act = {0};
-  sigchld_act.sa_handler = sigchld_handler;
-  sigchld_act.sa_flags = SA_RESTART;
-  sigemptyset(&sigchld_act.sa_mask);
+  // sigset_t set;
+  // sigemptyset(&set);
+  // sigaddset(&set, SIGINT);
+  // sigaddset(&set, SIGTSTP);
+  // sigaddset(&set, SIGTTOU);
 
-  sigaction(SIGCHLD, &sigchld_act, NULL);
-  
-  sigemptyset(&oldset);
-  sigprocmask(SIG_BLOCK, NULL, &oldset);
+  // sigprocmask(SIG_BLOCK, &set, NULL);
 
   int atexit_return = atexit(kill_all_children);
   assert(atexit_return == 0);
@@ -159,152 +103,184 @@ void reset_fg_process(void) {
   }
 }
 
-static void block_sigchld(void) {
-  sigset_t set;
-  sigemptyset(&set);
-  
-  sigaddset(&set, SIGCHLD);
-
-  sigprocmask(SIG_BLOCK, &set, NULL);
-}
-
-static void unblock_sigchld(void) {
-  sigprocmask(SIG_BLOCK, &oldset, NULL);
-}
-
 void clean_jobs(void) {
-  block_sigchld();
+  Job *current;
+  Job *prev = NULL;
 
-  for (size_t i = 0; i < JOB_TABLE_SIZE; i++) {
-    Job *job = job_table + i;
+  for (current = root_job; current != NULL;) {
+    int status;
+    pid_t pid = waitpid(current->pid, &status, WNOHANG | WUNTRACED);
 
-    if (!job->was_updated) {
-      continue;
-    }
+    if (current->pid == pid) {
+      printf("[%d]* PID: %d, ", current->id, pid);
 
-    printf("[%zu]* PID: %d, ", i + 1, job->pid);
-
-    if (job->state == JOB_ENDED) {
-      if (WIFEXITED(job->wait_status)) {
-        int exit_status = WEXITSTATUS(job->wait_status);
+      if (WIFEXITED(status)) {
+        int exit_status = WEXITSTATUS(status);
 
         if (exit_status == 0) {
           printf("Done\n");
         } else {
           printf("Exit %d\n", exit_status);
         }
-      } else if (WIFSIGNALED(job->wait_status)) {
-        int signal = WTERMSIG(job->wait_status);
+      } else if (WIFSIGNALED(status)) {
+        int signal = WTERMSIG(status);
 
         (void)fputs(strsignal(signal), stdout);
 
 // WCOREDUMP is from POSIX.1-2024 so it's pretty new and might not be available
 // everywhere.
 #ifdef WCOREDUMP
-        if (WCOREDUMP(job->wait_status)) {
+        if (WCOREDUMP(status)) {
           (void)fputs(" (core dumped)", stdout);
         }
 #endif
+
+        putchar('\n');
+      } else if (WIFSTOPPED(status)) {
+        printf("Stopped\n");
+
+        current->state = JOB_STOPPED;
+        prev = current;
+        current = current->p_next;
+        continue;
       }
 
-      putchar('\n');
-      job->pid = -1;
+      if (prev != NULL) {
+        prev->p_next = current->p_next;
+      } else {
+        root_job = current->p_next;
+      }
+
+      if (current->p_next == NULL) {
+        last_job = prev;
+      }
+
+      Job *temp = current;
+      current = current->p_next;
+
+      free(temp);
       continue;
     }
 
-    if (job->state == JOB_STOPPED) {
-      printf("Stopped\n");
-      continue;
-    }
-
-    if (job->state == JOB_RUNNING) {
-      printf("Continued\n");
-      continue;
-    }
+    prev = current;
+    current = current->p_next;
   }
-
-  unblock_sigchld();
 }
 
 int register_job(pid_t pid, int state) {
-  block_sigchld();
+  Job *new_job = malloc(sizeof(Job));
 
-  Job *new_job = NULL;
-
-  size_t i;
-  for (i = 0; i < JOB_TABLE_SIZE; i++) {
-    if (job_table[i].pid == -1) {
-      new_job = job_table + i;
-      break;
-    }
-  }
-
-  if (new_job == NULL) {
-    error("rash: job table is full.\n");
-    return -1;
-  }
+  new_job->p_next = NULL;
 
   new_job->pid = pid;
+
   new_job->state = state;
-  new_job->was_updated = false;
 
-  printf("[%zu] PID: %d, State: %s\n", i + 1, new_job->pid,
-         JOB_STATUSES[new_job->state]);
+  if (last_job == NULL) {
+    new_job->id = 1;
+    root_job = new_job;
+  } else {
+    new_job->id = last_job->id + 1;
 
-  unblock_sigchld();
-
-  return (int)(i + 1);
-}
-
-Job *aquire_job(int id) {
-  rash_assert(id <= JOB_TABLE_SIZE, "job id is too large");
-
-  block_sigchld();
-
-  if (id == -1) {
-    Job *job = NULL;
-
-    for (size_t i = 0; i < JOB_TABLE_SIZE; i++) {
-      if (job_table[i].pid != -1) {
-        job = job_table + i;
-      }
-    }
-
-    return job;
+    last_job->p_next = new_job;
   }
 
-  Job *job = job_table + (size_t)id;
+  last_job = new_job;
 
-  if (job->pid == -1) {
+  printf(
+      "[%d] PID: %d, State: %s\n",
+      new_job->id,
+      new_job->pid,
+      JOB_STATUSES[new_job->state]
+  );
+
+  return new_job->id;
+}
+
+Job *get_job(int id) {
+  if (root_job == NULL) {
     return NULL;
   }
 
-  return job;
+  Job *current;
+
+  if (id == -1) {
+    return last_job;
+  }
+
+  for (current = root_job; current != NULL; current = current->p_next) {
+    if (current->id == id) {
+      return current;
+    }
+  }
+
+  return NULL;
 }
 
-void release_job(void) {
-  unblock_sigchld();
+pid_t get_pid_and_remove(int *id) {
+  if (root_job == NULL) {
+    return 0;
+  }
+
+  Job *current;
+  Job *prev = NULL;
+
+  if (*id == -1) {
+    for (current = root_job;; current = current->p_next) {
+      if (current->p_next == NULL) {
+        pid_t pid = current->pid;
+        *id = current->id;
+
+        last_job = prev;
+        if (prev != NULL) {
+          prev->p_next = NULL;
+        } else {
+          root_job = NULL;
+        }
+
+        free(current);
+
+        return pid;
+      }
+      prev = current;
+    }
+
+    // this should never be reached
+    assert(0);
+  }
+
+  for (current = root_job; current != NULL; current = current->p_next) {
+    if (current->id == *id) {
+      pid_t pid = current->pid;
+
+      if (prev != NULL) {
+        prev->p_next = current->p_next;
+      } else {
+        root_job = current->p_next;
+      }
+
+      if (current->p_next == NULL) {
+        last_job = prev;
+      }
+
+      free(current);
+
+      return pid;
+    }
+
+    prev = current;
+  }
+
+  return 0;
 }
 
 void print_jobs(void) {
-  block_sigchld();
-
-  for (size_t i = 0; i < JOB_TABLE_SIZE; i++) {
-    printf("[%zu] PID: %d, State: %s\n", i + 1, job_table[i].pid,
-           JOB_STATUSES[job_table[i].state]);
+  for (Job *current = root_job; current != NULL; current = current->p_next) {
+    printf(
+        "[%d] PID: %d, State: %s\n",
+        current->id,
+        current->pid,
+        JOB_STATUSES[current->state]
+    );
   }
-
-  unblock_sigchld();
-}
-
-int wait_job(int id) {
-  rash_assert(id <= JOB_TABLE_SIZE, "job id is too large");
-
-  block_sigchld();
-
-  if (job_table[id].state == JOB_ENDED) {
-    return job
-  }
-
-  unblock_sigchld();
 }
