@@ -45,11 +45,12 @@ int builtin_bg(char **argv) {
     } else {
       error_f("bg: %d: no such job\n", job_id);
     }
+
     return EXIT_FAILURE;
   }
 
   if (job->state == JOB_RUNNING) {
-    error_f("bg: %d: job already running\n", job_id);
+    error_f("bg: %d: job already running\n", job->id);
     return EXIT_FAILURE;
   }
 
@@ -60,7 +61,7 @@ int builtin_bg(char **argv) {
 
   job->state = JOB_RUNNING;
 
-  printf("[%d] PID: %d, continued in background\n", job_id, job->pid);
+  printf("[%d] PID: %d, continued in background\n", job->id, job->pid);
 
   return EXIT_SUCCESS;
 }
