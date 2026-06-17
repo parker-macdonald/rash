@@ -119,11 +119,13 @@ int action_history_down(LineReader *reader) {
   if (reader->history_curr == reader->history.length) {
     update_active_buffer(reader, &reader->buffer);
     draw_entire_state(reader);
+    draw_flush();
     return 0;
   }
 
   update_active_buffer(reader, &reader->history.data[reader->history_curr]);
   draw_entire_state(reader);
+  draw_flush();
 
   return 0;
 }
@@ -139,8 +141,8 @@ int action_insert(LineReader *reader, uint8_t byte) {
   }
 
   draw_entire_state(reader);
-
   draw_flush();
+
   return 0;
 }
 
@@ -157,7 +159,6 @@ int action_backspace(LineReader *reader) {
   reader->cursor_pos--;
 
   draw_entire_state(reader);
-
   draw_flush();
 
   return 0;
@@ -173,7 +174,6 @@ int action_delete(LineReader *reader) {
   utf8_remove_codepoint(&reader->buffer, reader->buffer_offset);
 
   draw_entire_state(reader);
-
   draw_flush();
 
   return 0;
