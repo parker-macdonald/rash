@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 
 #include "lib/ansi.h"
 #include "lib/buffer.h"
@@ -10,6 +9,7 @@
 #include "lib/vector.h"
 #include "line_reader/action_utils.h"
 #include "line_reader/auto_complete.h"
+#include "line_reader/draw.h"
 #include "line_reader/history.h"
 #include "line_reader/types.h"
 
@@ -19,22 +19,10 @@ int action_nop(LineReader *reader) {
 }
 
 int action_clear(LineReader *reader) {
-  unsigned short width = get_terminal_width();
+  PUTS(ANSI_CURSOR_HOME ANSI_ERASE_SCREEN ANSI_CURSOR_SAVE);
 
-  PUTS(ANSI_CURSOR_HOME ANSI_ERASE_SCREEN);
-
-  draw_active_buffer(reader);
-
-  PUTS(ANSI_CURSOR_HOME);
-
-  unsigned moves_down = reader->cursor_pos / width;
-  if (moves_down) {
-    printf(ANSI_CURSOR_DOWN_N("%u"), moves_down);
-  }
-
-  printf(ANSI_CURSOR_RIGHT_N("%u"), reader->cursor_pos % width);
-
-  FLUSH();
+  draw_entire_state(reader);
+  draw_flush();
 
   return 0;
 }
@@ -47,8 +35,9 @@ int action_cursor_left(LineReader *reader) {
   reader->buffer_offset =
       utf8_prev_codepoint(reader->active_buffer, reader->buffer_offset);
 
-  cursor_left(reader);
-  FLUSH();
+  move_cursor_left(reader);
+  draw_flush();
+
   return 0;
 }
 
@@ -60,28 +49,31 @@ int action_cursor_right(LineReader *reader) {
   reader->buffer_offset =
       utf8_next_codepoint(reader->active_buffer, reader->buffer_offset);
 
-  cursor_right(reader);
-  FLUSH();
+  move_cursor_right(reader);
+  draw_flush();
+
   return 0;
 }
 
-int action_end_of_file(LineReader *reader) {
-  cursor_to_bottom(reader);
-  putchar('\n');
+int action_stop(LineReader *reader) {
+  draw_cursor_post_line(reader);
+
   return -1;
 }
 
-int action_sigint(LineReader *reader) {
-  cursor_to_bottom(reader);
-  printf("\n%s", reader->prompt);
-  FLUSH();
+int action_clear_line(LineReader *reader) {
+  reader->history_curr = reader->history.length;
 
-  reader->history_curr = NULL;
   reader->active_buffer = &reader->buffer;
+  VECTOR_CLEAR(reader->buffer);
 
   reader->cursor_pos = reader->prompt_length;
+  reader->buffer_offset = 0;
 
-  VECTOR_CLEAR(reader->buffer);
+  draw_cursor_post_line(reader);
+  PUTS(ANSI_CURSOR_SAVE);
+  draw_entire_state(reader);
+  draw_flush();
 
   return 0;
 }
@@ -89,55 +81,51 @@ int action_sigint(LineReader *reader) {
 int action_new_line(LineReader *reader) {
   if (reader->active_buffer->length == 0) {
     printf("\n%s", reader->prompt);
-    FLUSH();
+    draw_flush();
     return 0;
   }
 
-  cursor_to_bottom(reader);
-  putchar('\n');
-
   copy_hist_buf_if_needed(reader);
 
-  VECTOR_PUSH(reader->buffer, '\0');
-
   history_add(reader);
+
+  draw_cursor_post_line(reader);
+  draw_flush();
 
   return 1;
 }
 
 int action_history_up(LineReader *reader) {
-  if (reader->history_curr == NULL) {
-    if (reader->history_end != NULL) {
-      reader->history_curr = reader->history_end;
-    } else {
-      return 0;
-    }
-  } else if (reader->history_curr->p_prev != NULL) {
-    reader->history_curr = reader->history_curr->p_prev;
-  } else {
-    // there is no more history
+  if (reader->history_curr == 0) {
     return 0;
   }
 
-  update_active_buffer(reader, &reader->history_curr->line);
+  reader->history_curr--;
+
+  update_active_buffer(reader, &reader->history.data[reader->history_curr]);
+  draw_entire_state(reader);
+  draw_flush();
 
   return 0;
 }
 
 int action_history_down(LineReader *reader) {
-  if (reader->history_curr != NULL) {
-    if (reader->history_curr->p_next != NULL) {
-      reader->history_curr = reader->history_curr->p_next;
-
-      update_active_buffer(reader, &reader->history_curr->line);
-      return 0;
-    }
-
-    reader->history_curr = NULL;
-
-    update_active_buffer(reader, &reader->buffer);
+  if (reader->history_curr == reader->history.length) {
     return 0;
   }
+
+  reader->history_curr++;
+
+  if (reader->history_curr == reader->history.length) {
+    update_active_buffer(reader, &reader->buffer);
+    draw_entire_state(reader);
+    draw_flush();
+    return 0;
+  }
+
+  update_active_buffer(reader, &reader->history.data[reader->history_curr]);
+  draw_entire_state(reader);
+  draw_flush();
 
   return 0;
 }
@@ -149,16 +137,12 @@ int action_insert(LineReader *reader, uint8_t byte) {
   reader->buffer_offset++;
 
   if (!is_continuation_byte_utf8(byte)) {
-    cursor_right(reader);
+    reader->cursor_pos++;
   }
 
-  PUTS(ANSI_CURSOR_POS_SAVE);
+  draw_entire_state(reader);
+  draw_flush();
 
-  draw_active_buffer(reader);
-
-  PUTS(ANSI_CURSOR_POS_RESTORE);
-
-  FLUSH();
   return 0;
 }
 
@@ -172,16 +156,10 @@ int action_backspace(LineReader *reader) {
   size_t previous = utf8_prev_codepoint(&reader->buffer, reader->buffer_offset);
   utf8_remove_codepoint(&reader->buffer, previous);
   reader->buffer_offset = previous;
+  reader->cursor_pos--;
 
-  cursor_left(reader);
-
-  PUTS(ANSI_CURSOR_POS_SAVE);
-
-  draw_active_buffer(reader);
-
-  PUTS(ANSI_CURSOR_POS_RESTORE);
-
-  FLUSH();
+  draw_entire_state(reader);
+  draw_flush();
 
   return 0;
 }
@@ -195,13 +173,8 @@ int action_delete(LineReader *reader) {
 
   utf8_remove_codepoint(&reader->buffer, reader->buffer_offset);
 
-  PUTS(ANSI_CURSOR_POS_SAVE);
-
-  draw_active_buffer(reader);
-
-  PUTS(ANSI_CURSOR_POS_RESTORE);
-
-  FLUSH();
+  draw_entire_state(reader);
+  draw_flush();
 
   return 0;
 }
@@ -211,20 +184,14 @@ int action_word_left(LineReader *reader) {
     return 0;
   }
 
-  unsigned count = 1;
+  unsigned char_count;
+  size_t index;
+  prev_word(reader->active_buffer, reader->buffer_offset, &char_count, &index);
 
-  reader->buffer_offset =
-      utf8_prev_codepoint(reader->active_buffer, reader->buffer_offset);
+  reader->buffer_offset = index;
 
-  while (reader->buffer_offset > 0 &&
-         reader->active_buffer->data[reader->buffer_offset - 1] != ' ') {
-    reader->buffer_offset =
-        utf8_prev_codepoint(reader->active_buffer, reader->buffer_offset);
-    count++;
-  }
-
-  cursor_left_n(reader, count);
-  FLUSH();
+  move_cursor_left_n(reader, char_count);
+  draw_flush();
   return 0;
 }
 
@@ -233,68 +200,35 @@ int action_word_right(LineReader *reader) {
     return 0;
   }
 
-  unsigned count = 1;
+  unsigned char_count;
+  size_t index;
+  next_word(reader->active_buffer, reader->buffer_offset, &char_count, &index);
 
-  reader->buffer_offset =
-      utf8_next_codepoint(reader->active_buffer, reader->buffer_offset);
+  reader->buffer_offset = index;
 
-  while (reader->buffer_offset <= reader->active_buffer->length - 1 &&
-         reader->active_buffer->data[reader->buffer_offset] != ' ') {
-    reader->buffer_offset =
-        utf8_next_codepoint(reader->active_buffer, reader->buffer_offset);
-    count++;
-  }
-
-  cursor_right_n(reader, count);
-  FLUSH();
+  move_cursor_right_n(reader, char_count);
+  draw_flush();
   return 0;
 }
 
 int action_home(LineReader *reader) {
-  unsigned short width = get_terminal_width();
-
   reader->buffer_offset = 0;
-
-  unsigned moves_up = reader->cursor_pos / width;
   reader->cursor_pos = reader->prompt_length;
 
-  if (moves_up > 0) {
-    printf(ANSI_CURSOR_UP_N("%u"), moves_up);
-  }
-
-  // move the cursort all the way to the left, then right prompt_length times
-  printf("\r" ANSI_CURSOR_RIGHT_N("%u"), reader->prompt_length);
-
-  FLUSH();
+  draw_cursor_at(reader, reader->prompt_length);
+  draw_flush();
 
   return 0;
 }
 
 int action_end(LineReader *reader) {
-  unsigned short width = get_terminal_width();
-
-  unsigned length = get_line_length(reader);
+  unsigned length = get_line_width(reader);
 
   reader->buffer_offset = reader->active_buffer->length;
-
-  unsigned current_line = reader->cursor_pos / width;
-  unsigned total_lines = length / width;
-
-  unsigned down = total_lines - current_line;
-  if (down > 0) {
-    printf(ANSI_CURSOR_DOWN_N("%u"), down);
-  }
-
   reader->cursor_pos = length;
 
-  putchar('\r');
-
-  unsigned right = length % width;
-  if (right) {
-    printf(ANSI_CURSOR_RIGHT_N("%u"), right);
-  }
-
-  FLUSH();
+  draw_cursor_at(reader, length);
+  draw_flush();
 
   return 0;
 }
@@ -310,36 +244,19 @@ int action_delete_word_left(LineReader *reader) {
     return 0;
   }
 
-  size_t saved_offset = reader->buffer_offset;
-  unsigned count = 1;
-
-  reader->buffer_offset =
-      utf8_prev_codepoint(reader->active_buffer, reader->buffer_offset);
-
-  while (reader->buffer_offset > 0 &&
-         reader->active_buffer->data[reader->buffer_offset - 1] != ' ') {
-    reader->buffer_offset =
-        utf8_prev_codepoint(reader->active_buffer, reader->buffer_offset);
-    count++;
-  }
+  unsigned char_count;
+  size_t index;
+  prev_word(reader->active_buffer, reader->buffer_offset, &char_count, &index);
 
   copy_hist_buf_if_needed(reader);
 
-  buffer_remove_n(
-      reader->active_buffer,
-      reader->buffer_offset,
-      saved_offset - reader->buffer_offset
-  );
+  buffer_remove_n(reader->active_buffer, index, reader->buffer_offset - index);
 
-  cursor_left_n(reader, count);
+  reader->buffer_offset = index;
+  reader->cursor_pos -= char_count;
 
-  PUTS(ANSI_CURSOR_POS_SAVE);
-
-  draw_active_buffer(reader);
-
-  PUTS(ANSI_CURSOR_POS_RESTORE);
-
-  FLUSH();
+  draw_entire_state(reader);
+  draw_flush();
 
   return 0;
 }
@@ -349,29 +266,20 @@ int action_delete_word_right(LineReader *reader) {
     return 0;
   }
 
-  size_t new_offset =
-      utf8_next_codepoint(reader->active_buffer, reader->buffer_offset);
-
-  while (new_offset <= reader->active_buffer->length - 1 &&
-         reader->active_buffer->data[new_offset] != ' ') {
-    new_offset = utf8_next_codepoint(reader->active_buffer, new_offset);
-  }
+  unsigned char_count;
+  size_t index;
+  prev_word(reader->active_buffer, reader->buffer_offset, &char_count, &index);
 
   copy_hist_buf_if_needed(reader);
 
   buffer_remove_n(
       reader->active_buffer,
       reader->buffer_offset,
-      new_offset - reader->buffer_offset
+      index - reader->buffer_offset
   );
 
-  PUTS(ANSI_CURSOR_POS_SAVE);
-
-  draw_active_buffer(reader);
-
-  PUTS(ANSI_CURSOR_POS_RESTORE);
-
-  FLUSH();
+  draw_entire_state(reader);
+  draw_flush();
 
   return 0;
 }

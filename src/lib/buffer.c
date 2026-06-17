@@ -53,7 +53,7 @@ void buffer_append_byte(Buffer *self, uint8_t byte) {
 void buffer_append_ptr(Buffer *self, const void *data, size_t length) {
   size_t new_length = self->length + length;
 
-  buffer_grow(self, length);
+  buffer_grow(self, new_length);
 
   memcpy(self->data + self->length, data, length);
 
@@ -104,9 +104,7 @@ void buffer_insert_cstr(Buffer *self, size_t at, const char *cstr) {
 
 // remove n bytes from an arbitrary place in an existing buffer
 void buffer_remove_n(Buffer *self, size_t at, size_t count) {
-  if (self->length < at + count) {
-    PANIC("index out of bounds on remove");
-  }
+  rash_assert(self->length < at + count, "index out of bounds on remove");
 
   size_t new_length = self->length - count;
 
@@ -170,9 +168,7 @@ void buffer_grow(Buffer *self, size_t grow_to) {
 
   void *ptr = realloc(self->data, self->_capacity);
 
-  if (ptr == NULL) {
-    PANIC("realloc failed\n");
-  }
+  rash_assert(ptr == NULL, "realloc failed\n");
 
   self->data = ptr;
 }

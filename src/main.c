@@ -15,6 +15,7 @@
 #include "lib/vector.h"
 #include "line_reader/line_reader.h"
 #include "rashrc.h"
+#include "shell_vars.h"
 #include "shlvl.h"
 #include "strings/version.h"
 
@@ -35,6 +36,7 @@ static const char *const HELP_STRING =
 int main(int argc, char **argv) {
   trie_init();
   set_shlvl();
+  var_init();
 
   // this can happen if argv is not populated in a call to execve
   if (argc == 0) {
@@ -97,7 +99,7 @@ int main(int argc, char **argv) {
       }
     }
 
-    int status = repl_once(command.data);
+    int status = repl_once(&command);
     VECTOR_DESTROY(command);
 
     return status;

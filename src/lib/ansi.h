@@ -45,8 +45,8 @@
 #define ANSI_DELETE_CHAR "\033[P"
 
 // save current cursor position to be restored later
-#define ANSI_CURSOR_POS_SAVE "\033[s"
+#define ANSI_CURSOR_SAVE "\033[s"
 // restore cursor position that was previously saved
-#define ANSI_CURSOR_POS_RESTORE "\033[u"
+#define ANSI_CURSOR_RESTORE "\033[u"
 
 #endif

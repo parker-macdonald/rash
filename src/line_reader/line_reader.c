@@ -7,10 +7,13 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "lib/ansi.h"
+#include "lib/buffer.h"
 #include "lib/vector.h"
 #include "line_reader/actions.h"
 #include "line_reader/history.h"
 #include "line_reader/prompt.h"
+#include "line_reader/raw_mode.h"
 #include "line_reader/types.h"
 #include "shell_vars.h"
 
@@ -25,9 +28,11 @@ void line_reader_init(void) {
 
   reader.active_buffer = &reader.buffer;
 
-  reader.history_begin = NULL;
-  reader.history_end = NULL;
-  reader.history_curr = NULL;
+  reader.history._capacity = 0;
+  reader.history.length = 0;
+  reader.history.data = NULL;
+  
+  reader.history_curr = 0;
 
   reader.cursor_pos = reader.prompt_length;
 
@@ -39,14 +44,14 @@ void line_reader_destroy(void) {
   history_clear(&reader);
 }
 
-const uint8_t *line_reader_read_void(void *_) {
+const Buffer *line_reader_read_void(void *_) {
   (void)_;
 
   return line_reader_read();
 }
 
-static struct termios oldt = {0};
 static void reader_begin(void) {
+  enable_raw_mode();
   const char *prompt = var_get("PS1");
 
   if (prompt == NULL) {
@@ -61,23 +66,18 @@ static void reader_begin(void) {
   reader.buffer_offset = 0;
   reader.cursor_pos = reader.prompt_length;
 
-  printf("%s", reader.prompt);
+  reader.history_curr = reader.history.length;
+
+  printf("\r" ANSI_CURSOR_SAVE "%s", reader.prompt);
   (void)fflush(stdout);
-
-  struct termios newt = {0};
-
-  tcgetattr(STDIN_FILENO, &oldt);
-  newt = oldt;
-  newt.c_lflag &= ~(unsigned int)(ICANON | ECHO);
-  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 }
 
 static void reader_end(void) {
   free(reader.prompt);
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+  disable_raw_mode();
 }
 
-const uint8_t *line_reader_read(void) {
+const Buffer *line_reader_read(void) {
   reader_begin();
 
   while (1) {
@@ -94,7 +94,7 @@ const uint8_t *line_reader_read(void) {
   }
 
   reader_end();
-  return reader.buffer.data;
+  return &reader.buffer;
 }
 
 void line_reader_hist_print(int count) {

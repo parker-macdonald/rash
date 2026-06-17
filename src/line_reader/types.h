@@ -2,6 +2,7 @@
 #define LINE_READER_TYPES_H
 
 #include <stdint.h>
+
 #include "lib/buffer.h"
 
 struct LineReader;
@@ -9,8 +10,6 @@ struct LineReader;
 typedef int (*Action)(struct LineReader *);
 
 typedef struct {
-  Action form_feed;
-  Action sigint;
   Action arrow_left;
   Action arrow_right;
   Action delete;
@@ -26,29 +25,46 @@ typedef struct {
   Action page_down;
   Action shift_tab;
   Action tab;
-  Action end_of_file;
   Action backspace;
   Action ctrl_backspace;
+  Action ctrl_a;
+  Action ctrl_b;
+  Action ctrl_c;
+  Action ctrl_d;
+  Action ctrl_e;
+  Action ctrl_f;
+  Action ctrl_g;
+  Action ctrl_h;
+  Action ctrl_i;
+  Action ctrl_j;
+  Action ctrl_k;
+  Action ctrl_l;
+  Action ctrl_m;
+  Action ctrl_n;
+  Action ctrl_o;
+  Action ctrl_p;
+  Action ctrl_q;
+  Action ctrl_r;
+  Action ctrl_s;
+  Action ctrl_t;
+  Action ctrl_u;
+  Action ctrl_v;
+  // there is no ctrl+w since it's the same as ctrl+backspace
+  Action ctrl_x;
+  Action ctrl_y;
+  Action ctrl_z;
   int (*insert)(struct LineReader *, uint8_t);
 } ActionSet;
 
 // a history node is a node in the linked list storing command history.
-typedef struct HistoryNode {
-  struct HistoryNode *p_next;
-  struct HistoryNode *p_prev;
-  // buffer containing a line from history, this buffer is read only, this
-  // buffer is null terminated, and the length does not include the null
-  // terminator
-  Buffer line;
-} HistoryNode;
+typedef VECTOR(Buffer) History;
 
 struct LineReader {
-  // history is a linked list where begin is the oldest this in history, end in
-  // the newest thing in history, and current is where the user is in history
-  // (by pressing up and down).
-  HistoryNode *history_begin;
-  HistoryNode *history_end;
-  HistoryNode *history_curr;
+  // history is a array where the beginning is the oldest this in history, the
+  // end in the newest thing in history, and history_curr is where the user is
+  // in history (by pressing up and down).
+  History history;
+  size_t history_curr;
 
   ActionSet acts;
 
