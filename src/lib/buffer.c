@@ -53,7 +53,7 @@ void buffer_append_byte(Buffer *self, uint8_t byte) {
 void buffer_append_ptr(Buffer *self, const void *data, size_t length) {
   size_t new_length = self->length + length;
 
-  buffer_grow(self, length);
+  buffer_grow(self, new_length);
 
   memcpy(self->data + self->length, data, length);
 
