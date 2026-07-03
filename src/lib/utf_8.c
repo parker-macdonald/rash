@@ -28,7 +28,7 @@ size_t utf8_prev_codepoint(const Buffer *buffer, size_t buffer_offset) {
   buffer_offset--;
 
   // true until we've reached the start of the utf-8 char
-  while (is_continuation_byte_utf8(buffer->data[buffer_offset])) {
+  while (is_continuation_byte_utf8(buffer->u8_ptr[buffer_offset])) {
     // if we've reached the start this is malformed utf-8, just treat the bad
     // character as a byte. also, char size should not be four in this loop,
     // if it is the data is malformed, again just treat the bad character as
@@ -44,7 +44,7 @@ size_t utf8_prev_codepoint(const Buffer *buffer, size_t buffer_offset) {
   // checks to make sure the starting utf-8 byte we found is valid, if it
   // isn't, the data is malformed and tread the initial bad character as a
   // byte.
-  if (count_leading_ones(buffer->data[buffer_offset]) != char_size) {
+  if (count_leading_ones(buffer->u8_ptr[buffer_offset]) != char_size) {
     return start - 1;
   }
 
@@ -57,7 +57,7 @@ size_t utf8_codepoint_size(const Buffer *buffer, size_t buffer_offset) {
   }
 
   size_t start = buffer_offset;
-  size_t char_size = (size_t)count_leading_ones(buffer->data[buffer_offset]);
+  size_t char_size = (size_t)count_leading_ones(buffer->u8_ptr[buffer_offset]);
 
   // if char_size is has a bad number of leading zeros, treat the character as
   // a byte
@@ -80,7 +80,7 @@ size_t utf8_codepoint_size(const Buffer *buffer, size_t buffer_offset) {
     // checks if the continue sequence exists in the next character, if it
     // doesn't this utf-8 is malformed and we're treating the character as a
     // byte
-    if (!is_continuation_byte_utf8(buffer->data[buffer_offset])) {
+    if (!is_continuation_byte_utf8(buffer->u8_ptr[buffer_offset])) {
       return 1;
     }
   }

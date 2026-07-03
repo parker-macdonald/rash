@@ -37,7 +37,7 @@ void history_print(LineReader *reader, int count) {
         "%5zu  %.*s\n",
         i + 1,
         (int)reader->history.data[i].length,
-        reader->history.data[i].data
+        reader->history.data[i].char_ptr
     );
   }
 }

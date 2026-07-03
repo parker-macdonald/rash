@@ -9,7 +9,6 @@
 
 #include "lib/ansi.h"
 #include "lib/buffer.h"
-#include "lib/vector.h"
 #include "line_reader/actions.h"
 #include "line_reader/history.h"
 #include "line_reader/prompt.h"
@@ -22,7 +21,7 @@ static LineReader reader;
 void line_reader_init(void) {
   reader.buffer._capacity = 0;
   reader.buffer.length = 0;
-  reader.buffer.data = 0;
+  reader.buffer.u8_ptr = NULL;
 
   reader.buffer_offset = 0;
 
@@ -40,7 +39,7 @@ void line_reader_init(void) {
 }
 
 void line_reader_destroy(void) {
-  VECTOR_DESTROY(reader.buffer);
+  buffer_destroy(&reader.buffer);
   history_clear(&reader);
 }
 
@@ -61,7 +60,7 @@ static void reader_begin(void) {
     reader.prompt_length = get_prompt(&reader.prompt, prompt);
   }
 
-  VECTOR_INIT(reader.buffer);
+  reader.buffer = buffer_create(16);
   reader.active_buffer = &reader.buffer;
   reader.buffer_offset = 0;
   reader.cursor_pos = reader.prompt_length;

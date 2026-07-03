@@ -16,13 +16,14 @@
 #include "execute.h"
 #include "glob.h"
 #include "lex.h"
+#include "lib/buffer.h"
+#include "lib/cstrlist.h"
 #include "lib/error.h"
-#include "lib/string.h"
 #include "lib/vector.h"
 #include "shell_vars.h"
 
 #define READ_ARG                                                               \
-  while (tokens[i].type != END_ARG)                                            \
+  while (tokens[i].type != TK_END_ARG)                                         \
   i++
 
 static bool bad_syntax(const Token *const tokens) {
@@ -35,13 +36,13 @@ static bool bad_syntax(const Token *const tokens) {
   int stderr_count = 0;
   int stdin_count = 0;
 
-  for (size_t i = 1; tokens[i].type != END; i++) {
+  for (size_t i = 1; tokens[i].type != TK_END; i++) {
     if (IS_ARGUMENT_TOKENS(tokens[i].type)) {
       READ_ARG;
       continue;
     }
 
-    if (tokens[i].type == STDIN_REDIR) {
+    if (tokens[i].type == TK_STDIN_REDIR) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
         error_f("rash: expected filename after ‘<’.\n");
@@ -52,7 +53,7 @@ static bool bad_syntax(const Token *const tokens) {
       stdin_count++;
     }
 
-    if (tokens[i].type == STDIN_REDIR_STRING) {
+    if (tokens[i].type == TK_STDIN_REDIR_STRING) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
         error_f("rash: expected string after ‘<<<’.\n");
@@ -63,7 +64,7 @@ static bool bad_syntax(const Token *const tokens) {
       stdin_count++;
     }
 
-    if (tokens[i].type == STDOUT_REDIR) {
+    if (tokens[i].type == TK_STDOUT_REDIR) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
         error_f("rash: expected filename after ‘>’.\n");
@@ -74,7 +75,7 @@ static bool bad_syntax(const Token *const tokens) {
       stdout_count++;
     }
 
-    if (tokens[i].type == STDOUT_REDIR_APPEND) {
+    if (tokens[i].type == TK_STDOUT_REDIR_APPEND) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
         error_f("rash: expected filename after ‘>>’.\n");
@@ -85,7 +86,7 @@ static bool bad_syntax(const Token *const tokens) {
       stdout_count++;
     }
 
-    if (tokens[i].type == STDERR_REDIR) {
+    if (tokens[i].type == TK_STDERR_REDIR) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
         error_f("rash: expected filename after ‘2>’.\n");
@@ -96,7 +97,7 @@ static bool bad_syntax(const Token *const tokens) {
       stderr_count++;
     }
 
-    if (tokens[i].type == STDERR_REDIR_APPEND) {
+    if (tokens[i].type == TK_STDERR_REDIR_APPEND) {
       i++;
       if (!IS_ARGUMENT_TOKENS(tokens[i].type)) {
         error_f("rash: expected filename after ‘2>>’.\n");
@@ -107,13 +108,13 @@ static bool bad_syntax(const Token *const tokens) {
       stderr_count++;
     }
 
-    if (tokens[i].type == PIPE) {
+    if (tokens[i].type == TK_PIPE) {
       if (!IS_ARGUMENT_TOKENS(tokens[i + 1].type)) {
         error_f("rash: expected command after ‘|’.\n");
         return true;
       }
 
-      if (tokens[i - 1].type != END_ARG) {
+      if (tokens[i - 1].type != TK_END_ARG) {
         error_f("rash: bad placement of ‘|’.\n");
         return true;
       }
@@ -136,7 +137,7 @@ static bool bad_syntax(const Token *const tokens) {
       return true;
     }
 
-    if (tokens[i].type == PIPE) {
+    if (tokens[i].type == TK_PIPE) {
       stdout_count = 0;
       stdin_count = 1;
       stderr_count = 0;
@@ -144,13 +145,13 @@ static bool bad_syntax(const Token *const tokens) {
       i++;
     }
 
-    if (tokens[i].type == LOGICAL_OR) {
+    if (tokens[i].type == TK_LOGICAL_OR) {
       if (!IS_ARGUMENT_TOKENS(tokens[i + 1].type)) {
         error_f("rash: expected command after ‘||’.\n");
         return true;
       }
 
-      if (tokens[i - 1].type != END_ARG) {
+      if (tokens[i - 1].type != TK_END_ARG) {
         error_f("rash: bad placement of ‘||’.\n");
         return true;
       }
@@ -160,13 +161,13 @@ static bool bad_syntax(const Token *const tokens) {
       stderr_count = 0;
     }
 
-    if (tokens[i].type == LOGICAL_AND) {
+    if (tokens[i].type == TK_LOGICAL_AND) {
       if (!IS_ARGUMENT_TOKENS(tokens[i + 1].type)) {
         error_f("rash: expected command after ‘&&’.\n");
         return true;
       }
 
-      if (tokens[i - 1].type != END_ARG) {
+      if (tokens[i - 1].type != TK_END_ARG) {
         error_f("rash: bad placement of ‘&&’.\n");
         return true;
       }
@@ -176,8 +177,8 @@ static bool bad_syntax(const Token *const tokens) {
       stderr_count = 0;
     }
 
-    if (tokens[i].type == SEMI) {
-      if (tokens[i - 1].type != END_ARG) {
+    if (tokens[i].type == TK_SEMI) {
+      if (tokens[i - 1].type != TK_END_ARG) {
         error_f("rash: bad placement of ‘;’.\n");
         return true;
       }
@@ -187,8 +188,8 @@ static bool bad_syntax(const Token *const tokens) {
       stderr_count = 0;
     }
 
-    if (tokens[i].type == AMP) {
-      if (tokens[i - 1].type != END_ARG) {
+    if (tokens[i].type == TK_AMP) {
+      if (tokens[i - 1].type != TK_END_ARG) {
         error_f("rash: bad placement of ‘&’.\n");
         return true;
       }
@@ -210,37 +211,34 @@ static void set_exit_code_var(int code) {
 }
 
 static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
-  String buffer;
-  VECTOR_INIT(buffer);
+  Buffer buffer = buffer_create(16);
 
   for (;; (*tokens)++) {
-    if ((*tokens)->type == STRING) {
-      string_append(&buffer, (char *)((*tokens)->data));
+    if ((*tokens)->type == TK_STRING) {
+      buffer_append_cstr(&buffer, (char *)((*tokens)->data));
 
       continue;
     }
 
-    if ((*tokens)->type == ENV_EXPANSION) {
+    if ((*tokens)->type == TK_ENV_EXPANSION) {
       const char *value = getenv((char *)(*tokens)->data);
 
       if (value == NULL) {
-        error_f(
-            "rash: environment variable ‘%s’ does not exist.\n",
-            (char *)(*tokens)->data
-        );
+        error_f("rash: environment variable ‘%s’ does not exist.\n",
+                (char *)(*tokens)->data);
         goto error;
       }
 
-      string_append(&buffer, value);
+      buffer_append_cstr(&buffer, value);
 
       continue;
     }
 
-    if ((*tokens)->type == TILDE) {
+    if ((*tokens)->type == TK_TILDE) {
       if (((char *)(*tokens)->data)[0] == '\0') {
         char *home = getenv("HOME");
         if (home != NULL) {
-          string_append(&buffer, home);
+          buffer_append_cstr(&buffer, home);
           continue;
         }
         error_f("cannot expand ‘~’, HOME is not set.\n");
@@ -253,27 +251,25 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
         goto error;
       }
 
-      string_append(&buffer, pw->pw_dir);
+      buffer_append_cstr(&buffer, pw->pw_dir);
       continue;
     }
 
-    if ((*tokens)->type == VAR_EXPANSION) {
+    if ((*tokens)->type == TK_VAR_EXPANSION) {
       const char *value = var_get((char *)(*tokens)->data);
 
       if (value == NULL) {
-        error_f(
-            "rash: shell variable ‘%s’ does not exist.\n",
-            (char *)(*tokens)->data
-        );
+        error_f("rash: shell variable ‘%s’ does not exist.\n",
+                (char *)(*tokens)->data);
         goto error;
       }
 
-      string_append(&buffer, value);
+      buffer_append_cstr(&buffer, value);
 
       continue;
     }
 
-    if ((*tokens)->type == SUBSHELL) {
+    if ((*tokens)->type == TK_SUBSHELL) {
       char *argv[4] = {argv0, "-c", (*tokens)->data, NULL};
 
       int null_fd = open("/dev/null", O_RDWR);
@@ -305,13 +301,11 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
         goto error;
       }
 
-      ExecutionContext ec = {
-          .argv = argv,
-          .flags = EC_NO_WAIT,
-          .stderr_fd = null_fd,
-          .stdin_fd = null_fd2,
-          .stdout_fd = fds[1]
-      };
+      ExecutionContext ec = {.argv = argv,
+                             .flags = EC_NO_WAIT,
+                             .stderr_fd = null_fd,
+                             .stdin_fd = null_fd2,
+                             .stdout_fd = fds[1]};
 
       pid_t pid = execute(ec);
 
@@ -319,7 +313,7 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
         goto error;
       }
 
-      char read_bytes[512];
+      uint8_t read_bytes[512];
       ssize_t nread;
 
       do {
@@ -335,7 +329,7 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
 
         for (ssize_t i = 0; i < nread; i++) {
           if (!iscntrl((int)read_bytes[i])) {
-            VECTOR_PUSH(buffer, read_bytes[i]);
+            buffer_append_byte(&buffer, read_bytes[i]);
           }
         }
       } while (nread > 0);
@@ -344,31 +338,29 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
       continue;
     }
 
-    if ((*tokens)->type == GLOB_WILDCARD) {
+    if ((*tokens)->type == TK_GLOB_WILDCARD) {
       // this is a really dumb solution to this problem, but the line reader
       // assures that '\033' never be in the string, so it's not bad unless i
       // forget to strip out '\033' when i implement shell scripts. also if
       // futures globs besides the wildcard are added, this will need to be
       // reworked
-      VECTOR_PUSH(buffer, '\033');
+      buffer_append_byte(&buffer, '\033');
       *needs_globbing = true;
       continue;
     }
 
-    if ((*tokens)->type == END_ARG) {
-      VECTOR_PUSH(buffer, '\0');
-
-      return buffer.data;
+    if ((*tokens)->type == TK_END_ARG) {
+      return buffer_cstr(&buffer);
     }
   }
 
 error:
-  VECTOR_DESTROY(buffer);
+  buffer_destroy(&buffer);
   return NULL;
 }
 
 int evaluate(const Token *tokens) {
-  if (tokens[0].type == END) {
+  if (tokens[0].type == TK_END) {
     return EXIT_SUCCESS;
   }
 
@@ -376,7 +368,7 @@ int evaluate(const Token *tokens) {
     return EXIT_FAILURE;
   }
 
-  StringList argv;
+  CStrList argv;
   VECTOR_INIT(argv);
 
   int last_status = -1;
@@ -419,7 +411,7 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == STDIN_REDIR) {
+    if (tokens->type == TK_STDIN_REDIR) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
@@ -450,7 +442,7 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == STDIN_REDIR_STRING) {
+    if (tokens->type == TK_STDIN_REDIR_STRING) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
@@ -471,8 +463,7 @@ int evaluate(const Token *tokens) {
       }
       if (needs_globbing) {
         error_f(
-            "rash: expected string after ‘<<<’, but found glob expression.\n"
-        );
+            "rash: expected string after ‘<<<’, but found glob expression.\n");
         free(str);
         goto error;
       }
@@ -497,7 +488,7 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == STDOUT_REDIR) {
+    if (tokens->type == TK_STDOUT_REDIR) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
@@ -529,7 +520,7 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == STDOUT_REDIR_APPEND) {
+    if (tokens->type == TK_STDOUT_REDIR_APPEND) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
@@ -561,7 +552,7 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == STDERR_REDIR) {
+    if (tokens->type == TK_STDERR_REDIR) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
@@ -593,7 +584,7 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == STDERR_REDIR_APPEND) {
+    if (tokens->type == TK_STDERR_REDIR_APPEND) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
@@ -625,7 +616,7 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == PIPE) {
+    if (tokens->type == TK_PIPE) {
       VECTOR_PUSH(argv, NULL);
 
       int fds[2];
@@ -649,7 +640,7 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == AMP) {
+    if (tokens->type == TK_AMP) {
       ec.flags = EC_BACKGROUND_JOB;
       continue;
     }
@@ -674,9 +665,9 @@ int evaluate(const Token *tokens) {
       VECTOR_CLEAR(wait_for_me);
     }
 
-    if (tokens->type == LOGICAL_AND) {
+    if (tokens->type == TK_LOGICAL_AND) {
       if (last_status != 0) {
-        while ((tokens + 1)->type == END_ARG) {
+        while ((tokens + 1)->type == TK_END_ARG) {
           tokens++;
         }
       }
@@ -684,9 +675,9 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == LOGICAL_OR) {
+    if (tokens->type == TK_LOGICAL_OR) {
       if (last_status == 0) {
-        while ((tokens + 1)->type == END_ARG) {
+        while ((tokens + 1)->type == TK_END_ARG) {
           tokens++;
         }
       }
@@ -694,11 +685,11 @@ int evaluate(const Token *tokens) {
       continue;
     }
 
-    if (tokens->type == SEMI) {
+    if (tokens->type == TK_SEMI) {
       continue;
     }
 
-    if (tokens->type == END) {
+    if (tokens->type == TK_END) {
       break;
     }
   }

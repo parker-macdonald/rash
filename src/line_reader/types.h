@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "lib/buffer.h"
+#include "lib/vector.h"
 
 struct LineReader;
 

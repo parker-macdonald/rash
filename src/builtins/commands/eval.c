@@ -4,7 +4,6 @@
 #include "builtins/builtins.h"
 #include "interpreter/repl.h"
 #include "lib/buffer.h"
-#include "lib/vector.h"
 
 extern char **environ;
 
@@ -18,8 +17,7 @@ int builtin_eval(char **argv) {
     return 0;
   }
 
-  Buffer command;
-  VECTOR_INIT(command);
+  Buffer command = buffer_create(16);
 
   argv++;
   while (1) {
@@ -28,12 +26,12 @@ int builtin_eval(char **argv) {
     if (*argv == NULL) {
       break;
     }
-    VECTOR_PUSH(command, ' ');
+    buffer_append_byte(&command, ' ');
   }
 
   int status = repl_once(&command);
 
-  VECTOR_DESTROY(command);
+  buffer_destroy(&command);
 
   return status;
 }

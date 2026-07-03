@@ -12,7 +12,6 @@
 #include "jobs.h"
 #include "lib/buffer.h"
 #include "lib/error.h"
-#include "lib/vector.h"
 #include "line_reader/line_reader.h"
 #include "rashrc.h"
 #include "shell_vars.h"
@@ -90,17 +89,16 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    Buffer command;
-    VECTOR_INIT(command);
+    Buffer command = buffer_create(16);
 
     for (size_t i = 0; argv[2][i] != '\0'; i++) {
       if (!iscntrl((int)argv[2][i])) {
-        VECTOR_PUSH(command, (uint8_t)argv[2][i]);
+        buffer_append_char(&command, argv[2][i]);
       }
     }
 
     int status = repl_once(&command);
-    VECTOR_DESTROY(command);
+    buffer_destroy(&command);
 
     return status;
   }

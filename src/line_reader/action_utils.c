@@ -65,7 +65,7 @@ void next_word(
 
   offset = utf8_next_codepoint(buffer, offset);
 
-  while (offset <= buffer->length - 1 && buffer->data[offset] != ' ') {
+  while (offset <= buffer->length - 1 && buffer->u8_ptr[offset] != ' ') {
     offset = utf8_next_codepoint(buffer, offset);
     count++;
   }
@@ -90,7 +90,7 @@ void prev_word(
 
   offset = utf8_prev_codepoint(buffer, offset);
 
-  while (offset > 0 && buffer->data[offset - 1] != ' ') {
+  while (offset > 0 && buffer->u8_ptr[offset - 1] != ' ') {
     offset = utf8_prev_codepoint(buffer, offset);
     count++;
   }

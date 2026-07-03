@@ -22,7 +22,7 @@ int repl(const Buffer *(*reader)(void *), void *reader_data) {
     Buffer null_terminated_line = buffer_clone(line);
     buffer_append_byte(&null_terminated_line, '\0');
 
-    Token *tokens = lex(null_terminated_line.data);
+    Token *tokens = lex(null_terminated_line.u8_ptr);
 
     buffer_destroy(&null_terminated_line);
 
@@ -44,7 +44,7 @@ int repl_once(const Buffer *line) {
   Buffer null_terminated_line = buffer_clone(line);
   buffer_append_byte(&null_terminated_line, '\0');
 
-  Token *tokens = lex(null_terminated_line.data);
+  Token *tokens = lex(null_terminated_line.u8_ptr);
 
   buffer_destroy(&null_terminated_line);
 

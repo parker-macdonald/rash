@@ -21,11 +21,11 @@ enum lexer_state {
   do {                                                                         \
     if (buffer.length != 0) {                                                  \
       VECTOR_PUSH(buffer, '\0');                                               \
-      VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));     \
+      VECTOR_PUSH(tokens, ((Token){.type = TK_STRING, .data = buffer.data}));     \
       VECTOR_INIT(buffer);                                                     \
     }                                                                          \
     if (has_arguments) {                                                       \
-      VECTOR_PUSH(tokens, ((Token){.type = END_ARG}));                         \
+      VECTOR_PUSH(tokens, ((Token){.type = TK_END_ARG}));                         \
       has_arguments = false;                                                   \
     }                                                                          \
     VECTOR_PUSH(tokens, (Token){.type = (token_type)});                        \
@@ -69,12 +69,12 @@ Token *lex(const uint8_t *source) {
           state = WHITESPACE;
           if (buffer.length != 0) {
             VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
+            VECTOR_PUSH(tokens, ((Token){.type = TK_STRING, .data = buffer.data}));
 
             VECTOR_INIT(buffer);
           }
           if (has_arguments) {
-            VECTOR_PUSH(tokens, ((Token){.type = END_ARG}));
+            VECTOR_PUSH(tokens, ((Token){.type = TK_END_ARG}));
             has_arguments = false;
           }
 
@@ -84,33 +84,33 @@ Token *lex(const uint8_t *source) {
         // stdin redirection
         if (curr == '<') {
           if (source[i + 1] == '<' && source[i + 2] == '<') {
-            ADD_NONSTR_TOKEN(STDIN_REDIR_STRING);
+            ADD_NONSTR_TOKEN(TK_STDIN_REDIR_STRING);
             i += 2;
             break;
           }
-          ADD_NONSTR_TOKEN(STDIN_REDIR);
+          ADD_NONSTR_TOKEN(TK_STDIN_REDIR);
           break;
         }
 
         // stdout redirection
         if (curr == '>') {
           if (source[i + 1] == '>') {
-            ADD_NONSTR_TOKEN(STDOUT_REDIR_APPEND);
+            ADD_NONSTR_TOKEN(TK_STDOUT_REDIR_APPEND);
             i++;
             break;
           }
-          ADD_NONSTR_TOKEN(STDOUT_REDIR);
+          ADD_NONSTR_TOKEN(TK_STDOUT_REDIR);
           break;
         }
 
         if (curr == '2') {
           if (source[i + 1] == '>') {
             if (source[i + 2] == '>') {
-              ADD_NONSTR_TOKEN(STDERR_REDIR_APPEND);
+              ADD_NONSTR_TOKEN(TK_STDERR_REDIR_APPEND);
               i += 2;
               break;
             }
-            ADD_NONSTR_TOKEN(STDERR_REDIR);
+            ADD_NONSTR_TOKEN(TK_STDERR_REDIR);
             i++;
             continue;
           }
@@ -118,26 +118,26 @@ Token *lex(const uint8_t *source) {
 
         if (curr == '|') {
           if (source[i + 1] == '|') {
-            ADD_NONSTR_TOKEN(LOGICAL_OR);
+            ADD_NONSTR_TOKEN(TK_LOGICAL_OR);
             i++;
             break;
           }
-          ADD_NONSTR_TOKEN(PIPE);
+          ADD_NONSTR_TOKEN(TK_PIPE);
           break;
         }
 
         if (curr == ';') {
-          ADD_NONSTR_TOKEN(SEMI);
+          ADD_NONSTR_TOKEN(TK_SEMI);
           break;
         }
 
         if (curr == '&') {
           if (source[i + 1] == '&') {
-            ADD_NONSTR_TOKEN(LOGICAL_AND);
+            ADD_NONSTR_TOKEN(TK_LOGICAL_AND);
             i++;
             break;
           }
-          ADD_NONSTR_TOKEN(AMP);
+          ADD_NONSTR_TOKEN(TK_AMP);
           break;
         }
 
@@ -180,13 +180,13 @@ Token *lex(const uint8_t *source) {
             if (buffer.length != 0) {
               VECTOR_PUSH(buffer, '\0');
               VECTOR_PUSH(
-                  tokens, ((Token){.type = STRING, .data = buffer.data})
+                  tokens, ((Token){.type = TK_STRING, .data = buffer.data})
               );
               VECTOR_INIT(buffer);
             }
 
             VECTOR_PUSH(
-                tokens, ((Token){.type = SUBSHELL, .data = subshell_cmd})
+                tokens, ((Token){.type = TK_SUBSHELL, .data = subshell_cmd})
             );
             break;
           }
@@ -223,13 +223,13 @@ Token *lex(const uint8_t *source) {
             if (buffer.length != 0) {
               VECTOR_PUSH(buffer, '\0');
               VECTOR_PUSH(
-                  tokens, ((Token){.type = STRING, .data = buffer.data})
+                  tokens, ((Token){.type = TK_STRING, .data = buffer.data})
               );
               VECTOR_INIT(buffer);
             }
 
             VECTOR_PUSH(
-                tokens, ((Token){.type = ENV_EXPANSION, .data = env_name})
+                tokens, ((Token){.type = TK_ENV_EXPANSION, .data = env_name})
             );
             break;
           }
@@ -259,12 +259,12 @@ Token *lex(const uint8_t *source) {
 
           if (buffer.length != 0) {
             VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
+            VECTOR_PUSH(tokens, ((Token){.type = TK_STRING, .data = buffer.data}));
             VECTOR_INIT(buffer);
           }
 
           VECTOR_PUSH(
-              tokens, ((Token){.type = ENV_EXPANSION, .data = env_name})
+              tokens, ((Token){.type = TK_ENV_EXPANSION, .data = env_name})
           );
           break;
         }
@@ -300,12 +300,12 @@ Token *lex(const uint8_t *source) {
 
           if (buffer.length != 0) {
             VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
+            VECTOR_PUSH(tokens, ((Token){.type = TK_STRING, .data = buffer.data}));
             VECTOR_INIT(buffer);
           }
 
           VECTOR_PUSH(
-              tokens, ((Token){.type = VAR_EXPANSION, .data = var_name})
+              tokens, ((Token){.type = TK_VAR_EXPANSION, .data = var_name})
           );
           break;
         }
@@ -314,10 +314,10 @@ Token *lex(const uint8_t *source) {
           has_arguments = true;
           if (buffer.length != 0) {
             VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
+            VECTOR_PUSH(tokens, ((Token){.type = TK_STRING, .data = buffer.data}));
             VECTOR_INIT(buffer);
           }
-          VECTOR_PUSH(tokens, ((Token){.type = GLOB_WILDCARD}));
+          VECTOR_PUSH(tokens, ((Token){.type = TK_GLOB_WILDCARD}));
 
           break;
         }
@@ -349,7 +349,7 @@ Token *lex(const uint8_t *source) {
           memcpy(user, user_start, user_len);
           user[user_len] = '\0';
 
-          VECTOR_PUSH(tokens, ((Token){.type = TILDE, .data = user}));
+          VECTOR_PUSH(tokens, ((Token){.type = TK_TILDE, .data = user}));
           i--;
           state = DEFAULT;
 
@@ -406,16 +406,16 @@ success:
 
   if (buffer.length != 0) {
     VECTOR_PUSH(buffer, '\0');
-    VECTOR_PUSH(tokens, ((Token){.type = STRING, .data = buffer.data}));
+    VECTOR_PUSH(tokens, ((Token){.type = TK_STRING, .data = buffer.data}));
   } else {
     VECTOR_DESTROY(buffer);
   }
 
   if (has_arguments) {
-    VECTOR_PUSH(tokens, ((Token){.type = END_ARG}));
+    VECTOR_PUSH(tokens, ((Token){.type = TK_END_ARG}));
   }
 
-  VECTOR_PUSH(tokens, (Token){.type = END});
+  VECTOR_PUSH(tokens, (Token){.type = TK_END});
 
   return tokens.data;
 
@@ -426,9 +426,9 @@ error:
   // tokens does not have an END token to mark the end of the array (ask me how
   // i know).
   for (size_t i = 0; i < tokens.length; i++) {
-    if (tokens.data[i].type == STRING || tokens.data[i].type == ENV_EXPANSION ||
-        tokens.data[i].type == VAR_EXPANSION || tokens.data[i].type == TILDE ||
-        tokens.data[i].type == SUBSHELL) {
+    if (tokens.data[i].type == TK_STRING || tokens.data[i].type == TK_ENV_EXPANSION ||
+        tokens.data[i].type == TK_VAR_EXPANSION || tokens.data[i].type == TK_TILDE ||
+        tokens.data[i].type == TK_SUBSHELL) {
       free(tokens.data[i].data);
     }
   }
@@ -439,10 +439,10 @@ error:
 }
 
 void free_tokens(Token **tokens) {
-  for (size_t i = 0; (*tokens)[i].type != END; i++) {
-    if ((*tokens)[i].type == STRING || (*tokens)[i].type == ENV_EXPANSION ||
-        (*tokens)[i].type == VAR_EXPANSION || (*tokens)[i].type == TILDE ||
-        (*tokens)[i].type == SUBSHELL) {
+  for (size_t i = 0; (*tokens)[i].type != TK_END; i++) {
+    if ((*tokens)[i].type == TK_STRING || (*tokens)[i].type == TK_ENV_EXPANSION ||
+        (*tokens)[i].type == TK_VAR_EXPANSION || (*tokens)[i].type == TK_TILDE ||
+        (*tokens)[i].type == TK_SUBSHELL) {
       free((*tokens)[i].data);
     }
   }

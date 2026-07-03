@@ -12,7 +12,7 @@ void draw_entire_state(const LineReader *reader) {
       ANSI_CURSOR_RESTORE ANSI_REMOVE_BELOW_CURSOR "%s%.*s ",
       reader->prompt,
       (int)reader->active_buffer->length,
-      (char *)reader->active_buffer->data
+      (char *)reader->active_buffer->u8_ptr
   );
 
   draw_cursor_at(reader, reader->cursor_pos);

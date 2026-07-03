@@ -4,19 +4,20 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "lib/buffer.h"
 #include "lib/vector.h"
 
 void file_reader_init(FileReader *file, FILE *fp) {
   file->file = fp;
   file->eof = false;
-  VECTOR_INIT(file->line);
+  file->line = buffer_create(16);
 }
 
 const Buffer *file_reader_read(FileReader *file) {
   VECTOR_CLEAR(file->line);
 
   if (file->eof) {
-    VECTOR_DESTROY(file->line);
+    buffer_destroy(&file->line);
     if (fclose(file->file) == EOF) {
       perror("fclose");
     }
@@ -36,7 +37,7 @@ const Buffer *file_reader_read(FileReader *file) {
 
     if (c == EOF) {
       if (file->line.length == 0) {
-        VECTOR_DESTROY(file->line);
+        buffer_destroy(&file->line);
         if (fclose(file->file) == EOF) {
           perror("fclose");
         }
@@ -52,7 +53,7 @@ const Buffer *file_reader_read(FileReader *file) {
       continue;
     }
 
-    VECTOR_PUSH(file->line, (uint8_t)c);
+    buffer_append_byte(&file->line, (uint8_t)c);
   }
 }
 

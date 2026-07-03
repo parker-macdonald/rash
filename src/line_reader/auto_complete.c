@@ -15,25 +15,24 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifndef _DIRENT_HAVE_D_TYPE
+  #include <sys/stat.h>
+#endif
+
 #include "lib/ansi.h"
 #include "lib/attrib.h"
+#include "lib/cstrlist.h"
 #include "lib/sort.h"
 #include "lib/utf_8.h"
 #include "line_reader/action_utils.h"
 #include "line_reader/draw.h"
 #include "line_reader/types.h"
-
-#ifndef _DIRENT_HAVE_D_TYPE
-  #include <sys/stat.h>
-#endif
-
 #include "builtins/find_builtin.h"
 #include "lib/buffer.h"
-#include "lib/string.h"
 #include "lib/vector.h"
 
 static void
-get_file_matches(StringList *matches, const char *word, size_t word_len) {
+get_file_matches(CStrList *matches, const char *word, size_t word_len) {
   DIR *dir;
   const char *basename;
   size_t basename_len;
@@ -126,7 +125,7 @@ get_file_matches(StringList *matches, const char *word, size_t word_len) {
 }
 
 static void
-get_command_matches(StringList *matches, const char *word, size_t word_len) {
+get_command_matches(CStrList *matches, const char *word, size_t word_len) {
   find_matching_builtins(word, word_len, matches);
   const char *path = getenv("PATH");
 
@@ -134,16 +133,20 @@ get_command_matches(StringList *matches, const char *word, size_t word_len) {
     return;
   }
 
-  String file_path;
-  VECTOR_INIT(file_path);
+  Buffer file_path = buffer_create(16);
 
   for (size_t i = 0; path[i] != '\0'; i++) {
     if (path[i] != ':' && path[i] != '\0') {
-      VECTOR_PUSH(file_path, path[i]);
+      buffer_append_char(&file_path, path[i]);
       continue;
     }
-    VECTOR_PUSH(file_path, '\0');
-    DIR *dir = opendir(file_path.data);
+
+    DIR *dir;
+ 
+    {
+      char *cstr = buffer_cstr(&file_path);
+      dir = opendir(cstr);
+    }
 
     if (dir == NULL) {
       continue;
@@ -178,25 +181,25 @@ get_command_matches(StringList *matches, const char *word, size_t word_len) {
 
     closedir(dir);
 
-    VECTOR_CLEAR(file_path);
+    buffer_clear(&file_path);
   }
 
-  VECTOR_DESTROY(file_path);
+  buffer_destroy(&file_path);
 }
 
 ATTRIB_UNUSED
 static size_t
-get_matches(StringList *matches, Buffer *line, size_t cursor_pos) {
+get_matches(CStrList *matches, Buffer *line, size_t cursor_pos) {
   size_t word_start = cursor_pos - 1;
 
   for (; word_start > 0; word_start--) {
-    if (line->data[word_start] == ' ') {
+    if (line->char_ptr[word_start] == ' ') {
       word_start++;
       break;
     }
   }
 
-  char *word = (char *)line->data + word_start;
+  char *word = line->char_ptr + word_start;
   size_t word_len = cursor_pos - word_start;
 
   if (word_len == 0) {
@@ -259,13 +262,13 @@ void auto_complete(LineReader *reader) {
   size_t word_start = reader->buffer_offset - 1;
 
   for (; word_start > 0; word_start--) {
-    if (reader->active_buffer->data[word_start] == ' ') {
+    if (reader->active_buffer->char_ptr[word_start] == ' ') {
       word_start++;
       break;
     }
   }
 
-  char *word = (char *)reader->active_buffer->data + word_start;
+  char *word = (char *)reader->active_buffer->char_ptr + word_start;
   size_t word_len = reader->buffer_offset - word_start;
   size_t bytes_written = 0;
 
@@ -273,7 +276,7 @@ void auto_complete(LineReader *reader) {
     return;
   }
 
-  StringList matches = {0};
+  CStrList matches = {0};
 
   if (word_start == 0 && memchr(word, '/', word_len) == NULL) {
     get_command_matches(&matches, word, word_len);

@@ -4,13 +4,22 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "vector.h"
-
-typedef VECTOR(uint8_t) Buffer;
+typedef struct {
+  size_t _capacity;
+  size_t length;
+  union {
+    uint8_t *u8_ptr;
+    char *char_ptr;
+    void *void_ptr;
+  };
+} Buffer;
 
 /*
  * Helper functions to create a new buffer
  */
+
+// construct a buffer with length 0 and capacty of `capacity`
+Buffer buffer_create(size_t capacity);
 
 // constructs a buffer by copying the data at `data` of length `length` bytes.
 Buffer buffer_from_ptr(const void *data, size_t length);
@@ -30,6 +39,8 @@ void buffer_destroy(Buffer *self);
 
 void buffer_append_byte(Buffer *self, uint8_t byte);
 
+void buffer_append_char(Buffer *self, char character);
+
 void buffer_append_cstr(Buffer *self, const char *cstr);
 
 void buffer_append_ptr(Buffer *self, const void *data, size_t length);
@@ -40,11 +51,12 @@ void buffer_append_ptr(Buffer *self, const void *data, size_t length);
 
 void buffer_insert_byte(Buffer *self, size_t at, uint8_t byte);
 
+void buffer_insert_char(Buffer *self, size_t at, char character);
+
 void buffer_insert_cstr(Buffer *self, size_t at, const char *cstr);
 
-void buffer_insert_ptr(
-    Buffer *self, size_t at, const void *data, size_t length
-);
+void buffer_insert_ptr(Buffer *self, size_t at, const void *data,
+                       size_t length);
 
 /*
  * Extra helper functions
@@ -67,6 +79,17 @@ int buffer_compare(const Buffer *self, const Buffer *other);
 
 // resize the buffer to hold at least `grow_to` bytes. nothing is done if the
 // buffer can already hold `grow_to` bytes
-void buffer_grow(Buffer *self, size_t grow_to);
+void buffer_grow_to(Buffer *self, size_t grow_to);
+
+// resize the buffer to hold at least `self->length + grow_by` bytes. nothing is
+// done if the buffer can already hold `self->length + grow_by` bytes
+void buffer_grow_by(Buffer *self, size_t grow_by);
+
+// modifies `self` by adding a null terminator but the length remains unchanged.
+// this returns a pointer to the buffer's data casted to a `char *`
+char *buffer_cstr(Buffer *self);
+
+// set the length of a buffer to zero
+void buffer_clear(Buffer *self);
 
 #endif

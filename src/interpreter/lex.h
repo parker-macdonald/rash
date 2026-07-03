@@ -4,50 +4,50 @@
 #include <stdint.h>
 
 typedef enum {
-  STRING,
+  TK_STRING,
   // '<' used to redirect stdin from a file
-  STDIN_REDIR,
+  TK_STDIN_REDIR,
   // '<<<' used to redirect stdin from a string
-  STDIN_REDIR_STRING,
+  TK_STDIN_REDIR_STRING,
   // '>' used to redirect stdout to a file, replace file contents
-  STDOUT_REDIR,
+  TK_STDOUT_REDIR,
   // '>>' used to redirect stdout to a file, append to file contents
-  STDOUT_REDIR_APPEND,
+  TK_STDOUT_REDIR_APPEND,
   // '2>' used to redirect stderr to a file, replace file contents
-  STDERR_REDIR,
+  TK_STDERR_REDIR,
   // '2>>' used to redirect stderr to a file, append to file contents
-  STDERR_REDIR_APPEND,
+  TK_STDERR_REDIR_APPEND,
   // '|' used to link one programs stdout to anothers stdin
-  PIPE,
+  TK_PIPE,
   // '*' matches zero or more characters while globbing
-  GLOB_WILDCARD,
+  TK_GLOB_WILDCARD,
   // environment variable to be expanded
-  ENV_EXPANSION,
+  TK_ENV_EXPANSION,
   // subshell i.e. $(example string)
-  SUBSHELL,
+  TK_SUBSHELL,
   // shell variable to be expanded
-  VAR_EXPANSION,
+  TK_VAR_EXPANSION,
   // '~' used for home folder expansion
-  TILDE,
+  TK_TILDE,
   // used to end the current argument
-  END_ARG,
+  TK_END_ARG,
   // ';' used to run two commands sequentially
-  SEMI,
+  TK_SEMI,
   // '&&' used to run two commands sequencially, but only run the second if the
   // first is successful
-  LOGICAL_AND,
+  TK_LOGICAL_AND,
   // '||' used to run two commands sequencially, but only run the second if the
   // first is unsuccessful
-  LOGICAL_OR,
+  TK_LOGICAL_OR,
   // '&' run a program in the background
-  AMP,
+  TK_AMP,
   // end a sequence of tokens
-  END
+  TK_END
 } TokenType;
 
 #define IS_ARGUMENT_TOKENS(x)                                                  \
-  ((x) == STRING || (x) == GLOB_WILDCARD || (x) == ENV_EXPANSION ||            \
-   (x) == VAR_EXPANSION || (x) == TILDE || (x) == SUBSHELL)
+  ((x) == TK_STRING || (x) == TK_GLOB_WILDCARD || (x) == TK_ENV_EXPANSION ||   \
+   (x) == TK_VAR_EXPANSION || (x) == TK_TILDE || (x) == TK_SUBSHELL)
 
 typedef struct {
   TokenType type;

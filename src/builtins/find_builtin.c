@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "builtins.h"
-#include "lib/string.h"
+#include "lib/cstrlist.h"
 #include "lib/vector.h"
 
 #define ALPHABET_SIZE 26
@@ -124,7 +124,7 @@ builtin_t find_builtin(const char *const str) {
 }
 
 void find_matching_builtins(
-    const char *prefix, size_t prefix_len, StringList *vec
+    const char *prefix, size_t prefix_len, CStrList *vec
 ) {
   TrieNode *node = find_node(prefix, prefix_len);
 
