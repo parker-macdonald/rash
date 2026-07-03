@@ -82,6 +82,9 @@ Buffer buffer_slice(const Buffer *self, size_t from, size_t to);
 // similar to strcmp, but with buffers
 int buffer_compare(const Buffer *self, const Buffer *other);
 
+// compare a buffer to a cstr
+int buffer_compare_cstr(const Buffer *self, const char *cstr);
+
 // resize the buffer to hold at least `grow_to` bytes. nothing is done if the
 // buffer can already hold `grow_to` bytes
 void buffer_grow_to(Buffer *self, size_t grow_to);

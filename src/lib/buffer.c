@@ -208,6 +208,17 @@ int buffer_compare(const Buffer *self, const Buffer *other) {
   return 0;
 }
 
+int buffer_compare_cstr(const Buffer *self, const char *cstr) {
+  // TODO: there's a way to do this without copying `cstr`, but i dont want to have to worry about it rn
+  Buffer other = buffer_from_cstr(cstr);
+
+  int saved = buffer_compare(self, &other);
+
+  buffer_destroy(&other);
+
+  return saved;
+}
+
 // resize the buffer to hold at least `grow_to` bytes. nothing is done if the
 // buffer can already hold `grow_to` bytes
 void buffer_grow_to(Buffer *self, size_t grow_to) {
