@@ -97,8 +97,8 @@ int builtin_setvar(char **argv) {
     }
 
     if (strcmp(type, "null") == 0) {
-      if (strcmp(value, "null") == 0) {
-        error_f("setvar: ‘%s’ is not a ‘null’.\n", value);
+      if (strcmp(value, "null") != 0) {
+        error_f("setvar: ‘%s’ is not ‘null’.\n", value);
         return EXIT_FAILURE;
       }
 
