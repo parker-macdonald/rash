@@ -19,7 +19,7 @@ typedef struct {
  * Helper functions to create a new buffer
  */
 
-// construct a buffer with length 0 and capacty of `capacity`
+// construct a buffer with length 0 and capacty of `next_pow_2(capacity)`
 Buffer buffer_create(size_t capacity);
 
 // constructs a buffer by copying the data at `data` of length `length` bytes.
