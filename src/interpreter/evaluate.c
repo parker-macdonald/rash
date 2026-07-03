@@ -21,7 +21,7 @@
 #include "lib/cstrlist.h"
 #include "lib/error.h"
 #include "lib/vector.h"
-#include "shell_vars.h"
+#include "shell_vars/shell_vars.h"
 
 #define READ_ARG                                                               \
   while (tokens[i].type != TK_END_ARG)                                         \

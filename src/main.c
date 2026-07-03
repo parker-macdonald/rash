@@ -14,7 +14,7 @@
 #include "lib/error.h"
 #include "line_reader/line_reader.h"
 #include "rashrc.h"
-#include "shell_vars.h"
+#include "shell_vars/shell_vars.h"
 #include "shlvl.h"
 #include "strings/version.h"
 

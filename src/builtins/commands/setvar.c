@@ -7,7 +7,7 @@
 #include "lib/buffer.h"
 #include "lib/error.h"
 #include "lib/parse.h"
-#include "shell_vars.h"
+#include "shell_vars/shell_vars.h"
 
 static const char *const SETVAR_HELP =
     "Usage: setvar KEY [-t TYPE] VALUE\n"

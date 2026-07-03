@@ -4,6 +4,8 @@
 #include "lib/buffer.h"
 #include "lib/vector.h"
 
+#include <stdbool.h>
+
 typedef enum {
   TK_ADD, // +
   TK_SUB, // -
@@ -40,6 +42,8 @@ typedef struct {
     Buffer identifier;
   };
 } Token;
+
+bool is_binary_op(TokenKind kind);
 
 typedef VECTOR(Token) TokenList;
 
