@@ -1,6 +1,7 @@
 #include "shell_vars.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "lib/buffer.h"

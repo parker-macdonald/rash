@@ -1,5 +1,6 @@
 #include "lib/sys.h"
 
+#include <signal.h>
 #include <unistd.h>
 
 #include "lib/error.h"

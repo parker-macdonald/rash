@@ -134,10 +134,12 @@ printf("%s", string.data); // hi
     (vector).length = 0;                                                       \
     if (capacity != 0) {                                                       \
       (vector).data = malloc(sizeof(*(vector).data) * capacity);               \
-      if ((vector).data == NULL)                                               \
+      if ((vector).data == NULL) {                                             \
         abort();                                                               \
-    } else                                                                     \
+      }                                                                        \
+    } else {                                                                   \
       (vector).data = NULL;                                                    \
+    }                                                                          \
   } while (0)
 
 #define VECTOR_INIT(...)                                                       \

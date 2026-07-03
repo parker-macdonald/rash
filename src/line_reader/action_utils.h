@@ -1,6 +1,8 @@
 #ifndef ACTION_UTILS_H
 #define ACTION_UTILS_H
 
+#include <stddef.h>
+#include <stdint.h>
 #include "lib/buffer.h"
 #include "types.h"
 

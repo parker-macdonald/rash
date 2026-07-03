@@ -12,7 +12,7 @@ const Buffer *line_reader_read(void);
 // wrapper around line_reader_read that just takes a void ptr instead of
 // nothing. this is useful for the repl functions which take a reader function
 // with a void ptr argument.
-const Buffer *line_reader_read_void(void *);
+const Buffer *line_reader_read_void(void *_unused);
 
 void line_reader_hist_print(int count);
 

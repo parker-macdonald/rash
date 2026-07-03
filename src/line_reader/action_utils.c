@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "lib/buffer.h"

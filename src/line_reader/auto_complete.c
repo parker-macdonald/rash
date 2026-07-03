@@ -268,7 +268,7 @@ void auto_complete(LineReader *reader) {
     }
   }
 
-  char *word = (char *)reader->active_buffer->char_ptr + word_start;
+  char *word = reader->active_buffer->char_ptr + word_start;
   size_t word_len = reader->buffer_offset - word_start;
   size_t bytes_written = 0;
 

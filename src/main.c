@@ -18,7 +18,7 @@
 #include "shlvl.h"
 #include "strings/version.h"
 
-bool interactive = 0;
+bool interactive = false;
 
 char *argv0;
 

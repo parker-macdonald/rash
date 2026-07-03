@@ -1,11 +1,8 @@
 #include "line_reader.h"
 
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <termios.h>
-#include <unistd.h>
 
 #include "lib/ansi.h"
 #include "lib/buffer.h"
