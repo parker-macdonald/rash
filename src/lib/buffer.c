@@ -1,7 +1,9 @@
 #include "lib/buffer.h"
 
 #include <assert.h>
+#include <stdarg.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -12,22 +14,22 @@
  * Helper functions to create a new buffer
  */
 
-// construct a buffer with length 0 and capacty of `capacity`
+// construct a buffer with length 0 and capacty of `next_pow_2(capacity)`
 Buffer buffer_create(size_t capacity) {
   Buffer buffer;
 
-  buffer._capacity = capacity;
   buffer.length = 0;
 
-  if (capacity != 0) {
-    buffer.void_ptr = malloc(capacity);
-
-    if (buffer.void_ptr == NULL) {
-      abort();
-    }
-  } else {
+  if (capacity == 0) {
+    buffer._capacity = 0;
     buffer.void_ptr = NULL;
+    return buffer;
   }
+
+  buffer.void_ptr = malloc(capacity);
+  buffer._capacity = capacity;
+
+  rash_panic(buffer.void_ptr == NULL);
 
   return buffer;
 }
@@ -49,6 +51,32 @@ Buffer buffer_from_ptr(const void *data, size_t length) {
 Buffer buffer_from_cstr(const char *cstr) {
   size_t length = strlen(cstr);
   return buffer_from_ptr(cstr, length);
+}
+
+Buffer buffer_from_format(const char *format, ...) {
+  va_list ap;
+  va_start(ap, format);
+
+  va_list ap2;
+  va_copy(ap2, ap);
+  int size = vsnprintf(NULL, 0, format, ap2);
+  va_end(ap2);
+
+  rash_panic(size < 0);
+
+  Buffer buffer;
+
+  // must have space for a null terminator since vsnprintf will unconditionally write one
+  buffer._capacity = next_pow_2((size_t)size + 1);
+  buffer.length = (size_t)size;
+  buffer.void_ptr = malloc(buffer._capacity);
+
+  int new_size = vsnprintf(buffer.char_ptr, (size_t)size + 1, format, ap);
+  va_end(ap);
+
+  rash_panic(size != new_size);
+
+  return buffer;
 }
 
 // clone a buffer, creating a new one referencing a copy of the old ones data.

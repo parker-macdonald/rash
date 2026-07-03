@@ -51,13 +51,14 @@ const Buffer *line_reader_read_void(void *_) {
 
 static void reader_begin(void) {
   enable_raw_mode();
-  const char *prompt = var_get("PS1");
+  char *prompt = var_eval_to_string("PS1");
 
   if (prompt == NULL) {
     reader.prompt_length = 2;
     reader.prompt = strdup("$ ");
   } else {
     reader.prompt_length = get_prompt(&reader.prompt, prompt);
+    free(prompt);
   }
 
   reader.buffer = buffer_create(16);

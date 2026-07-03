@@ -3,25 +3,111 @@
 #include <string.h>
 
 #include "builtins/builtins.h"
+#include "builtins/utils.h"
+#include "lib/buffer.h"
 #include "lib/error.h"
+#include "lib/parse.h"
 #include "shell_vars.h"
 
 static const char *const SETVAR_HELP =
-    "Usage: setvar KEY VALUE\n"
+    "Usage: setvar KEY [-t TYPE] VALUE\n"
     "Set the shell variable KEY equal to VALUE.";
 
 int builtin_setvar(char **argv) {
-  if (argv[1] == NULL || argv[2] == NULL) {
-    error_f("%s\n", SETVAR_HELP);
-    return EXIT_FAILURE;
-  }
+  int argc = count_argv(argv);
 
   if (strcmp(argv[1], "--help") == 0) {
     puts(SETVAR_HELP);
     return EXIT_SUCCESS;
   }
 
-  var_set(argv[1], argv[2]);
+  if (argc == 3) {
+    char *key = argv[1];
+    char *value = argv[2];
 
-  return EXIT_SUCCESS;
+    if (strcmp(value, "null") == 0) {
+      ShellVar var = {.kind = SV_NULL};
+      var_set(key, &var);
+      return EXIT_SUCCESS;
+    }
+
+    if (strcmp(value, "true") == 0) {
+      ShellVar var = {.kind = SV_BOOLEAN, .boolean = true};
+      var_set(key, &var);
+      return EXIT_SUCCESS;
+    }
+
+    if (strcmp(value, "false") == 0) {
+      ShellVar var = {.kind = SV_BOOLEAN, .boolean = false};
+      var_set(key, &var);
+      return EXIT_SUCCESS;
+    }
+
+    OptionDouble num = parse_double(value);
+
+    if (num.has_value) {
+      ShellVar var = {.kind = SV_NUMBER, .number = num.value};
+      var_set(key, &var);
+      return EXIT_SUCCESS;
+    }
+
+    ShellVar var = {.kind = SV_STRING, .string = buffer_from_cstr(value)};
+    var_set(key, &var);
+    return EXIT_SUCCESS;
+  }
+
+  if (argc == 5 && strcmp(argv[2], "-t") == 0) {
+    char *key = argv[1];
+    char *type = argv[3];
+    char *value = argv[4];
+
+    if (strcmp(type, "string") == 0) {
+      ShellVar var = {.kind = SV_STRING, .string = buffer_from_cstr(value)};
+      var_set(key, &var);
+      return EXIT_SUCCESS;
+    }
+
+    if (strcmp(type, "number") == 0) {
+      OptionDouble num = parse_double(value);
+
+      if (!num.has_value) {
+        error_f("setvar: ‘%s’ is not a number.\n", value);
+        return EXIT_FAILURE;
+      }
+
+      ShellVar var = {.kind = SV_NUMBER, .number = num.value};
+      var_set(key, &var);
+      return EXIT_SUCCESS;
+    }
+
+    if (strcmp(type, "boolean") == 0) {
+      bool boolean;
+      if (strcmp(value, "true") == 0) {
+        boolean = true;
+      } else if (strcmp(value, "false") == 0) {
+        boolean = false;
+      } else {
+        error_f("setvar: ‘%s’ is not a boolean.\n", value);
+        return EXIT_FAILURE;
+      }
+
+      ShellVar var = {.kind = SV_BOOLEAN, .boolean = boolean};
+      var_set(key, &var);
+      return EXIT_SUCCESS;
+    }
+
+    if (strcmp(type, "null") == 0) {
+      if (strcmp(value, "null") == 0) {
+        error_f("setvar: ‘%s’ is not a ‘null’.\n", value);
+        return EXIT_FAILURE;
+      }
+
+      ShellVar var = {.kind = SV_NULL};
+      var_set(key, &var);
+      return EXIT_SUCCESS;
+    }
+  }
+
+  error_f("%s\n", SETVAR_HELP);
+  return EXIT_FAILURE;
 }

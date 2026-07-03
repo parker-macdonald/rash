@@ -1,6 +1,7 @@
 #ifndef BUFFER_H
 #define BUFFER_H
 
+#include "lib/attrib.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -26,6 +27,10 @@ Buffer buffer_from_ptr(const void *data, size_t length);
 
 // constructs a buffer by copying the data at `cstr` of length `strlen(cstr)`.
 Buffer buffer_from_cstr(const char *cstr);
+
+// construct a buffer with the results of a call to sprintf
+ATTRIB_PRINTF(1, 2)
+Buffer buffer_from_format(const char *format, ...);
 
 // clone a buffer, creating a new one referencing a copy of the old ones data.
 Buffer buffer_clone(const Buffer *other);

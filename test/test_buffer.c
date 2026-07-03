@@ -128,4 +128,13 @@ TEST_SUITE("buffer", {
       buffer_destroy(&buffer2);
     }
   });
+
+  TEST("from_format", {
+    Buffer buffer = buffer_from_format("%d %.3f %s", 6, 7.0, "hi");
+
+    ASSERT_EQ(buffer.length, 10);
+    ASSERT_EQ(memcmp(buffer.void_ptr, "6 7.000 hi", 10), 0);
+
+    buffer_destroy(&buffer);
+  });
 })

@@ -1,6 +1,25 @@
 #ifndef SHELL_VARS_H
 #define SHELL_VARS_H
 
+#include "lib/buffer.h"
+#include <stdbool.h>
+
+typedef enum {
+  SV_NUMBER,
+  SV_STRING,
+  SV_BOOLEAN,
+  SV_NULL
+} ShellVarKind;
+
+typedef struct {
+  ShellVarKind kind;
+  union {
+    Buffer string;
+    double number;
+    bool boolean;
+  };
+} ShellVar;
+
 void var_init(void);
 
 /**
@@ -9,14 +28,18 @@ void var_init(void);
  * @param key the key of the shell variable.
  * @param value the value of the shell variable.
  */
-void var_set(const char *key, const char *value);
+void var_set(const char *key, const ShellVar *var);
 
 /**
- * @brief get a shell variable given a key.
- * @param key the key of the variable
- * @return returns the associated value or null
+ * @brief evaluate the shell variable from the following expression.
+ * @param expr the expression to evaluate
+ * @return returns the expressions value
  */
-const char *var_get(const char *key);
+ShellVar var_eval(const char *expr);
+
+Buffer var_to_string(const ShellVar *var);
+
+char *var_eval_to_string(const char *expr);
 
 /**
  * @brief unset a shell variable given a key
