@@ -30,6 +30,8 @@ void var_init(void);
  */
 void var_set(const char *key, const ShellVar *var);
 
+ShellVar *var_get(const char *key);
+
 /**
  * @brief evaluate the shell variable from the following expression.
  * @param expr the expression to evaluate

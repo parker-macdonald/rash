@@ -7,9 +7,9 @@
 typedef struct {
   size_t length;
   union {
-    char *char_ptr;
-    uint8_t *u8_ptr;
-    void *void_ptr;
+    const char *char_ptr;
+    const uint8_t *u8_ptr;
+    const void *void_ptr;
   };
 } Slice;
 

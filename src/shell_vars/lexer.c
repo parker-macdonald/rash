@@ -1,138 +1,10 @@
-#include "shell_vars.h"
-
-#include <ctype.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-#include "lib/buffer.h"
+#include "lexer.h"
 #include "lib/error.h"
-#include "lib/hash_map.h"
 #include "lib/parse.h"
-#include "lib/slice.h"
-#include "lib/vector.h"
-
-static HashMap map;
-
-static void var_destroy(void *ptr) {
-  ShellVar *var = ptr;
-
-  if (var->kind == SV_STRING) {
-    buffer_destroy(&var->string);
-  }
-}
-
-void var_init(void) {
-  hash_map_init(&map, var_destroy);
-}
-
-void var_set(const char *key, const ShellVar *var) {
-  ShellVar *var_clone = malloc(sizeof(ShellVar));
-  memcpy(var_clone, var, sizeof(ShellVar));
-
-  hash_map_set(&map, key, var_clone);
-}
-
-int var_unset(const char *const key) {
-  hash_map_remove(&map, key);
-
-  return 0;
-}
-
-static void print_callback(const char *key, void *ptr) {
-  ShellVar *var = ptr;
-  
-  printf("{%s}:\t", key);
-
-  switch (var->kind) {
-  case SV_NUMBER:
-    printf("%f (type: number)\n", var->number);
-    break;
-  case SV_STRING:
-    printf("\"%.*s\" (type: string)\n", (int)var->string.length, var->string.char_ptr);
-    break;
-  case SV_BOOLEAN:
-    printf("%s (type: boolean)\n", var->boolean ? "true" : "false");
-    break;
-  case SV_NULL:
-    printf("null (type: null)\n");
-    break;
-  }
-}
-
-void var_print(void) {
-  hash_map_iter(&map, print_callback);
-}
-
-ShellVar var_eval(const char *expr) {
-  (void)expr;
-
-  return (ShellVar){.kind = SV_NULL};
-}
-
-Buffer var_to_string(const ShellVar *var) {
-  switch (var->kind) {
-  case SV_NUMBER:
-    return buffer_from_format("%g", var->number);
-  case SV_STRING:
-    return buffer_clone(&var->string);
-  case SV_BOOLEAN:
-    return buffer_from_format("%s", var->boolean ? "true" : "false");
-  case SV_NULL:
-    return buffer_from_cstr("null");
-  }
-}
-
-char *var_eval_to_string(const char *expr) {
-  ShellVar var = var_eval(expr);
-
-  Buffer buffer = var_to_string(&var);
-
-  var_destroy(&var);
-
-  return buffer_cstr(&buffer);
-}
-
-typedef enum {
-  TK_ADD, // +
-  TK_SUB, // -
-  TK_MUL, // *
-  TK_POW, // **
-  TK_DIV, // /
-  TK_MOD, // %
-
-  TK_EQ, // ==
-  TK_NEQ, // !=
-  TK_GT, // >
-  TK_LT, // <
-  TK_GTE, // >=
-  TK_LTE, // <=
-  TK_NOT, // !
-
-  TK_O_PAREN, // (
-  TK_C_PAREN, // )
-
-  TK_STRING_LIT,
-  TK_NUMBER_LIT,
-  TK_NULL_LIT,
-  TK_TRUE_LIT,
-  TK_FALSE_LIT,
-
-  TK_IDENTIFIER
-} TokenKind;
-
-typedef struct {
-  TokenKind kind;
-  union {
-    double num_lit;
-    Buffer str_lit;
-    Buffer identifier;
-  };
-} Token;
-
-typedef VECTOR(Token) TokenList;
+#include "token.h"
+#include <ctype.h>
+#include <stdbool.h>
+#include <unistd.h>
 
 typedef struct {
   const Slice *source;
@@ -141,31 +13,31 @@ typedef struct {
   size_t current;
 } LexState;
 
-bool is_at_end(LexState *s) {
+static bool is_at_end(LexState *s) {
   return s->current >= s->source->length;
 }
 
-uint8_t advance(LexState *s) {
-  s->current++;
-
+static uint8_t advance(LexState *s) {
   rash_panic(is_at_end(s));
+  
+  return s->source->u8_ptr[s->current++];
+}
+
+static uint8_t peek(LexState *s) {
+  if (is_at_end(s)) {
+    return '\0';
+  }
 
   return s->source->u8_ptr[s->current];
 }
 
-uint8_t peek(LexState *s) {
-  rash_panic(is_at_end(s));
-
-  return s->source->u8_ptr[s->current];
-}
-
-uint8_t peek_next(LexState *s) {
+static uint8_t peek_next(LexState *s) {
   rash_panic(s->current + 1 >= s->source->length);
   
   return s->source->u8_ptr[s->current + 1];
 }
 
-bool match(LexState *s, uint8_t expected) {
+static bool match(LexState *s, uint8_t expected) {
   if (is_at_end(s)) {
     return false;
   }
@@ -178,11 +50,11 @@ bool match(LexState *s, uint8_t expected) {
   return true;
 }
 
-void add_token(LexState *s, TokenKind kind) {
+static void add_token(LexState *s, TokenKind kind) {
   VECTOR_PUSH(s->tokens, ((Token){.kind = kind}));
 }
 
-void add_string_literal(LexState *s, Buffer *value) {
+static void add_string_literal(LexState *s, Buffer *value) {
   VECTOR_PUSH(
     s->tokens, 
     ((Token){
@@ -192,7 +64,7 @@ void add_string_literal(LexState *s, Buffer *value) {
   );
 }
 
-void add_number_literal(LexState *s, double value) {
+static void add_number_literal(LexState *s, double value) {
   VECTOR_PUSH(
     s->tokens, 
     ((Token){
@@ -202,7 +74,7 @@ void add_number_literal(LexState *s, double value) {
   );
 }
 
-void add_identifier(LexState *s, Buffer *identifier) {
+static void add_identifier(LexState *s, Buffer *identifier) {
   VECTOR_PUSH(
     s->tokens, 
     ((Token){
@@ -212,7 +84,7 @@ void add_identifier(LexState *s, Buffer *identifier) {
   );
 }
 
-void string(LexState *s) {
+static void string(LexState *s) {
   while (peek(s) != '"' && !is_at_end(s)) {
     advance(s);
   }
@@ -235,7 +107,7 @@ void string(LexState *s) {
   add_string_literal(s, &value);
 }
 
-void number(LexState *s) {
+static void number(LexState *s) {
   while (isdigit(peek(s))) advance(s);
 
   // Look for a fractional part.
@@ -254,7 +126,7 @@ void number(LexState *s) {
   buffer_destroy(&number_str);
 }
 
-void identifier(LexState *s) {
+static void identifier(LexState *s) {
   while (isalnum(peek(s))) {
     advance(s);
   }
@@ -285,7 +157,7 @@ void identifier(LexState *s) {
   add_identifier(s, &identifier);
 }
 
-void scan_token(LexState *s) {
+static void scan_token(LexState *s) {
   uint8_t c = advance(s);
 
   switch (c) {
@@ -383,7 +255,7 @@ void scan_token(LexState *s) {
   }
 }
 
-TokenList lex(const Slice *source) {
+TokenList lex_shell_expr(const Slice *source) {
   LexState state = {.source = source, .current = 0, .start = 0};
   VECTOR_INIT(state.tokens);
 
