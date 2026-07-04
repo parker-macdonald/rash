@@ -127,7 +127,7 @@ static void number(LexState *s) {
 }
 
 static void identifier(LexState *s) {
-  while (isalnum(peek(s))) {
+  while (isalnum(peek(s)) || peek(s) == '_') {
     advance(s);
   }
 

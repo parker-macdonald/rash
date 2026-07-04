@@ -7,6 +7,8 @@
 #include <stdbool.h>
 
 typedef enum {
+  TK_NONE,
+  
   TK_ADD, // +
   TK_SUB, // -
   TK_MUL, // *

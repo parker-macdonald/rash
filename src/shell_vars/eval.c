@@ -42,13 +42,17 @@ static bool is_at_end(EvalState *s) {
 }
 
 static Token advance(EvalState *s) {
-  rash_panic(is_at_end(s));
+  if (is_at_end(s)) {
+    return (Token){.kind = TK_NONE};
+  }
 
   return s->tokens->data[s->current++];
 }
 
 static Token peek(EvalState *s) {
-  rash_panic(is_at_end(s));
+  if (is_at_end(s)) {
+    return (Token){.kind = TK_NONE};
+  }
 
   return s->tokens->data[s->current];
 }
@@ -349,25 +353,20 @@ static ShellVar eval_part(ShellVar lhs, ShellVar rhs, TokenKind op) {
 }
 
 static ShellVar eval_expr(EvalState *s, ShellVar lhs, OpPrec min_prec) {
-  if (is_at_end(s)) {
-    return lhs;
-  }
+  TokenKind lookahead = peek(s).kind;
 
-  Token lookahead = peek(s);
-
-  while (!is_at_end(s) && is_binary_op(lookahead.kind) && OP_PREC_LOOKUP[lookahead.kind] >= min_prec) {
-    TokenKind op = lookahead.kind;
+  while (is_binary_op(lookahead) && OP_PREC_LOOKUP[lookahead] >= min_prec) {
+    TokenKind op = lookahead;
     advance(s);
 
     ShellVar rhs = eval_term(s);
 
-    if (!is_at_end(s)) {
-      lookahead = peek(s);
-  
-      while (!is_at_end(s) && is_binary_op(lookahead.kind) && OP_PREC_LOOKUP[lookahead.kind] > OP_PREC_LOOKUP[op]) {
-        rhs = eval_expr(s, rhs, OP_PREC_LOOKUP[op] + 1);
-        lookahead = peek(s);
-      }
+    lookahead = peek(s).kind;
+
+    while (is_binary_op(lookahead) && OP_PREC_LOOKUP[lookahead] > OP_PREC_LOOKUP[op]) {
+      rhs = eval_expr(s, rhs, OP_PREC_LOOKUP[op] + 1);
+
+      lookahead = peek(s).kind;
     }
 
     lhs = eval_part(lhs, rhs, op);

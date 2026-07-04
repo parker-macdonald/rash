@@ -15,6 +15,7 @@ bool is_binary_op(TokenKind kind) {
     case TK_GTE:
     case TK_LTE:
       return true;
+    case TK_NONE:
     case TK_NOT:
     case TK_O_PAREN:
     case TK_C_PAREN:
