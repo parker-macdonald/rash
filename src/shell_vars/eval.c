@@ -22,7 +22,7 @@ typedef enum {
   PREC_POW
 } OpPrec;
 
-const OpPrec OP_PREC_LOOKUP[] = {
+static const OpPrec OP_PREC_LOOKUP[] = {
   [TK_ADD] = PREC_ADD_SUB,
   [TK_SUB] = PREC_ADD_SUB,
   [TK_MUL] = PREC_MUL_DIV,
@@ -203,6 +203,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
         Buffer right_str = var_to_string(rhs);
         Buffer result = buffer_clone(&lhs->string);
         buffer_append_buffer(&result, &right_str);
+        buffer_destroy(&right_str);
         
         return var_create_string(result);
       }

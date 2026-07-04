@@ -63,6 +63,8 @@ static void var_destroy(ShellVar *var) {
   if (var->kind == SV_STRING) {
     buffer_destroy(&var->string);
   }
+
+  free(var);
 }
 
 ShellVar *var_release(ShellVar *var) {
