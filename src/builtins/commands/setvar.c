@@ -26,33 +26,39 @@ int builtin_setvar(char **argv) {
     char *value = argv[2];
 
     if (strcmp(value, "null") == 0) {
-      ShellVar var = {.kind = SV_NULL};
-      var_set(key, &var);
+      ShellVar *var = var_create_null();
+      var_set(key, var);
+      var_release(var);
       return EXIT_SUCCESS;
     }
 
     if (strcmp(value, "true") == 0) {
-      ShellVar var = {.kind = SV_BOOLEAN, .boolean = true};
-      var_set(key, &var);
+      ShellVar *var = var_create_boolean(true);
+      var_set(key, var);
+      var_release(var);
       return EXIT_SUCCESS;
     }
 
     if (strcmp(value, "false") == 0) {
-      ShellVar var = {.kind = SV_BOOLEAN, .boolean = false};
-      var_set(key, &var);
+      ShellVar *var = var_create_boolean(false);
+      var_set(key, var);
+      var_release(var);
       return EXIT_SUCCESS;
     }
 
     OptionDouble num = parse_double(value);
 
     if (num.has_value) {
-      ShellVar var = {.kind = SV_NUMBER, .number = num.value};
-      var_set(key, &var);
+      ShellVar *var = var_create_number(num.value);
+      var_set(key, var);
+      var_release(var);
       return EXIT_SUCCESS;
     }
 
-    ShellVar var = {.kind = SV_STRING, .string = buffer_from_cstr(value)};
-    var_set(key, &var);
+
+    ShellVar *var = var_create_string(buffer_from_cstr(value));
+    var_set(key, var);
+    var_release(var);
     return EXIT_SUCCESS;
   }
 
@@ -62,8 +68,9 @@ int builtin_setvar(char **argv) {
     char *value = argv[4];
 
     if (strcmp(type, "string") == 0) {
-      ShellVar var = {.kind = SV_STRING, .string = buffer_from_cstr(value)};
-      var_set(key, &var);
+      ShellVar *var = var_create_string(buffer_from_cstr(value));
+      var_set(key, var);
+      var_release(var);
       return EXIT_SUCCESS;
     }
 
@@ -75,8 +82,9 @@ int builtin_setvar(char **argv) {
         return EXIT_FAILURE;
       }
 
-      ShellVar var = {.kind = SV_NUMBER, .number = num.value};
-      var_set(key, &var);
+      ShellVar *var = var_create_number(num.value);
+      var_set(key, var);
+      var_release(var);
       return EXIT_SUCCESS;
     }
 
@@ -91,8 +99,9 @@ int builtin_setvar(char **argv) {
         return EXIT_FAILURE;
       }
 
-      ShellVar var = {.kind = SV_BOOLEAN, .boolean = boolean};
-      var_set(key, &var);
+      ShellVar *var = var_create_boolean(boolean);
+      var_set(key, var);
+      var_release(var);
       return EXIT_SUCCESS;
     }
 
@@ -102,8 +111,9 @@ int builtin_setvar(char **argv) {
         return EXIT_FAILURE;
       }
 
-      ShellVar var = {.kind = SV_NULL};
-      var_set(key, &var);
+      ShellVar *var = var_create_null();
+      var_set(key, var);
+      var_release(var);
       return EXIT_SUCCESS;
     }
   }
