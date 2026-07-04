@@ -50,6 +50,8 @@ void buffer_append_cstr(Buffer *self, const char *cstr);
 
 void buffer_append_ptr(Buffer *self, const void *data, size_t length);
 
+void buffer_append_buffer(Buffer *self, const Buffer *other);
+
 /*
  * Helper functions to insert into an arbitrary place in an existing buffer
  */
@@ -62,6 +64,8 @@ void buffer_insert_cstr(Buffer *self, size_t at, const char *cstr);
 
 void buffer_insert_ptr(Buffer *self, size_t at, const void *data,
                        size_t length);
+
+void buffer_insert_buffer(Buffer *self, size_t at, const Buffer *other);
 
 /*
  * Extra helper functions

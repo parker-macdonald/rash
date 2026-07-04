@@ -207,9 +207,11 @@ static bool bad_syntax(const Token *const tokens) {
 static void set_exit_code_var(int code) {
   Buffer string = buffer_from_format("%d", code & 0xff);
 
-  ShellVar var = {.kind = SV_STRING, .string = string};
+  ShellVar *var = var_create_string(string);
 
-  var_set("?", &var);
+  var_set("?", var);
+
+  var_release(var);
 }
 
 static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {

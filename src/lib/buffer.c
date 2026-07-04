@@ -117,6 +117,10 @@ void buffer_append_cstr(Buffer *self, const char *cstr) {
   buffer_append_ptr(self, cstr, length);
 }
 
+void buffer_append_buffer(Buffer *self, const Buffer *other) {
+  buffer_append_ptr(self, other->void_ptr, other->length);
+}
+
 /*
  * Helper functions to insert into an arbitrary place in an existing buffer
  */
@@ -146,6 +150,10 @@ void buffer_insert_char(Buffer *self, size_t at, char character) {
 void buffer_insert_cstr(Buffer *self, size_t at, const char *cstr) {
   size_t length = strlen(cstr);
   buffer_insert_ptr(self, at, cstr, length);
+}
+
+void buffer_insert_buffer(Buffer *self, size_t at, const Buffer *other) {
+  buffer_insert_ptr(self, at, other->void_ptr, other->length);
 }
 
 /*
