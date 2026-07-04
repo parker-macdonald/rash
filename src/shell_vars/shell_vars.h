@@ -2,14 +2,18 @@
 #define SHELL_VARS_H
 
 #include "lib/buffer.h"
+#include "lib/optional.h"
 #include <stdbool.h>
 
 typedef enum {
   SV_NUMBER,
   SV_STRING,
   SV_BOOLEAN,
-  SV_NULL
+  SV_NULL,
+  SV_COUNT
 } ShellVarKind;
+
+extern const char *SHELL_VAR_KIND_NAMES[SV_COUNT];
 
 typedef struct {
   ShellVarKind kind;
@@ -20,28 +24,17 @@ typedef struct {
   };
 } ShellVar;
 
-void var_init(void);
+typedef OPTIONAL(ShellVar) OptionShellVar;
 
-/**
- * @brief set a shell variable given a key and a value. in case it isn't
- * obvious, the data passed in is cloned.
- * @param key the key of the shell variable.
- * @param value the value of the shell variable.
- */
-void var_set(const char *key, const ShellVar *var);
+void var_destroy(ShellVar *var);
 
-ShellVar *var_get(const char *key);
-
-/**
- * @brief evaluate the shell variable from the following expression.
- * @param expr the expression to evaluate
- * @return returns the expressions value
- */
-ShellVar var_eval(const char *expr);
+ShellVar var_clone(const ShellVar *var);
 
 Buffer var_to_string(const ShellVar *var);
 
-char *var_eval_to_string(const char *expr);
+void var_init(void);
+
+void var_set(const char *key, const ShellVar *var);
 
 /**
  * @brief unset a shell variable given a key
@@ -49,6 +42,12 @@ char *var_eval_to_string(const char *expr);
  * @return returns 1 if no variable was removed, returns 0 otherwise.
  */
 int var_unset(const char *key);
+
+ShellVar *var_get(const char *key);
+
+OptionShellVar var_eval(const char *expr);
+
+char *var_eval_to_string(const char *expr);
 
 /**
  * @brief prints all shell variables in a list.

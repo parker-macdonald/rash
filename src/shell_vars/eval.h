@@ -4,6 +4,6 @@
 #include "shell_vars.h"
 #include "shell_vars/token.h"
 
-ShellVar evaluate_tokens(const TokenList *tokens);
+OptionShellVar evaluate_tokens(const TokenList *tokens);
 
 #endif

@@ -73,19 +73,22 @@ static bool match(EvalState *s, TokenKind kind) {
   return false;
 }
 
-static ShellVar eval_term(EvalState *s);
-static ShellVar eval_expr(EvalState *s, ShellVar lhs, OpPrec min_prec);
-static ShellVar eval_part(ShellVar lhs, ShellVar rhs, TokenKind op);
+static OptionShellVar eval_term(EvalState *s);
+static OptionShellVar eval_expr(EvalState *s, ShellVar lhs, OpPrec min_prec);
+static OptionShellVar eval_part(ShellVar lhs, ShellVar rhs, TokenKind op);
 
-static ShellVar eval_term(EvalState *s) {
+#define Some(x) ((OptionShellVar){.has_value = true, .value = (x)})
+#define None ((OptionShellVar){.has_value = false})
+
+static OptionShellVar eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
   if (check(s, TK_NUMBER_LIT)) {
     Token tk = advance(s);
-    return (ShellVar){.kind = SV_NUMBER, .number = tk.num_lit};
+    return Some(((ShellVar){.kind = SV_NUMBER, .number = tk.num_lit}));
   }
 
   if (check(s, TK_STRING_LIT)) {
     Token tk = advance(s);
-    return (ShellVar){.kind = SV_STRING, .string = buffer_clone(&tk.str_lit)};
+    return Some(((ShellVar){.kind = SV_STRING, .string = buffer_clone(&tk.str_lit)}));
   }
 
   if (check(s, TK_IDENTIFIER)) {
@@ -93,33 +96,38 @@ static ShellVar eval_term(EvalState *s) {
     ShellVar *var = var_get(buffer_cstr(&tk.identifier));
 
     if (var == NULL) {
-      error("var is not set\n");
-      _exit(420);
+      error_f("shell expression: var `%.*s` is not set.\n", (int)tk.identifier.length, tk.identifier.char_ptr);
+      return None;
     }
 
-    return *var;
+    return Some(var_clone(var));
   }
 
   if (match(s, TK_TRUE_LIT)) {
-    return (ShellVar){.kind = SV_BOOLEAN, .boolean = true};
+    return Some(((ShellVar){.kind = SV_BOOLEAN, .boolean = true}));
   }
 
   if (match(s, TK_FALSE_LIT)) {
-    return (ShellVar){.kind = SV_BOOLEAN, .boolean = false};
+    return Some(((ShellVar){.kind = SV_BOOLEAN, .boolean = false}));
   }
 
   if (match(s, TK_NULL_LIT)) {
-    return (ShellVar){.kind = SV_NULL};
+    return Some(((ShellVar){.kind = SV_NULL}));
   }
 
   // unary plus
   if (match(s, TK_ADD)) {
-    ShellVar var = eval_term(s);
+    OptionShellVar var = eval_term(s);
 
-    if (var.kind != SV_NUMBER) {
-      // TODO: error handling
-      error("unary plus can only be used on the number type\n");
-      _exit(67);
+    if (!var.has_value) {
+      error("shell expression: expected term following `+`.\n");
+      return None;
+    }
+
+    if (var.value.kind != SV_NUMBER) {
+      error("shell expression: unary plus can only be used on the number type.\n");
+      var_destroy(&var.value);
+      return None;
     }
 
     return eval_term(s);
@@ -127,48 +135,71 @@ static ShellVar eval_term(EvalState *s) {
 
   // unary minus
   if (match(s, TK_SUB)) {
-    ShellVar var = eval_term(s);
+    OptionShellVar var = eval_term(s);
 
-    if (var.kind != SV_NUMBER) {
-      // TODO: error handling
-      error("unary minus can only be used on the number type\n");
-      _exit(67);
+    if (!var.has_value) {
+      error("shell expression: expected term following `-`.\n");
+      return None;
     }
 
-    var.number *= -1.0;
+    if (var.value.kind != SV_NUMBER) {
+      error("shell expression: unary minus can only be used on the number type.\n");
+      var_destroy(&var.value);
+      return None;
+    }
+
+    var.value.number *= -1.0;
 
     return var;
   }
 
   if (match(s, TK_NOT)) {
-    ShellVar var = eval_term(s);
+    OptionShellVar var = eval_term(s);
 
-    if (var.kind != SV_BOOLEAN) {
-      // TODO: error handling
-      error("not operator can only be used on the boolean type\n");
-      _exit(67);
+    if (!var.has_value) {
+      error("shell expression: expected term following `!`.\n");
+      return None;
     }
 
-    var.boolean = !var.boolean;
+    if (var.value.kind != SV_BOOLEAN) {
+      error("shell expression: not operator can only be used on the boolean type.\n");
+      var_destroy(&var.value);
+      return None;
+    }
+
+    var.value.boolean = !var.value.boolean;
 
     return var;
   }
 
   if (match(s, TK_O_PAREN)) {
-    ShellVar var = eval_expr(s, eval_term(s), PREC_MIN);
+    OptionShellVar lhs = eval_term(s);
+
+    if (!lhs.has_value) {
+      return None;
+    }
+
+    OptionShellVar var = eval_expr(s, lhs.value, PREC_MIN);
+    var_destroy(&lhs.value);
+
+    if (!var.has_value) {
+      return None;
+    }
 
     if (!match(s, TK_C_PAREN)) {
-      error("no closing parem\n");
-      _exit(2394);
+      error("shell expression: expected closing `)`.\n");
+      var_destroy(&var.value);
+      return None;
     }
 
     return var;
   }
 
-  rash_assert(1, "token error");
+  error_f("shell expression: expected term but found %s.\n", TOKEN_KIND_NAMES[peek(s).kind]);
+  return None;
 }
 
-static ShellVar eval_part(ShellVar lhs, ShellVar rhs, TokenKind op) {
+static OptionShellVar eval_part(ShellVar lhs, ShellVar rhs, TokenKind op) {
   switch (op) {
     case TK_ADD:
       if (lhs.kind == SV_STRING) {
@@ -177,207 +208,251 @@ static ShellVar eval_part(ShellVar lhs, ShellVar rhs, TokenKind op) {
         Buffer result = buffer_clone(&lhs.string);
         buffer_append_ptr(&result, right_str.void_ptr, right_str.length);
         
-        return (ShellVar){.kind = SV_STRING, .string = result};
+        return Some(((ShellVar){.kind = SV_STRING, .string = result}));
       }
 
       if (rhs.kind == SV_STRING) {
         Buffer result = var_to_string(&lhs);
         buffer_append_ptr(&result, rhs.string.void_ptr, rhs.string.length);
         
-        return (ShellVar){.kind = SV_STRING, .string = result};
+        return Some(((ShellVar){.kind = SV_STRING, .string = result}));
       }
 
       if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
-        return (ShellVar){
+        return Some(((ShellVar){
           .kind = SV_NUMBER,
           .number = lhs.number + rhs.number
-        };
+        }));
       }
 
-      rash_assert(1, "bad types");
+      error_f("shell expression: cannot add types %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs.kind], SHELL_VAR_KIND_NAMES[rhs.kind]);
+      return None;
 
     case TK_SUB:
       if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
-        return (ShellVar){
+        return Some(((ShellVar){
           .kind = SV_NUMBER,
           .number = lhs.number - rhs.number
-        };
+        }));
       }
 
-      rash_assert(1, "bad types");
+      error_f("shell expression: can only subtract number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs.kind], SHELL_VAR_KIND_NAMES[rhs.kind]);
+      return None;
 
     case TK_MUL:
       if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
-        return (ShellVar){
+        return Some(((ShellVar){
           .kind = SV_NUMBER,
           .number = lhs.number * rhs.number
-        };
+        }));
       }
 
-      rash_assert(1, "bad types");
+      error_f("shell expression: can only multiply number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs.kind], SHELL_VAR_KIND_NAMES[rhs.kind]);
+      return None;
 
     case TK_POW:
       if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
-        return (ShellVar){
+        return Some(((ShellVar){
           .kind = SV_NUMBER,
           .number = pow(lhs.number, rhs.number)
-        };
+        }));
       }
 
-      rash_assert(1, "bad types");
+      error_f("shell expression: can only exponentiate number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs.kind], SHELL_VAR_KIND_NAMES[rhs.kind]);
+      return None;
 
     case TK_DIV:
       if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
-        return (ShellVar){
+        return Some(((ShellVar){
           .kind = SV_NUMBER,
           .number = lhs.number / rhs.number
-        };
+        }));
       }
 
-      rash_assert(1, "bad types");
+      error_f("shell expression: can only divide number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs.kind], SHELL_VAR_KIND_NAMES[rhs.kind]);
+      return None;
 
     case TK_MOD:
       if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
-        return (ShellVar){
+        return Some(((ShellVar){
           .kind = SV_NUMBER,
           .number = fmod(lhs.number, rhs.number)
-        };
+        }));
       }
 
-      rash_assert(1, "bad types");
+      error_f("shell expression: can only mod number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs.kind], SHELL_VAR_KIND_NAMES[rhs.kind]);
+      return None;
 
     case TK_EQ:
       if (lhs.kind != rhs.kind) {
-        return (ShellVar){
+        return Some(((ShellVar){
           .kind = SV_BOOLEAN,
           .boolean = false
-        };
+        }));
       }
 
       switch (lhs.kind) {
         case SV_NUMBER:
-          return (ShellVar){
+          return Some(((ShellVar){
             .kind = SV_BOOLEAN,
             .boolean = lhs.number == rhs.number
-          };
+          }));
         case SV_STRING:
-          return (ShellVar){
+          return Some(((ShellVar){
             .kind = SV_BOOLEAN,
             .boolean = buffer_compare(&lhs.string, &rhs.string) == 0
-          };
+          }));
         case SV_BOOLEAN:
-          return (ShellVar){
+          return Some(((ShellVar){
             .kind = SV_BOOLEAN,
             .boolean = lhs.boolean == rhs.boolean
-          };
+          }));
         case SV_NULL:
-          return (ShellVar){
+          return Some(((ShellVar){
             .kind = SV_BOOLEAN,
             .boolean = true
-          };
+          }));
+        default:
+          unreachable();
       }
       
     case TK_NEQ:
       if (lhs.kind != rhs.kind) {
-        return (ShellVar){
+        return Some(((ShellVar){
           .kind = SV_BOOLEAN,
           .boolean = true
-        };
+        }));
       }
 
       switch (lhs.kind) {
         case SV_NUMBER:
-          return (ShellVar){
+          return Some(((ShellVar){
             .kind = SV_BOOLEAN,
             .boolean = lhs.number != rhs.number
-          };
+          }));
         case SV_STRING:
-          return (ShellVar){
+          return Some(((ShellVar){
             .kind = SV_BOOLEAN,
             .boolean = buffer_compare(&lhs.string, &rhs.string) != 0
-          };
+          }));
         case SV_BOOLEAN:
-          return (ShellVar){
+          return Some(((ShellVar){
             .kind = SV_BOOLEAN,
             .boolean = lhs.boolean != rhs.boolean
-          };
+          }));
         case SV_NULL:
-          return (ShellVar){
+          return Some(((ShellVar){
             .kind = SV_BOOLEAN,
             .boolean = false
-          };
+          }));
+        default:
+          unreachable();
       }
 
     case TK_GT:
       if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
-        return (ShellVar){
+        return Some(((ShellVar){
           .kind = SV_BOOLEAN,
           .boolean = lhs.number > rhs.number
-        };
+        }));
       }
 
-      rash_assert(1, "bad types");
+      error_f("shell expression: can only compare number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs.kind], SHELL_VAR_KIND_NAMES[rhs.kind]);
+      return None;
 
     case TK_LT:
       if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
-        return (ShellVar){
+        return Some(((ShellVar){
           .kind = SV_BOOLEAN,
           .boolean = lhs.number < rhs.number
-        };
+        }));
       }
 
-      rash_assert(1, "bad types");
+      error_f("shell expression: can only compare number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs.kind], SHELL_VAR_KIND_NAMES[rhs.kind]);
+      return None;
 
     case TK_GTE:
       if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
-        return (ShellVar){
+        return Some(((ShellVar){
           .kind = SV_BOOLEAN,
           .boolean = lhs.number >= rhs.number
-        };
+        }));
       }
 
-      rash_assert(1, "bad types");
+      error_f("shell expression: can only compare number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs.kind], SHELL_VAR_KIND_NAMES[rhs.kind]);
+      return None;
 
     case TK_LTE:
       if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
-        return (ShellVar){
+        return Some(((ShellVar){
           .kind = SV_BOOLEAN,
           .boolean = lhs.number <= rhs.number
-        };
+        }));
       }
 
-      rash_assert(1, "bad types");
+      error_f("shell expression: can only compare number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs.kind], SHELL_VAR_KIND_NAMES[rhs.kind]);
+      return None;
     default:
-      rash_panic(1);
+      unreachable();
   }
 }
 
-static ShellVar eval_expr(EvalState *s, ShellVar lhs, OpPrec min_prec) {
+static OptionShellVar eval_expr(EvalState *s, ShellVar lhs, OpPrec min_prec) { // NOLINT(misc-no-recursion)
   TokenKind lookahead = peek(s).kind;
+  OptionShellVar tmp;
 
   while (is_binary_op(lookahead) && OP_PREC_LOOKUP[lookahead] >= min_prec) {
     TokenKind op = lookahead;
     advance(s);
 
-    ShellVar rhs = eval_term(s);
+    tmp = eval_term(s);
+
+    if (!tmp.has_value) {
+      return None;
+    }
+
+    ShellVar rhs = tmp.value;
 
     lookahead = peek(s).kind;
 
     while (is_binary_op(lookahead) && OP_PREC_LOOKUP[lookahead] > OP_PREC_LOOKUP[op]) {
-      rhs = eval_expr(s, rhs, OP_PREC_LOOKUP[op] + 1);
+      tmp = eval_expr(s, rhs, OP_PREC_LOOKUP[op] + 1);
+      var_destroy(&rhs);
+
+      if (!tmp.has_value) {
+        return None;
+      }
+
+      rhs = tmp.value;
 
       lookahead = peek(s).kind;
     }
 
-    lhs = eval_part(lhs, rhs, op);
+    tmp = eval_part(lhs, rhs, op);
+    var_destroy(&lhs);
+    var_destroy(&rhs);
+
+    if (!tmp.has_value) {
+      return None;
+    }
+
+    lhs = tmp.value;
   }
 
-  return lhs;
+  return Some(lhs);
 }
 
-ShellVar evaluate_tokens(const TokenList *tokens) {
+OptionShellVar evaluate_tokens(const TokenList *tokens) {
   EvalState state = {.tokens = tokens, .current = 0};
 
-  ShellVar lhs = eval_term(&state);
-  return eval_expr(&state, lhs, PREC_MIN);
+  OptionShellVar lhs = eval_term(&state);
+
+  if (!lhs.has_value) {
+    return None;
+  }
+
+  OptionShellVar result = eval_expr(&state, lhs.value, PREC_MIN);
+  var_destroy(&lhs.value);
+
+  return result;
 }

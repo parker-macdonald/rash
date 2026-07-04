@@ -261,8 +261,6 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
       char *value = var_eval_to_string((char *)(*tokens)->data);
 
       if (value == NULL) {
-        error_f("rash: shell variable ‘%s’ does not exist.\n",
-                (char *)(*tokens)->data);
         goto error;
       }
 

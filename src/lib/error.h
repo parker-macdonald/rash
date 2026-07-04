@@ -36,4 +36,6 @@ void fatal_f(const char *restrict format, ...);
       );                                                                       \
   } while (0)
 
+#define unreachable() fatal_f("%s:%d: reached unreachable code\n", __FILE__, __LINE__)
+
 #endif

@@ -33,8 +33,11 @@ typedef enum {
   TK_TRUE_LIT,
   TK_FALSE_LIT,
 
-  TK_IDENTIFIER
+  TK_IDENTIFIER,
+  TK_COUNT
 } TokenKind;
+
+extern const char *TOKEN_KIND_NAMES[TK_COUNT];
 
 typedef struct {
   TokenKind kind;
