@@ -182,7 +182,7 @@ static void scan_token(LexState *s) {
         add_token(s, TK_POW);
         break;
       }
-      add_token(s, TK_ADD);
+      add_token(s, TK_MUL);
       break;
 
     case '/':

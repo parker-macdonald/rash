@@ -4,6 +4,7 @@
 #include "shell_vars.h"
 #include "shell_vars/token.h"
 #include <math.h>
+#include <stdbool.h>
 #include <unistd.h>
 
 typedef struct {
@@ -69,7 +70,8 @@ static bool match(EvalState *s, TokenKind kind) {
 }
 
 static ShellVar eval_term(EvalState *s);
-static ShellVar eval_expr(EvalState *s, OpPrec prec);
+static ShellVar eval_expr(EvalState *s, ShellVar lhs, OpPrec min_prec);
+static ShellVar eval_part(ShellVar lhs, ShellVar rhs, TokenKind op);
 
 static ShellVar eval_term(EvalState *s) {
   if (check(s, TK_NUMBER_LIT)) {
@@ -149,7 +151,7 @@ static ShellVar eval_term(EvalState *s) {
   }
 
   if (match(s, TK_O_PAREN)) {
-    ShellVar var = eval_expr(s, PREC_MIN);
+    ShellVar var = eval_expr(s, eval_term(s), PREC_MIN);
 
     if (!match(s, TK_C_PAREN)) {
       error("no closing parem\n");
@@ -162,11 +164,193 @@ static ShellVar eval_term(EvalState *s) {
   rash_assert(1, "token error");
 }
 
-static ShellVar eval_expr(EvalState *s, OpPrec min_prec) {
-  ShellVar left = eval_term(s);
+static ShellVar eval_part(ShellVar lhs, ShellVar rhs, TokenKind op) {
+  switch (op) {
+    case TK_ADD:
+      if (lhs.kind == SV_STRING) {
+        // promote rhs to a string
+        Buffer right_str = var_to_string(&rhs);
+        Buffer result = buffer_clone(&lhs.string);
+        buffer_append_ptr(&result, right_str.void_ptr, right_str.length);
+        
+        return (ShellVar){.kind = SV_STRING, .string = result};
+      }
 
+      if (rhs.kind == SV_STRING) {
+        Buffer result = var_to_string(&lhs);
+        buffer_append_ptr(&result, rhs.string.void_ptr, rhs.string.length);
+        
+        return (ShellVar){.kind = SV_STRING, .string = result};
+      }
+
+      if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
+        return (ShellVar){
+          .kind = SV_NUMBER,
+          .number = lhs.number + rhs.number
+        };
+      }
+
+      rash_assert(1, "bad types");
+
+    case TK_SUB:
+      if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
+        return (ShellVar){
+          .kind = SV_NUMBER,
+          .number = lhs.number - rhs.number
+        };
+      }
+
+      rash_assert(1, "bad types");
+
+    case TK_MUL:
+      if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
+        return (ShellVar){
+          .kind = SV_NUMBER,
+          .number = lhs.number * rhs.number
+        };
+      }
+
+      rash_assert(1, "bad types");
+
+    case TK_POW:
+      if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
+        return (ShellVar){
+          .kind = SV_NUMBER,
+          .number = pow(lhs.number, rhs.number)
+        };
+      }
+
+      rash_assert(1, "bad types");
+
+    case TK_DIV:
+      if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
+        return (ShellVar){
+          .kind = SV_NUMBER,
+          .number = lhs.number / rhs.number
+        };
+      }
+
+      rash_assert(1, "bad types");
+
+    case TK_MOD:
+      if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
+        return (ShellVar){
+          .kind = SV_NUMBER,
+          .number = fmod(lhs.number, rhs.number)
+        };
+      }
+
+      rash_assert(1, "bad types");
+
+    case TK_EQ:
+      if (lhs.kind != rhs.kind) {
+        return (ShellVar){
+          .kind = SV_BOOLEAN,
+          .boolean = false
+        };
+      }
+
+      switch (lhs.kind) {
+        case SV_NUMBER:
+          return (ShellVar){
+            .kind = SV_BOOLEAN,
+            .boolean = lhs.number == rhs.number
+          };
+        case SV_STRING:
+          return (ShellVar){
+            .kind = SV_BOOLEAN,
+            .boolean = buffer_compare(&lhs.string, &rhs.string) == 0
+          };
+        case SV_BOOLEAN:
+          return (ShellVar){
+            .kind = SV_BOOLEAN,
+            .boolean = lhs.boolean == rhs.boolean
+          };
+        case SV_NULL:
+          return (ShellVar){
+            .kind = SV_BOOLEAN,
+            .boolean = true
+          };
+      }
+      
+    case TK_NEQ:
+      if (lhs.kind != rhs.kind) {
+        return (ShellVar){
+          .kind = SV_BOOLEAN,
+          .boolean = true
+        };
+      }
+
+      switch (lhs.kind) {
+        case SV_NUMBER:
+          return (ShellVar){
+            .kind = SV_BOOLEAN,
+            .boolean = lhs.number != rhs.number
+          };
+        case SV_STRING:
+          return (ShellVar){
+            .kind = SV_BOOLEAN,
+            .boolean = buffer_compare(&lhs.string, &rhs.string) != 0
+          };
+        case SV_BOOLEAN:
+          return (ShellVar){
+            .kind = SV_BOOLEAN,
+            .boolean = lhs.boolean != rhs.boolean
+          };
+        case SV_NULL:
+          return (ShellVar){
+            .kind = SV_BOOLEAN,
+            .boolean = false
+          };
+      }
+
+    case TK_GT:
+      if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
+        return (ShellVar){
+          .kind = SV_BOOLEAN,
+          .boolean = lhs.number > rhs.number
+        };
+      }
+
+      rash_assert(1, "bad types");
+
+    case TK_LT:
+      if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
+        return (ShellVar){
+          .kind = SV_BOOLEAN,
+          .boolean = lhs.number < rhs.number
+        };
+      }
+
+      rash_assert(1, "bad types");
+
+    case TK_GTE:
+      if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
+        return (ShellVar){
+          .kind = SV_BOOLEAN,
+          .boolean = lhs.number >= rhs.number
+        };
+      }
+
+      rash_assert(1, "bad types");
+
+    case TK_LTE:
+      if (lhs.kind == SV_NUMBER && rhs.kind == SV_NUMBER) {
+        return (ShellVar){
+          .kind = SV_BOOLEAN,
+          .boolean = lhs.number <= rhs.number
+        };
+      }
+
+      rash_assert(1, "bad types");
+    default:
+      rash_panic(1);
+  }
+}
+
+static ShellVar eval_expr(EvalState *s, ShellVar lhs, OpPrec min_prec) {
   if (is_at_end(s)) {
-    return left;
+    return lhs;
   }
 
   Token lookahead = peek(s);
@@ -175,173 +359,26 @@ static ShellVar eval_expr(EvalState *s, OpPrec min_prec) {
     TokenKind op = lookahead.kind;
     advance(s);
 
-    ShellVar right = eval_term(s);
+    ShellVar rhs = eval_term(s);
 
     if (!is_at_end(s)) {
       lookahead = peek(s);
   
-      while (is_binary_op(lookahead.kind) && OP_PREC_LOOKUP[lookahead.kind] > OP_PREC_LOOKUP[op]) {
-        right = eval_expr(s, OP_PREC_LOOKUP[op] + 1);
+      while (!is_at_end(s) && is_binary_op(lookahead.kind) && OP_PREC_LOOKUP[lookahead.kind] > OP_PREC_LOOKUP[op]) {
+        rhs = eval_expr(s, rhs, OP_PREC_LOOKUP[op] + 1);
         lookahead = peek(s);
       }
     }
 
-    switch (op) {
-      case TK_ADD:
-        if (left.kind == SV_STRING) {
-          Buffer right_str = var_to_string(&right);
-          buffer_append_ptr(&left.string, right_str.void_ptr, right_str.length);
-          buffer_destroy(&right_str);
-          break;
-        }
-        if (right.kind == SV_STRING) {
-          Buffer left_str = var_to_string(&left);
-          buffer_append_ptr(&left_str, right.string.void_ptr, right.string.length);
-          left.kind = SV_STRING;
-          left.string = left_str;
-          break;
-        }
-
-        if (left.kind == SV_NUMBER && right.kind == SV_NUMBER) {
-          left.number += right.number;
-          break;
-        }
-
-        rash_assert(1, "bad types");
-
-      case TK_SUB:
-        if (left.kind == SV_NUMBER && right.kind == SV_NUMBER) {
-          left.number -= right.number;
-          break;
-        }
-
-        rash_assert(1, "bad types");
-
-      case TK_MUL:
-        if (left.kind == SV_NUMBER && right.kind == SV_NUMBER) {
-          left.number *= right.number;
-          break;
-        }
-
-        rash_assert(1, "bad types");
-
-      case TK_POW:
-        if (left.kind == SV_NUMBER && right.kind == SV_NUMBER) {
-          left.number = pow(left.number, right.number);
-          break;
-        }
-
-        rash_assert(1, "bad types");
-
-      case TK_DIV:
-        if (left.kind == SV_NUMBER && right.kind == SV_NUMBER) {
-          left.number /= right.number;
-          break;
-        }
-
-        rash_assert(1, "bad types");
-
-      case TK_MOD:
-        if (left.kind == SV_NUMBER && right.kind == SV_NUMBER) {
-          left.number = fmod(left.number, right.number);
-          break;
-        }
-
-        rash_assert(1, "bad types");
-
-      case TK_EQ:
-        left.kind = SV_BOOLEAN;
-        if (left.kind != right.kind) {
-          left.boolean = false;
-          break;
-        }
-
-        switch (left.kind) {
-          case SV_NUMBER:
-            left.boolean = left.number == right.number;
-            break;
-          case SV_STRING:
-            left.boolean = buffer_compare(&left.string, &right.string) == 0;
-            break;
-          case SV_BOOLEAN:
-            left.boolean = left.boolean == right.boolean;
-          case SV_NULL:
-            left.boolean = true;
-            break;
-        }
-        break;
-        
-      case TK_NEQ:
-        left.kind = SV_BOOLEAN;
-        if (left.kind != right.kind) {
-          left.boolean = true;
-          break;
-        }
-
-        switch (left.kind) {
-          case SV_NUMBER:
-            left.boolean = left.number != right.number;
-            break;
-          case SV_STRING:
-            left.boolean = buffer_compare(&left.string, &right.string) != 0;
-            break;
-          case SV_BOOLEAN:
-            left.boolean = left.boolean != right.boolean;
-          case SV_NULL:
-            left.boolean = false;
-            break;
-        }
-        break;
-
-      case TK_GT:
-        left.kind = SV_BOOLEAN;
-
-        if (left.kind == SV_NUMBER && right.kind == SV_NUMBER) {
-          left.boolean = left.number > right.number;
-          break;
-        }
-
-        rash_assert(1, "bad types");
-
-      case TK_LT:
-        left.kind = SV_BOOLEAN;
-
-        if (left.kind == SV_NUMBER && right.kind == SV_NUMBER) {
-          left.boolean = left.number < right.number;
-          break;
-        }
-
-        rash_assert(1, "bad types");
-
-      case TK_GTE:
-        left.kind = SV_BOOLEAN;
-
-        if (left.kind == SV_NUMBER && right.kind == SV_NUMBER) {
-          left.boolean = left.number >= right.number;
-          break;
-        }
-
-        rash_assert(1, "bad types");
-
-      case TK_LTE:
-        left.kind = SV_BOOLEAN;
-
-        if (left.kind == SV_NUMBER && right.kind == SV_NUMBER) {
-          left.boolean = left.number <= right.number;
-          break;
-        }
-
-        rash_assert(1, "bad types");
-      default:
-        rash_panic(1);
-    }
+    lhs = eval_part(lhs, rhs, op);
   }
 
-  return left;
+  return lhs;
 }
 
 ShellVar evaluate_tokens(const TokenList *tokens) {
   EvalState state = {.tokens = tokens, .current = 0};
 
-  return eval_expr(&state, PREC_MIN);
+  ShellVar lhs = eval_term(&state);
+  return eval_expr(&state, lhs, PREC_MIN);
 }
