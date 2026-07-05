@@ -48,8 +48,7 @@ const Buffer *line_reader_read_void(void *_) {
 
 static void reader_begin(void) {
   enable_raw_mode();
-  // char *prompt = var_eval_to_string("PS1");
-  char *prompt = NULL;
+  char *prompt = var_eval_to_string("PS1");
 
   if (prompt == NULL) {
     reader.prompt_length = 2;
