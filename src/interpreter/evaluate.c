@@ -205,11 +205,9 @@ static bool bad_syntax(const Token *const tokens) {
 }
 
 static void set_exit_code_var(int code) {
-  Buffer string = buffer_from_format("%d", code & 0xff);
+  ShellVar *var = var_create_number((double)(code & 0xff));
 
-  ShellVar *var = var_create_string(string);
-
-  var_set("?", var);
+  var_set("LAST_STATUS", var);
 
   var_release(var);
 }
