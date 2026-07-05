@@ -1,6 +1,7 @@
 #ifndef LINE_READER_TYPES_H
 #define LINE_READER_TYPES_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "lib/buffer.h"

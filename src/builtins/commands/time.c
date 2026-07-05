@@ -72,16 +72,16 @@ int builtin_time(char **argv) {
     return EXIT_FAILURE;
   }
 
-  double elapsed = ((double)now.tv_sec + (double)now.tv_nsec / 1e9) -
-                   ((double)then.tv_sec + (double)then.tv_nsec / 1e9);
+  double elapsed = ((double)now.tv_sec + ((double)now.tv_nsec / 1e9)) -
+                   ((double)then.tv_sec + ((double)then.tv_nsec / 1e9));
   double user = ((double)usage_now.ru_utime.tv_sec +
-                 (double)usage_now.ru_utime.tv_usec / 1e6) -
+                 ((double)usage_now.ru_utime.tv_usec / 1e6)) -
                 ((double)usage_then.ru_utime.tv_sec +
-                 (double)usage_then.ru_utime.tv_usec / 1e6);
+                 ((double)usage_then.ru_utime.tv_usec / 1e6));
   double sys = ((double)usage_now.ru_stime.tv_sec +
-                (double)usage_now.ru_stime.tv_usec / 1e6) -
+                ((double)usage_now.ru_stime.tv_usec / 1e6)) -
                ((double)usage_then.ru_stime.tv_sec +
-                (double)usage_then.ru_stime.tv_usec / 1e6);
+                ((double)usage_then.ru_stime.tv_usec / 1e6));
 
   (void)fprintf(
       stderr,

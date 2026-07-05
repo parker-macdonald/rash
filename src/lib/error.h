@@ -2,7 +2,6 @@
 #define ERROR_H
 
 #include <errno.h>
-#include <string.h>
 
 #include "lib/attrib.h"
 
@@ -26,6 +25,7 @@ void fatal_f(const char *restrict format, ...);
 
 #define rash_panic(expr)                                                       \
   do {                                                                         \
+    extern char *strerror(int errnum);                                         \
     if (expr)                                                                  \
       fatal_f(                                                                 \
           "%s:%d: errno is %d (%s)\n",                                         \
@@ -35,5 +35,7 @@ void fatal_f(const char *restrict format, ...);
           strerror(errno)                                                      \
       );                                                                       \
   } while (0)
+
+#define unreachable() fatal_f("%s:%d: reached unreachable code\n", __FILE__, __LINE__)
 
 #endif

@@ -79,12 +79,76 @@ hello world!
 
 ## Shell Variables
 
-In rash, shell variables are declared with the `setvar` command, and retrived by putting the variable name in braces {}. For example:
+In rash, shell variables have types (unlike in most other shells where they are all strings).
 
-```bash
-setvar key value
-echo {key} # prints value
+Below is a list of all the possible types a shell variable can be:
+
+- string
+- number (double precision float)
+- boolean
+- null
+
+To declare a shell variable, you use the `setvar` command. This command uses type inference by default, but you can override this with the `-t` option.
+
+For example:
+
+```sh
+# with type inference
+setvar my_str hello
+setvar my_num 67
+setvar my_bool true
+setvar my_null null
+
+# without type inference
+setvar my_str -t string 67
+setvar my_num -t number 420
+setvar my_bool -t boolean false
+setvar my_null -t null null
 ```
+
+Declaring a variable without type inference is really only for strings. If you wanted to have a string with the contents "null" for example `setvar my_str null` will make the type of `my_str` `null`, so you must do `setvar my_str -t string null` instead. 
+
+To retrieve the contents of your shell variables you use a *shell expression*.
+
+A shell expression is sort of like a calculator or a minimal programming language. It's kinda like Python or bc.
+
+To use shell expressions you surround them with braces {}, and the evaluated contents will be evaluated into a string and added as an argument.
+
+An example:
+
+```sh
+setvar num_1 32
+setvar num_2 35
+
+echo {num_1} # prints 32
+echo {num_1 + num_2} # prints 67
+```
+
+### Shell Variables: Operators
+
+For binary operators, assume the first term of the equation is $a$ and the second term is $b$.
+
+Let $str(x)$ convert $x$ into a string.
+
+| Operator | Type Signature              | Output |
+|----------|-----------------------------|--------|
+| +        | string + any -> string      | $a$ concatenated with $str(b)$ |
+|          | any + string -> string      | $str(a)$ contatenated with $b$ |
+|          | number + number -> number   | $a + b$ |
+| -        | number - number -> number   | $a - b$ |
+| *        | number * number -> number   | $a \times b$ |
+| /        | number / number -> number   | $a \div b$ |
+| %        | number % number -> number   | $a \mod b$ |
+| **       | number ** number -> number  | $a ^ b$ |
+| ==       | any == any -> boolean       | true iff $a$ and $b$ share the same type and value |
+| !=       | any != any -> boolean       | false iff $a$ and $b$ share the same type and value |
+| >        | number > number -> boolean  | $a \gt b$ |
+| <        | number < number -> boolean  | $a \lt b$ |
+| >=       | number >= number -> boolean | $a \ge b$ |
+| <=       | number <= number -> boolean | $a \le b$ |
+| !        | !boolean -> boolean         | $\neg a$ |
+| +        | +number -> number           | $a$ (unary plus, the identity function, leaves number as it was.) |
+| -        | -number -> number           | $-a$ (unary minus, negate (or multiply by -1) the number.) |
 
 To unset a shell variable, you use the `unsetvar` command, and you can list all declared shell variables with the `var` command.
 
@@ -94,31 +158,31 @@ For example:
 $ setvar key value
 $ setvar key2 value2
 $ var
-{?}:    "0"
-{key}:  "value"
-{key2}: "value2"
+{key}:  "value" (type: string)
+{key2}: "value2" (type: string)
+{LAST_STATUS}:  0 (type: number)
 $ unsetvar key
 $ var
-{?}:    "0"
-{key2}: "value2"
+{key2}: "value2" (type: string)
+{LAST_STATUS}:  0 (type: number)
 ```
 
-You might be wondering what the `?` is doing in the list of shell variables. It contains the exit code of the last program to run. (For pipelines this is the exit code of the last program in the pipeline).
+You might be wondering what `LAST_STATUS` is doing in the list of shell variables. It contains the exit code of the last program to run. (For pipelines this is the exit code of the last program in the pipeline).
 
 For example:
 
 ```bash
 $ rash -c "exit 69" # use one-shot mode to run a process with an exit code of 69
-$ echo {?}
+$ echo {LAST_STATUS}
 69
 $ false
-$ echo {?}
+$ echo {LAST_STATUS}
 1
 $ true
-$ echo {?}
+$ echo {LAST_STATUS}
 0
 $ true | true | false # this is a pipeline
-$ echo {?}
+$ echo {LAST_STATUS}
 1
 ```
 

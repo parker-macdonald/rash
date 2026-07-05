@@ -1,6 +1,7 @@
 #ifndef BUFFER_H
 #define BUFFER_H
 
+#include "lib/attrib.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -18,7 +19,7 @@ typedef struct {
  * Helper functions to create a new buffer
  */
 
-// construct a buffer with length 0 and capacty of `capacity`
+// construct a buffer with length 0 and capacty of `next_pow_2(capacity)`
 Buffer buffer_create(size_t capacity);
 
 // constructs a buffer by copying the data at `data` of length `length` bytes.
@@ -26,6 +27,10 @@ Buffer buffer_from_ptr(const void *data, size_t length);
 
 // constructs a buffer by copying the data at `cstr` of length `strlen(cstr)`.
 Buffer buffer_from_cstr(const char *cstr);
+
+// construct a buffer with the results of a call to sprintf
+ATTRIB_PRINTF(1, 2)
+Buffer buffer_from_format(const char *format, ...);
 
 // clone a buffer, creating a new one referencing a copy of the old ones data.
 Buffer buffer_clone(const Buffer *other);
@@ -45,6 +50,8 @@ void buffer_append_cstr(Buffer *self, const char *cstr);
 
 void buffer_append_ptr(Buffer *self, const void *data, size_t length);
 
+void buffer_append_buffer(Buffer *self, const Buffer *other);
+
 /*
  * Helper functions to insert into an arbitrary place in an existing buffer
  */
@@ -57,6 +64,8 @@ void buffer_insert_cstr(Buffer *self, size_t at, const char *cstr);
 
 void buffer_insert_ptr(Buffer *self, size_t at, const void *data,
                        size_t length);
+
+void buffer_insert_buffer(Buffer *self, size_t at, const Buffer *other);
 
 /*
  * Extra helper functions
@@ -76,6 +85,9 @@ Buffer buffer_slice(const Buffer *self, size_t from, size_t to);
 
 // similar to strcmp, but with buffers
 int buffer_compare(const Buffer *self, const Buffer *other);
+
+// compare a buffer to a cstr
+int buffer_compare_cstr(const Buffer *self, const char *cstr);
 
 // resize the buffer to hold at least `grow_to` bytes. nothing is done if the
 // buffer can already hold `grow_to` bytes

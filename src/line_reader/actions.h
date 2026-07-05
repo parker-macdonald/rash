@@ -3,8 +3,8 @@
 
 #include "types.h"
 
-int preform_action(LineReader *);
+int preform_action(LineReader *reader);
 
-void actions_default(ActionSet *);
+void actions_default(ActionSet *acts);
 
 #endif

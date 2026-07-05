@@ -32,7 +32,7 @@ void history_print(LineReader *reader, int count) {
     i = (size_t)count;
   }
 
-  for (i = 0; i < reader->history.length; i++) {
+  for (; i < reader->history.length; i++) {
     printf(
         "%5zu  %.*s\n",
         i + 1,

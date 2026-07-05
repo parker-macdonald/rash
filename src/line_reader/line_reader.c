@@ -1,11 +1,8 @@
 #include "line_reader.h"
 
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <termios.h>
-#include <unistd.h>
 
 #include "lib/ansi.h"
 #include "lib/buffer.h"
@@ -14,7 +11,7 @@
 #include "line_reader/prompt.h"
 #include "line_reader/raw_mode.h"
 #include "line_reader/types.h"
-#include "shell_vars.h"
+#include "shell_vars/shell_vars.h"
 
 static LineReader reader;
 
@@ -51,13 +48,14 @@ const Buffer *line_reader_read_void(void *_) {
 
 static void reader_begin(void) {
   enable_raw_mode();
-  const char *prompt = var_get("PS1");
+  char *prompt = var_eval_to_string("PS1");
 
   if (prompt == NULL) {
     reader.prompt_length = 2;
     reader.prompt = strdup("$ ");
   } else {
     reader.prompt_length = get_prompt(&reader.prompt, prompt);
+    free(prompt);
   }
 
   reader.buffer = buffer_create(16);

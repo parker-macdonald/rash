@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <pwd.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,7 +21,7 @@
 #include "lib/cstrlist.h"
 #include "lib/error.h"
 #include "lib/vector.h"
-#include "shell_vars.h"
+#include "shell_vars/shell_vars.h"
 
 #define READ_ARG                                                               \
   while (tokens[i].type != TK_END_ARG)                                         \
@@ -204,10 +205,11 @@ static bool bad_syntax(const Token *const tokens) {
 }
 
 static void set_exit_code_var(int code) {
-  // 3 digit number (exit status is max of 255) + null terminator
-  char status_str[3 + 1] = {0};
-  (void)snprintf(status_str, sizeof(status_str), "%d", code & 0xff);
-  var_set("?", status_str);
+  ShellVar *var = var_create_number((double)(code & 0xff));
+
+  var_set("LAST_STATUS", var);
+
+  var_release(var);
 }
 
 static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
@@ -256,15 +258,14 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
     }
 
     if ((*tokens)->type == TK_VAR_EXPANSION) {
-      const char *value = var_get((char *)(*tokens)->data);
+      char *value = var_eval_to_string((char *)(*tokens)->data);
 
       if (value == NULL) {
-        error_f("rash: shell variable ‘%s’ does not exist.\n",
-                (char *)(*tokens)->data);
         goto error;
       }
 
       buffer_append_cstr(&buffer, value);
+      free(value);
 
       continue;
     }

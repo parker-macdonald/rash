@@ -6,6 +6,7 @@
 
 #include "lib/ansi.h"
 #include "lib/utf_8.h"
+#include "line_reader/types.h"
 
 void draw_entire_state(const LineReader *reader) {
   printf(

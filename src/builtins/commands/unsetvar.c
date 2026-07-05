@@ -4,7 +4,7 @@
 
 #include "builtins/builtins.h"
 #include "lib/error.h"
-#include "shell_vars.h"
+#include "shell_vars/shell_vars.h"
 
 static const char *const UNSETVAR_HELP = "Usage: unsetvar KEY\n"
                                          "Remove the shell variable KEY.";
@@ -20,10 +20,7 @@ int builtin_unsetvar(char **argv) {
     return EXIT_SUCCESS;
   }
 
-  if (var_unset(argv[1]) == 1) {
-    error_f("unsetvar: shell variable ‘%s’ was not declared.\n", argv[1]);
-    return EXIT_FAILURE;
-  }
+  var_unset(argv[1]);
 
   return EXIT_SUCCESS;
 }
