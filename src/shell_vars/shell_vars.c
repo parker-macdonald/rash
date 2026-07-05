@@ -156,7 +156,7 @@ static void print_callback(const char *key, void *ptr) {
 
   switch (var->kind) {
   case SV_NUMBER:
-    printf("%f (type: number)\n", var->number);
+    printf("%g (type: number)\n", var->number);
     break;
   case SV_STRING:
     printf("\"%.*s\" (type: string)\n", (int)var->string.length,
