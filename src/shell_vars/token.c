@@ -1,4 +1,5 @@
 #include "token.h"
+#include "lib/error.h"
 
 const char *TOKEN_KIND_NAMES[TK_COUNT] = {
   [TK_NONE] = "None",
@@ -53,4 +54,6 @@ bool is_binary_op(TokenKind kind) {
     case TK_COUNT:
       return false;
   }
+
+  unreachable();
 }
