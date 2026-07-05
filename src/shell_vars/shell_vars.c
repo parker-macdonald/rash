@@ -1,6 +1,7 @@
 #include "shell_vars/shell_vars.h"
 #include "lib/error.h"
 #include "lib/hash_map.h"
+#include "lib/vector.h"
 #include "shell_vars/eval.h"
 #include "shell_vars/lexer.h"
 #include "shell_vars/token.h"
@@ -79,7 +80,15 @@ ShellVar *var_release(ShellVar *var) {
 ShellVar *var_eval(const char *expr) {
   TokenList list = lex_shell_expr(&slice_using_cstr(expr));
 
-  return evaluate_tokens(&list);
+  if (list.length == 0) {
+    return NULL;
+  }
+
+  ShellVar *var = evaluate_tokens(&list);
+
+  VECTOR_DESTROY(list);
+
+  return var;
 }
 
 Buffer var_to_string(const ShellVar *var) {
