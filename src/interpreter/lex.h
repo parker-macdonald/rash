@@ -47,7 +47,7 @@ typedef enum {
 
 #define IS_ARGUMENT_TOKENS(x)                                                  \
   ((x) == TK_STRING || (x) == TK_GLOB_WILDCARD || (x) == TK_ENV_EXPANSION ||   \
-   (x) == TK_VAR_EXPANSION || (x) == TK_TILDE || (x) == TK_SUBSHELL)
+   (x) == TK_VAR_EXPANSION || (x) == TK_TILDE || (x) == TK_SUBSHELL || (x) == TK_END_ARG)
 
 typedef struct {
   TokenType type;
