@@ -8,6 +8,7 @@
 #include "lib/error.h"
 #include "lib/parse.h"
 #include "shell_vars/shell_vars.h"
+#include "shell_vars/util.h"
 
 static const char *const SETVAR_HELP =
     "Usage: setvar KEY [-t TYPE] VALUE\n"
@@ -16,13 +17,19 @@ static const char *const SETVAR_HELP =
 int builtin_setvar(char **argv) {
   int argc = count_argv(argv);
 
-  if (strcmp(argv[1], "--help") == 0) {
+  if (argc == 2 && strcmp(argv[1], "--help") == 0) {
     puts(SETVAR_HELP);
     return EXIT_SUCCESS;
   }
 
   if (argc == 3) {
     char *key = argv[1];
+
+    if (!is_ident_cstr(key)) {
+      error_f("setvar: `%s` is not a valid identifier.\n", key);
+      return EXIT_FAILURE;
+    }
+
     char *value = argv[2];
 
     if (strcmp(value, "null") == 0) {
@@ -64,6 +71,12 @@ int builtin_setvar(char **argv) {
 
   if (argc == 5 && strcmp(argv[2], "-t") == 0) {
     char *key = argv[1];
+
+    if (!is_ident_cstr(key)) {
+      error_f("setvar: `%s` is not a valid identifier.\n", key);
+      return EXIT_FAILURE;
+    }
+
     char *type = argv[3];
     char *value = argv[4];
 

@@ -2,6 +2,7 @@
 #include "lib/error.h"
 #include "lib/parse.h"
 #include "lib/vector.h"
+#include "shell_vars/util.h"
 #include "token.h"
 #include <ctype.h>
 #include <stdbool.h>
@@ -129,7 +130,7 @@ static int number(LexState *s) {
 }
 
 static int identifier(LexState *s) {
-  while (isalnum(peek(s)) || peek(s) == '_') {
+  while (is_ident(peek(s))) {
     advance(s);
   }
 
@@ -249,7 +250,7 @@ static int scan_token(LexState *s) {
         }
         break;
       }
-      if (isalpha((int)c)) {
+      if (is_begin_ident(c)) {
         if (identifier(s)) {
           return -1;
         }
