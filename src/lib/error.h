@@ -23,18 +23,8 @@ void fatal_f(const char *restrict format, ...);
       fatal_f("%s:%d: %s\n", __FILE__, __LINE__, str);                         \
   } while (0)
 
-#define rash_panic(expr)                                                       \
-  do {                                                                         \
-    extern char *strerror(int errnum);                                         \
-    if (expr)                                                                  \
-      fatal_f(                                                                 \
-          "%s:%d: errno is %d (%s)\n",                                         \
-          __FILE__,                                                            \
-          __LINE__,                                                            \
-          errno,                                                               \
-          strerror(errno)                                                      \
-      );                                                                       \
-  } while (0)
+ATTRIB_NORETURN
+void rash_panic(void);
 
 #define unreachable() fatal_f("%s:%d: reached unreachable code\n", __FILE__, __LINE__)
 

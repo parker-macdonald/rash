@@ -29,7 +29,9 @@ Buffer buffer_create(size_t capacity) {
   buffer.void_ptr = malloc(capacity);
   buffer._capacity = capacity;
 
-  rash_panic(buffer.void_ptr == NULL);
+  if (buffer.void_ptr == NULL) {
+    rash_panic();
+  }
 
   return buffer;
 }
@@ -62,7 +64,9 @@ Buffer buffer_from_format(const char *format, ...) {
   int size = vsnprintf(NULL, 0, format, ap2);
   va_end(ap2);
 
-  rash_panic(size < 0);
+  if (size < 0) {
+    rash_panic();
+  }
 
   Buffer buffer;
 
@@ -74,7 +78,9 @@ Buffer buffer_from_format(const char *format, ...) {
   int new_size = vsnprintf(buffer.char_ptr, (size_t)size + 1, format, ap);
   va_end(ap);
 
-  rash_panic(size != new_size);
+  if (size != new_size) {
+    rash_panic();
+  }
 
   return buffer;
 }

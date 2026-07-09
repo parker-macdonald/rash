@@ -6,13 +6,13 @@
 #include "lib/error.h"
 
 void rash_kill(pid_t pid, int sig) {
-  int res = kill(pid, sig);
-
-  rash_panic(res == -1);
+  if (kill(pid, sig) == -1) {
+    rash_panic();
+  }
 }
 
 void rash_close(int fd) {
-  int res = close(fd);
-
-  rash_panic(res == -1);
+  if (close(fd) == -1) {
+    rash_panic();
+  }
 }
