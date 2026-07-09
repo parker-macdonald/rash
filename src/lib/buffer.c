@@ -133,7 +133,7 @@ void buffer_append_buffer(Buffer *self, const Buffer *other) {
 
 void buffer_insert_ptr(Buffer *self, size_t at, const void *data,
                        size_t length) {
-  rash_assert(at > self->length, "at is greater than buffer length\n");
+  rash_assert(at <= self->length, "at is greater than buffer length\n");
 
   buffer_grow_by(self, length);
 
@@ -168,7 +168,7 @@ void buffer_insert_buffer(Buffer *self, size_t at, const Buffer *other) {
 
 // remove n bytes from an arbitrary place in an existing buffer
 void buffer_remove_n(Buffer *self, size_t at, size_t count) {
-  rash_assert(self->length < at + count, "index out of bounds on remove");
+  rash_assert(self->length >= at + count, "index out of bounds on remove");
 
   size_t new_length = self->length - count;
 
@@ -246,7 +246,7 @@ void buffer_grow_to(Buffer *self, size_t grow_to) {
 
   void *ptr = realloc(self->void_ptr, self->_capacity);
 
-  rash_assert(ptr == NULL, "realloc failed\n");
+  rash_assert(ptr != NULL, "realloc failed\n");
 
   self->void_ptr = ptr;
 }

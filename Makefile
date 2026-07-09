@@ -6,7 +6,7 @@ SANITIZER :=
 INCLUDE := -Isrc/
 CFLAGS := -std=c17 -D_DEFAULT_SOURCE -DVERSION=\"$(VERSION)\" $(INCLUDE)
 CFLAG_ERRORS := -Werror -Wall -Wvla -Wextra -Wunreachable-code -Wshadow -Wpedantic -Wconversion
-LDFLAGS := -lm
+LDFLAGS := -lm -lunwind
 CC := clang
 LINTER := clang-tidy
 
