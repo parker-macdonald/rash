@@ -21,7 +21,6 @@ void rash_unwind(void);
   do {                                                                         \
     ATTRIB_NORETURN extern void _exit(int status);                             \
     error_f("rash has panicked at %s:%d\n", __FILE__, __LINE__);               \
-    rash_unwind();                                                             \
     _exit(1);                                                                  \
   } while (0)
 
