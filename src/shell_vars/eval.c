@@ -194,7 +194,7 @@ static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
 }
 
 static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind op) {
-  rash_assert(lhs == NULL || rhs == NULL, "bad arguments");
+  rash_assert(lhs != NULL && rhs != NULL, "bad arguments");
 
   switch (op) {
     case TK_ADD:
@@ -366,7 +366,7 @@ static ShellVar *eval_expr(EvalState *s, ShellVar *lhs, OpPrec min_prec) { // NO
       lookahead = peek(s).kind;
     }
 
-    ShellVar *tmp = eval_part(lhs, rhs, op);
+    ShellVar *tmp = eval_part(NULL, rhs, op);
     var_release(lhs);
     var_release(rhs);
 

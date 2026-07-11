@@ -7,6 +7,9 @@
 
 #include "lib/attrib.h"
 
+#define UNW_LOCAL_ONLY
+#include <libunwind.h>
+
 void error(const char *str) {
   int res = fputs(str, stderr);
 

@@ -26,10 +26,11 @@ Buffer buffer_create(size_t capacity) {
     return buffer;
   }
 
+  capacity = next_pow_2(capacity);
   buffer.void_ptr = malloc(capacity);
   buffer._capacity = capacity;
 
-  rash_panic(buffer.void_ptr == NULL);
+  rash_assert(buffer.void_ptr != NULL, "malloc failed");
 
   return buffer;
 }
@@ -62,19 +63,15 @@ Buffer buffer_from_format(const char *format, ...) {
   int size = vsnprintf(NULL, 0, format, ap2);
   va_end(ap2);
 
-  rash_panic(size < 0);
-
-  Buffer buffer;
+  rash_assert(size >= 0, "vsnprintf failed");
 
   // must have space for a null terminator since vsnprintf will unconditionally write one
-  buffer._capacity = next_pow_2((size_t)size + 1);
-  buffer.length = (size_t)size;
-  buffer.void_ptr = malloc(buffer._capacity);
+  Buffer buffer = buffer_create((size_t)size + 1);
 
   int new_size = vsnprintf(buffer.char_ptr, (size_t)size + 1, format, ap);
   va_end(ap);
 
-  rash_panic(size != new_size);
+  rash_assert(size == new_size, "vsnprintf weirdness happened");
 
   return buffer;
 }
@@ -127,7 +124,7 @@ void buffer_append_buffer(Buffer *self, const Buffer *other) {
 
 void buffer_insert_ptr(Buffer *self, size_t at, const void *data,
                        size_t length) {
-  rash_assert(at > self->length, "at is greater than buffer length\n");
+  rash_assert(at <= self->length, "at is greater than buffer length\n");
 
   buffer_grow_by(self, length);
 
@@ -162,7 +159,7 @@ void buffer_insert_buffer(Buffer *self, size_t at, const Buffer *other) {
 
 // remove n bytes from an arbitrary place in an existing buffer
 void buffer_remove_n(Buffer *self, size_t at, size_t count) {
-  rash_assert(self->length < at + count, "index out of bounds on remove");
+  rash_assert(self->length >= at + count, "index out of bounds on remove");
 
   size_t new_length = self->length - count;
 
@@ -240,7 +237,7 @@ void buffer_grow_to(Buffer *self, size_t grow_to) {
 
   void *ptr = realloc(self->void_ptr, self->_capacity);
 
-  rash_assert(ptr == NULL, "realloc failed\n");
+  rash_assert(ptr != NULL, "realloc failed\n");
 
   self->void_ptr = ptr;
 }

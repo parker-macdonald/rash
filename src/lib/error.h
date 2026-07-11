@@ -1,8 +1,6 @@
 #ifndef ERROR_H
 #define ERROR_H
 
-#include <errno.h>
-
 #include "lib/attrib.h"
 
 void error(const char *str);
@@ -17,25 +15,27 @@ ATTRIB_NORETURN
 ATTRIB_PRINTF(1, 2)
 void fatal_f(const char *restrict format, ...);
 
+void rash_unwind(void);
+
+#define rash_panic()                                                           \
+  do {                                                                         \
+    ATTRIB_NORETURN extern void _exit(int status);                             \
+    error_f("rash has panicked at %s:%d\n", __FILE__, __LINE__);               \
+    _exit(1);                                                                  \
+  } while (0)
+
 #define rash_assert(expr, str)                                                 \
   do {                                                                         \
-    if (expr)                                                                  \
-      fatal_f("%s:%d: %s\n", __FILE__, __LINE__, str);                         \
+    if (!(expr)) {                                                             \
+      error("assertion failed: `" #expr "`, " str ".\n");                      \
+      rash_panic();                                                            \
+    }                                                                          \
   } while (0)
 
-#define rash_panic(expr)                                                       \
+#define unreachable()                                                          \
   do {                                                                         \
-    extern char *strerror(int errnum);                                         \
-    if (expr)                                                                  \
-      fatal_f(                                                                 \
-          "%s:%d: errno is %d (%s)\n",                                         \
-          __FILE__,                                                            \
-          __LINE__,                                                            \
-          errno,                                                               \
-          strerror(errno)                                                      \
-      );                                                                       \
+    error("reached unreachable code.\n");                                      \
+    rash_panic();                                                              \
   } while (0)
-
-#define unreachable() fatal_f("%s:%d: reached unreachable code\n", __FILE__, __LINE__)
 
 #endif

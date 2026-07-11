@@ -20,7 +20,9 @@ static bool is_at_end(LexState *s) {
 }
 
 static uint8_t advance(LexState *s) {
-  rash_panic(is_at_end(s));
+  if (is_at_end(s)) {
+    rash_panic();
+  }
   
   return s->source->u8_ptr[s->current++];
 }
@@ -34,7 +36,9 @@ static uint8_t peek(LexState *s) {
 }
 
 static uint8_t peek_next(LexState *s) {
-  rash_panic(s->current + 1 >= s->source->length);
+  if (s->current + 1 >= s->source->length) {
+    rash_panic();
+  }
   
   return s->source->u8_ptr[s->current + 1];
 }
