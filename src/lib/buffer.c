@@ -26,12 +26,11 @@ Buffer buffer_create(size_t capacity) {
     return buffer;
   }
 
+  capacity = next_pow_2(capacity);
   buffer.void_ptr = malloc(capacity);
   buffer._capacity = capacity;
 
-  if (buffer.void_ptr == NULL) {
-    rash_panic();
-  }
+  rash_assert(buffer.void_ptr != NULL, "malloc failed");
 
   return buffer;
 }
@@ -64,23 +63,15 @@ Buffer buffer_from_format(const char *format, ...) {
   int size = vsnprintf(NULL, 0, format, ap2);
   va_end(ap2);
 
-  if (size < 0) {
-    rash_panic();
-  }
-
-  Buffer buffer;
+  rash_assert(size >= 0, "vsnprintf failed");
 
   // must have space for a null terminator since vsnprintf will unconditionally write one
-  buffer._capacity = next_pow_2((size_t)size + 1);
-  buffer.length = (size_t)size;
-  buffer.void_ptr = malloc(buffer._capacity);
+  Buffer buffer = buffer_create((size_t)size + 1);
 
   int new_size = vsnprintf(buffer.char_ptr, (size_t)size + 1, format, ap);
   va_end(ap);
 
-  if (size != new_size) {
-    rash_panic();
-  }
+  rash_assert(size == new_size, "vsnprintf weirdness happened");
 
   return buffer;
 }
