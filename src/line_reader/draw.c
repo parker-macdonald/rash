@@ -99,6 +99,10 @@ void draw_cursor_post_line(const LineReader *reader) {
 unsigned short get_terminal_width(void) {
   struct winsize win;
   if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &win) != -1) {
+    // can run into divide by zero errors if the width is zero (which can happen in testing environments)
+    if (win.ws_col == 0) {
+      return 80;
+    }
     return win.ws_col;
   }
   // assume 80 columns if we cant get the terminal size
