@@ -67,6 +67,7 @@ Buffer buffer_from_format(const char *format, ...) {
 
   // must have space for a null terminator since vsnprintf will unconditionally write one
   Buffer buffer = buffer_create((size_t)size + 1);
+  buffer.length = (size_t)size;
 
   int new_size = vsnprintf(buffer.char_ptr, (size_t)size + 1, format, ap);
   va_end(ap);
