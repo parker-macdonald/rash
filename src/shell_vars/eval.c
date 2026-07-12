@@ -395,5 +395,11 @@ ShellVar *evaluate_tokens(const TokenList *tokens) {
   ShellVar *result = eval_expr(&state, lhs, PREC_MIN);
   var_release(lhs);
 
+  if (!is_at_end(&state)) {
+    error("shell expression: expected end of input.\n");
+    var_release(result);
+    return NULL;
+  }
+
   return result;
 }
