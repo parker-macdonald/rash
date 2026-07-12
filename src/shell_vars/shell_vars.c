@@ -1,10 +1,13 @@
 #include "shell_vars/shell_vars.h"
+#include "lib/buffer.h"
 #include "lib/error.h"
 #include "lib/hash_map.h"
+#include "lib/slice.h"
 #include "lib/vector.h"
 #include "shell_vars/eval.h"
 #include "shell_vars/lexer.h"
 #include "shell_vars/token.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -68,13 +71,12 @@ static void var_destroy(ShellVar *var) {
   free(var);
 }
 
-ShellVar *var_release(ShellVar *var) {
+void var_release(ShellVar *var) {
   var->ref_count--;
 
   if (var->ref_count == 0) {
     var_destroy(var);
   }
-  return var;
 }
 
 ShellVar *var_eval(const char *expr) {

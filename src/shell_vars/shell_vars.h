@@ -30,7 +30,7 @@ ShellVar *var_create_boolean(bool boolean);
 ShellVar *var_create_null(void);
 
 ShellVar *var_aquire(ShellVar *var);
-ShellVar *var_release(ShellVar *var);
+void var_release(ShellVar *var);
 
 Buffer var_to_string(const ShellVar *var);
 

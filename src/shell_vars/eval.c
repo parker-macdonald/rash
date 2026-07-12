@@ -1,10 +1,13 @@
 #include "eval.h"
+
 #include "lib/buffer.h"
 #include "lib/error.h"
 #include "shell_vars.h"
 #include "shell_vars/token.h"
+
 #include <math.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <unistd.h>
 
 typedef struct {

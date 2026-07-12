@@ -1,11 +1,17 @@
 #include "lexer.h"
+
+#include "lib/buffer.h"
 #include "lib/error.h"
 #include "lib/parse.h"
+#include "lib/slice.h"
 #include "lib/vector.h"
 #include "shell_vars/util.h"
+
 #include "token.h"
 #include <ctype.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <unistd.h>
 
 typedef struct {
@@ -23,7 +29,7 @@ static uint8_t advance(LexState *s) {
   if (is_at_end(s)) {
     rash_panic();
   }
-  
+
   return s->source->u8_ptr[s->current++];
 }
 
@@ -39,7 +45,7 @@ static uint8_t peek_next(LexState *s) {
   if (s->current + 1 >= s->source->length) {
     rash_panic();
   }
-  
+
   return s->source->u8_ptr[s->current + 1];
 }
 
@@ -113,14 +119,16 @@ static int string(LexState *s) {
 }
 
 static int number(LexState *s) {
-  while (isdigit(peek(s))) advance(s);
+  while (isdigit(peek(s)))
+    advance(s);
 
   // Look for a fractional part.
   if (peek(s) == '.' && isdigit(peek_next(s))) {
     // Consume the "."
     advance(s);
 
-    while (isdigit(peek(s))) advance(s);
+    while (isdigit(peek(s)))
+      advance(s);
   }
 
   Buffer number_str = buffer_from_ptr(
