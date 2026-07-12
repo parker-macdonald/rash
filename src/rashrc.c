@@ -5,10 +5,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "file_reader.h"
 #include "interpreter/repl.h"
+#include "lib/dynamic_sprintf.h"
 
 int load_rashrc(void) {
   const char *home = getenv("HOME");
@@ -17,19 +17,12 @@ int load_rashrc(void) {
     return 1;
   }
 
-  size_t len = strlen(home);
-  if (len + sizeof("/.rashrc") > PATH_MAX) {
-    return 1;
-  }
-
-  char rc_path[PATH_MAX];
-
-  // this use of memcpy does not need to have a null terminated result since the
-  // strcpy on the next line down handles that
-  memcpy(rc_path, home, len); // NOLINT(bugprone-not-null-terminated-result)
-  strcpy(rc_path + len, "/.rashrc");
+  char *rc_path = dynamic_sprintf("%s/.rashrc", home);
 
   FILE *rashrc = fopen(rc_path, "r");
+
+  free(rc_path);
+
   if (rashrc == NULL) {
     // if opening the rashrc fails for a reason other than the file does not
     // exist, i.e. file permission error, or the value of home is malformed.
