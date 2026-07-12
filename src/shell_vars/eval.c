@@ -115,6 +115,78 @@ static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
     return var_create_null();
   }
 
+  if (match(s, TK_STRING_TYPE)) {
+    if (!match(s, TK_O_PAREN)) {
+      error("shell expression: expected opening `(` after `string`.\n");
+      return NULL;
+    }
+
+    ShellVar *var = eval_expr(s);
+
+    if (var == NULL) {
+      return NULL;
+    }
+
+    if (!match(s, TK_C_PAREN)) {
+      error("shell expression: expected closing `)`.\n");
+      var_release(var);
+      return NULL;
+    }
+
+    ShellVar *string = var_cast_to_string(var);
+    var_release(var);
+
+    return string;
+  }
+
+  if (match(s, TK_NUMBER_TYPE)) {
+    if (!match(s, TK_O_PAREN)) {
+      error("shell expression: expected opening `(` after `number`.\n");
+      return NULL;
+    }
+
+    ShellVar *var = eval_expr(s);
+
+    if (var == NULL) {
+      return NULL;
+    }
+
+    if (!match(s, TK_C_PAREN)) {
+      error("shell expression: expected closing `)`.\n");
+      var_release(var);
+      return NULL;
+    }
+
+    ShellVar *string = var_cast_to_number(var);
+    var_release(var);
+
+    return string;
+  }
+
+  if (match(s, TK_BOOLEAN_TYPE)) {
+    if (!match(s, TK_O_PAREN)) {
+      error("shell expression: expected opening `(` after `boolean`.\n");
+      return NULL;
+    }
+
+    ShellVar *var = eval_expr(s);
+
+    if (var == NULL) {
+      return NULL;
+    }
+
+    if (!match(s, TK_C_PAREN)) {
+      error("shell expression: expected closing `)`.\n");
+      var_release(var);
+      return NULL;
+    }
+
+    ShellVar *string = var_cast_to_boolean(var);
+    var_release(var);
+
+    return string;
+  }
+
   // unary plus
   if (match(s, TK_ADD)) {
     ShellVar *var = eval_term(s);
