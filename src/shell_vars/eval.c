@@ -369,7 +369,7 @@ static ShellVar *eval_expr(EvalState *s, ShellVar *lhs, OpPrec min_prec) { // NO
       lookahead = peek(s).kind;
     }
 
-    ShellVar *tmp = eval_part(NULL, rhs, op);
+    ShellVar *tmp = eval_part(lhs, rhs, op);
     var_release(lhs);
     var_release(rhs);
 
