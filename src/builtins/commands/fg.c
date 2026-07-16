@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <errno.h>
 #include <limits.h>
 #include <signal.h>
@@ -61,7 +60,7 @@ int builtin_fg(char **argv) {
 
   if (tty_fd != -1) {
     int status = tcsetpgrp(tty_fd, pid);
-    assert(status == 0);
+    rash_assert(status == 0);
   }
 
   return wait_process(pid);

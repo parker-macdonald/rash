@@ -1,6 +1,5 @@
 #include "evaluate.h"
 
-#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -416,7 +415,7 @@ int evaluate(const Token *tokens) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
-      assert(IS_ARGUMENT_TOKENS(tokens->type));
+      rash_assert(IS_ARGUMENT_TOKENS(tokens->type));
 
       bool needs_globbing = false;
       char *filename = evaluate_arg(&tokens, &needs_globbing);
@@ -447,7 +446,7 @@ int evaluate(const Token *tokens) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
-      assert(IS_ARGUMENT_TOKENS(tokens->type));
+      rash_assert(IS_ARGUMENT_TOKENS(tokens->type));
 
       int fds[2];
       if (pipe(fds) == -1) {
@@ -493,7 +492,7 @@ int evaluate(const Token *tokens) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
-      assert(IS_ARGUMENT_TOKENS(tokens->type));
+      rash_assert(IS_ARGUMENT_TOKENS(tokens->type));
 
       bool needs_globbing = false;
       char *filename = evaluate_arg(&tokens, &needs_globbing);
@@ -525,7 +524,7 @@ int evaluate(const Token *tokens) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
-      assert(IS_ARGUMENT_TOKENS(tokens->type));
+      rash_assert(IS_ARGUMENT_TOKENS(tokens->type));
 
       bool needs_globbing = false;
       char *filename = evaluate_arg(&tokens, &needs_globbing);
@@ -557,7 +556,7 @@ int evaluate(const Token *tokens) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
-      assert(IS_ARGUMENT_TOKENS(tokens->type));
+      rash_assert(IS_ARGUMENT_TOKENS(tokens->type));
 
       bool needs_globbing = false;
       char *filename = evaluate_arg(&tokens, &needs_globbing);
@@ -589,7 +588,7 @@ int evaluate(const Token *tokens) {
       // this should've been taken care of with the call to bad syntax, but you
       // never know
       tokens++;
-      assert(IS_ARGUMENT_TOKENS(tokens->type));
+      rash_assert(IS_ARGUMENT_TOKENS(tokens->type));
 
       bool needs_globbing = false;
       char *filename = evaluate_arg(&tokens, &needs_globbing);
@@ -661,7 +660,7 @@ int evaluate(const Token *tokens) {
       for (size_t i = 0; i < wait_for_me.length; i++) {
         pid_t id = waitpid(wait_for_me.data[i], NULL, 0);
         // from my understanding, if waitpid fails, something in rash went wrong
-        assert(id != -1);
+        rash_assert(id != -1);
       }
       VECTOR_CLEAR(wait_for_me);
     }
@@ -704,7 +703,7 @@ error:
   for (size_t i = 0; i < wait_for_me.length; i++) {
     pid_t id = waitpid(wait_for_me.data[i], NULL, 0);
     // from my understanding, if waitpid fails, something in rash went wrong
-    assert(id != -1);
+    rash_assert(id != -1);
   }
   VECTOR_DESTROY(wait_for_me);
   for (size_t i = 0; i < argv.length; i++) {

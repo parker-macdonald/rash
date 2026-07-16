@@ -116,7 +116,6 @@ printf("%s", string.data); // hi
 ```
 */
 
-#include <assert.h>
 #include <stdlib.h>
 
 #define VECTOR_DEFAULT_SIZE 16

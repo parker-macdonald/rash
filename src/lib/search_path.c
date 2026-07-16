@@ -1,12 +1,12 @@
 #include "search_path.h"
 
-#include <assert.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 #include "lib/buffer.h"
-#include "vector.h"
+#include "lib/error.h"
+#include "lib/vector.h"
 
 char *search_path(const char *file) {
   const char *path = getenv("PATH");
@@ -19,7 +19,7 @@ char *search_path(const char *file) {
 
   for (size_t i = 0;; i++) {
     if (path[i] == ':' || path[i] == '\0') {
-      assert(file_path.length != 0);
+      rash_assert(file_path.length != 0);
 
       buffer_append_byte(&file_path, '/');
 

@@ -1,6 +1,5 @@
 #include "lib/buffer.h"
 
-#include <assert.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
