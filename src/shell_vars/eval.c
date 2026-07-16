@@ -77,7 +77,7 @@ static bool match(EvalState *s, TokenKind kind) {
 }
 
 static ShellVar *eval_term(EvalState *s);
-static ShellVar *eval_expr(EvalState *s, ShellVar *lhs, OpPrec min_prec);
+static ShellVar *eval_expr(EvalState *s);
 static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind op);
 
 static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
@@ -113,6 +113,78 @@ static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
 
   if (match(s, TK_NULL_LIT)) {
     return var_create_null();
+  }
+
+  if (match(s, TK_STRING_TYPE)) {
+    if (!match(s, TK_O_PAREN)) {
+      error("shell expression: expected opening `(` after `string`.\n");
+      return NULL;
+    }
+
+    ShellVar *var = eval_expr(s);
+
+    if (var == NULL) {
+      return NULL;
+    }
+
+    if (!match(s, TK_C_PAREN)) {
+      error("shell expression: expected closing `)`.\n");
+      var_release(var);
+      return NULL;
+    }
+
+    ShellVar *string = var_cast_to_string(var);
+    var_release(var);
+
+    return string;
+  }
+
+  if (match(s, TK_NUMBER_TYPE)) {
+    if (!match(s, TK_O_PAREN)) {
+      error("shell expression: expected opening `(` after `number`.\n");
+      return NULL;
+    }
+
+    ShellVar *var = eval_expr(s);
+
+    if (var == NULL) {
+      return NULL;
+    }
+
+    if (!match(s, TK_C_PAREN)) {
+      error("shell expression: expected closing `)`.\n");
+      var_release(var);
+      return NULL;
+    }
+
+    ShellVar *string = var_cast_to_number(var);
+    var_release(var);
+
+    return string;
+  }
+
+  if (match(s, TK_BOOLEAN_TYPE)) {
+    if (!match(s, TK_O_PAREN)) {
+      error("shell expression: expected opening `(` after `boolean`.\n");
+      return NULL;
+    }
+
+    ShellVar *var = eval_expr(s);
+
+    if (var == NULL) {
+      return NULL;
+    }
+
+    if (!match(s, TK_C_PAREN)) {
+      error("shell expression: expected closing `)`.\n");
+      var_release(var);
+      return NULL;
+    }
+
+    ShellVar *string = var_cast_to_boolean(var);
+    var_release(var);
+
+    return string;
   }
 
   // unary plus
@@ -170,14 +242,7 @@ static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
   }
 
   if (match(s, TK_O_PAREN)) {
-    ShellVar *lhs = eval_term(s);
-
-    if (lhs == NULL) {
-      return NULL;
-    }
-
-    ShellVar *var = eval_expr(s, lhs, PREC_MIN);
-    var_release(lhs);
+    ShellVar *var = eval_expr(s);
 
     if (var == NULL) {
       return NULL;
@@ -337,7 +402,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
   }
 }
 
-static ShellVar *eval_expr(EvalState *s, ShellVar *lhs, OpPrec min_prec) { // NOLINT(misc-no-recursion)
+static ShellVar *eval_expr_1(EvalState *s, ShellVar *lhs, OpPrec min_prec) { // NOLINT(misc-no-recursion)
   var_aquire(lhs);
 
   TokenKind lookahead = peek(s).kind;
@@ -356,7 +421,7 @@ static ShellVar *eval_expr(EvalState *s, ShellVar *lhs, OpPrec min_prec) { // NO
     lookahead = peek(s).kind;
 
     while (is_binary_op(lookahead) && OP_PREC_LOOKUP[lookahead] > OP_PREC_LOOKUP[op]) {
-      ShellVar *tmp = eval_expr(s, rhs, OP_PREC_LOOKUP[op] + 1);
+      ShellVar *tmp = eval_expr_1(s, rhs, OP_PREC_LOOKUP[op] + 1);
       var_release(rhs);
 
       if (tmp == NULL) {
@@ -383,17 +448,27 @@ static ShellVar *eval_expr(EvalState *s, ShellVar *lhs, OpPrec min_prec) { // NO
   return lhs;
 }
 
-ShellVar *evaluate_tokens(const TokenList *tokens) {
-  EvalState state = {.tokens = tokens, .current = 0};
-
-  ShellVar *lhs = eval_term(&state);
+static ShellVar *eval_expr(EvalState *s) { // NOLINT(misc-no-recursion)
+  ShellVar *lhs = eval_term(s);
 
   if (lhs == NULL) {
     return NULL;
   }
 
-  ShellVar *result = eval_expr(&state, lhs, PREC_MIN);
+  ShellVar *var = eval_expr_1(s, lhs, PREC_MIN);
   var_release(lhs);
+
+  return var;
+}
+
+ShellVar *evaluate_tokens(const TokenList *tokens) {
+  EvalState state = {.tokens = tokens, .current = 0};
+
+  ShellVar *result = eval_expr(&state);
+
+  if (result == NULL) {
+    return NULL;
+  }
 
   if (!is_at_end(&state)) {
     error("shell expression: expected end of input.\n");

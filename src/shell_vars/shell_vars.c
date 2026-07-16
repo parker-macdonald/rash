@@ -2,12 +2,14 @@
 #include "lib/buffer.h"
 #include "lib/error.h"
 #include "lib/hash_map.h"
+#include "lib/parse.h"
 #include "lib/slice.h"
 #include "lib/vector.h"
 #include "shell_vars/eval.h"
 #include "shell_vars/lexer.h"
 #include "shell_vars/token.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -95,17 +97,78 @@ ShellVar *var_eval(const char *expr) {
 
 Buffer var_to_string(const ShellVar *var) {
   switch (var->kind) {
-  case SV_NUMBER:
-    return buffer_from_format("%g", var->number);
-  case SV_STRING:
-    return buffer_clone(&var->string);
-  case SV_BOOLEAN:
-    return buffer_from_format("%s", var->boolean ? "true" : "false");
-  case SV_NULL:
-    return buffer_from_cstr("null");
-  default:
-    unreachable();
+    case SV_NUMBER:
+      return buffer_from_format("%g", var->number);
+    case SV_STRING:
+      return buffer_clone(&var->string);
+    case SV_BOOLEAN:
+      return buffer_from_cstr(var->boolean ? "true" : "false");
+    case SV_NULL:
+      return buffer_from_cstr("null");
+    default:
+      unreachable();
   }
+}
+
+ShellVar *var_cast_to_string(const ShellVar *var) {
+  return var_create_string(var_to_string(var));
+}
+
+ShellVar *var_cast_to_boolean(const ShellVar *var) {
+  bool boolean;
+
+  switch (var->kind) {
+    case SV_NUMBER:
+      boolean = var->number != 0;
+      break;
+    case SV_STRING:
+      boolean = var->string.length != 0;
+      break;
+    case SV_BOOLEAN:
+      boolean = var->boolean;
+      break;
+    case SV_NULL:
+      boolean = false;
+      break;
+    default:
+      unreachable();
+  }
+
+  return var_create_boolean(boolean);
+}
+
+ShellVar *var_cast_to_number(const ShellVar *var) {
+  double number;
+
+  switch (var->kind) {
+    case SV_NUMBER:
+      number = var->number;
+      break;
+    case SV_STRING: {
+      Buffer copy = buffer_clone(&var->string);
+      OptionDouble parsed = parse_double(buffer_cstr(&copy));
+      buffer_destroy(&copy);
+
+      if (parsed.has_value) {
+        number = parsed.value;
+        break;
+      } 
+
+      number = NAN;
+      break;
+    }
+
+    case SV_BOOLEAN:
+      number = var->boolean ? 1 : 0;
+      break;
+    case SV_NULL:
+      number = 0;
+      break;
+    default:
+      unreachable();
+  }
+
+  return var_create_number(number);
 }
 
 char *var_eval_to_string(const char *expr) {
