@@ -6,7 +6,6 @@
 
 #include "auto_complete.h"
 
-#include <assert.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <stdint.h>
@@ -21,14 +20,14 @@
 
 #include "lib/attrib.h"
 #include "lib/cstrlist.h"
+#include "lib/error.h"
 #include "lib/sort.h"
 #include "lib/utf_8.h"
+#include "builtins/find_builtin.h"
+
 #include "line_reader/action_utils.h"
 #include "line_reader/draw.h"
 #include "line_reader/types.h"
-#include "builtins/find_builtin.h"
-#include "lib/buffer.h"
-#include "lib/vector.h"
 
 static void
 get_file_matches(CStrList *matches, const char *word, size_t word_len) {
@@ -78,7 +77,7 @@ get_file_matches(CStrList *matches, const char *word, size_t word_len) {
 
 #ifndef _DIRENT_HAVE_D_TYPE
   int fd = dirfd(dir);
-  assert(fd != -1);
+  rash_assert(fd != -1);
 #endif
 
   struct dirent *ent;
@@ -152,7 +151,7 @@ get_command_matches(CStrList *matches, const char *word, size_t word_len) {
     }
 
     int fd = dirfd(dir);
-    assert(fd != -1);
+    rash_assert(fd != -1);
     struct dirent *ent;
 
     while ((ent = readdir(dir))) {

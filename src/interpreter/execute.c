@@ -1,6 +1,5 @@
 #include "execute.h"
 
-#include <assert.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -45,10 +44,10 @@ int execute(ExecutionContext context) {
       pid_t new_pid = getpid();
 
       int status = setpgid(new_pid, new_pid);
-      assert(status == 0);
+      rash_assert(status == 0);
 
       status = tcsetpgrp(tty_fd, new_pid);
-      assert(status == 0);
+      rash_assert(status == 0);
 
       (void)signal(SIGTTOU, SIG_IGN);
       (void)signal(SIGTSTP, SIG_DFL);
@@ -58,21 +57,21 @@ int execute(ExecutionContext context) {
       int res = dup2(context.stdout_fd, STDOUT_FILENO);
       close(context.stdout_fd);
 
-      assert(res != -1);
+      rash_assert(res != -1);
     }
 
     if (context.stderr_fd != -1) {
       int res = dup2(context.stderr_fd, STDERR_FILENO);
       close(context.stderr_fd);
 
-      assert(res != -1);
+      rash_assert(res != -1);
     }
 
     if (context.stdin_fd != -1) {
       int res = dup2(context.stdin_fd, STDIN_FILENO);
       close(context.stdin_fd);
 
-      assert(res != -1);
+      rash_assert(res != -1);
     }
 
     if (builtin != NULL) {

@@ -1,12 +1,12 @@
 #include "find_builtin.h"
 
-#include <assert.h>
 #include <ctype.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "builtins.h"
+#include "lib/error.h"
 #include "lib/cstrlist.h"
 #include "lib/vector.h"
 
@@ -27,7 +27,7 @@ static void trie_insert(const char *const str, const builtin_t function) {
     char curr_char = str[i];
 
     // all builtins are just letters i believe
-    assert(isalpha((int)curr_char));
+    rash_assert(isalpha((int)curr_char));
     curr_char -= 'a';
     size_t index = (size_t)curr_char;
     TrieNode *new_node = node->nodes[index];

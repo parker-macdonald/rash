@@ -1,6 +1,5 @@
 #include "jobs.h"
 
-#include <assert.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
@@ -80,7 +79,7 @@ void sig_handler_init(void) {
   // sigprocmask(SIG_BLOCK, &set, NULL);
 
   int atexit_return = atexit(kill_all_children);
-  assert(atexit_return == 0);
+  rash_assert(atexit_return == 0);
 
   if (interactive) {
     tty_fd = open("/dev/tty", O_RDWR, 0666);
@@ -246,7 +245,7 @@ pid_t get_pid_and_remove(int *id) {
     }
 
     // this should never be reached
-    assert(0);
+    rash_assert(0);
   }
 
   for (current = root_job; current != NULL; current = current->p_next) {

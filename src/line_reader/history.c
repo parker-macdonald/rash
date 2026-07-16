@@ -1,9 +1,9 @@
 #include "history.h"
 
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "lib/error.h"
 #include "lib/vector.h"
 #include "line_reader/types.h"
 
@@ -18,7 +18,7 @@ void history_clear(LineReader *reader) {
 }
 
 void history_print(LineReader *reader, int count) {
-  assert(count >= -1);
+  rash_assert(count >= -1);
 
   if (count == 0) {
     return;
@@ -47,7 +47,7 @@ void history_add(LineReader *reader) {
 }
 
 Buffer *history_curr(LineReader *reader) {
-  assert(reader->history_curr < reader->history.length);
+  rash_assert(reader->history_curr < reader->history.length);
 
   return &reader->history.data[reader->history_curr];
 }
