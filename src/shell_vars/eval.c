@@ -262,7 +262,7 @@ static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
 }
 
 static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind op) {
-  rash_assert(lhs != NULL && rhs != NULL, "bad arguments");
+  rash_assert(lhs != NULL && rhs != NULL);
 
   switch (op) {
     case TK_ADD:

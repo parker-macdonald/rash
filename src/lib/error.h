@@ -24,7 +24,15 @@ void rash_unwind(void);
     _exit(1);                                                                  \
   } while (0)
 
-#define rash_assert(expr, str)                                                 \
+#define rash_assert(expr)                                                 \
+  do {                                                                         \
+    if (!(expr)) {                                                             \
+      error("assertion failed: `" #expr "` is false.\n");                      \
+      rash_panic();                                                            \
+    }                                                                          \
+  } while (0)
+
+#define rash_assert_msg(expr, str)                                             \
   do {                                                                         \
     if (!(expr)) {                                                             \
       error("assertion failed: `" #expr "`, " str ".\n");                      \
