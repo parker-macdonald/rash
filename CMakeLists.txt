@@ -1,7 +1,6 @@
-# Set the minimum version of CMake that can be used
-# To find the cmake version run
-# $ cmake --version
 cmake_minimum_required(VERSION 3.5)
+
+add_compile_definitions(VERSION=0.7.9)
 
 # Set the project name
 project (rash)
