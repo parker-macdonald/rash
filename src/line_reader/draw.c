@@ -9,11 +9,13 @@
 #include "line_reader/types.h"
 
 void draw_entire_state(const LineReader *reader) {
+  draw_cursor_begin_line(reader);
+  
   printf(
-      ANSI_CURSOR_RESTORE ANSI_REMOVE_BELOW_CURSOR "%s%.*s ",
+      ANSI_REMOVE_BELOW_CURSOR "%s%.*s ",
       reader->prompt,
       (int)reader->active_buffer->length,
-      (char *)reader->active_buffer->u8_ptr
+      reader->active_buffer->char_ptr
   );
 
   draw_cursor_at(reader, reader->cursor_pos);
@@ -82,6 +84,18 @@ void move_cursor_right_n(LineReader *reader, unsigned n) {
   reader->cursor_pos += n;
 }
 
+void draw_cursor_begin_line(const LineReader *reader) {
+  unsigned short width = get_terminal_width();
+
+  unsigned current_line = reader->cursor_pos / width;
+
+  if (current_line) {
+    printf(ANSI_CURSOR_UP_N("%u"), current_line);
+  }
+
+  PUTS("\r");
+}
+
 void draw_cursor_post_line(const LineReader *reader) {
   unsigned short width = get_terminal_width();
   unsigned length = get_line_width(reader);
@@ -121,7 +135,7 @@ void draw_cursor_at(const LineReader *reader, unsigned cursor_pos) {
   unsigned down = cursor_pos / width;
   unsigned right = cursor_pos % width;
 
-  PUTS(ANSI_CURSOR_RESTORE);
+  draw_cursor_begin_line(reader);
 
   if (down) {
     printf(ANSI_CURSOR_DOWN_N("%u"), down);

@@ -19,7 +19,6 @@
   #include <sys/stat.h>
 #endif
 
-#include "lib/ansi.h"
 #include "lib/attrib.h"
 #include "lib/cstrlist.h"
 #include "lib/sort.h"
@@ -338,7 +337,6 @@ void auto_complete(LineReader *reader) {
       draw_cursor_post_line(reader);
       pretty_print_strings(matches.data, matches.length);
 
-      PUTS(ANSI_CURSOR_SAVE);
       draw_entire_state(reader);
       draw_flush();
     }

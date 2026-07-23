@@ -71,7 +71,6 @@ int action_clear_line(LineReader *reader) {
   reader->buffer_offset = 0;
 
   draw_cursor_post_line(reader);
-  PUTS(ANSI_CURSOR_SAVE);
   draw_entire_state(reader);
   draw_flush();
 
@@ -80,7 +79,7 @@ int action_clear_line(LineReader *reader) {
 
 int action_new_line(LineReader *reader) {
   if (reader->active_buffer->length == 0) {
-    printf("\n%s", reader->prompt);
+    printf("\r\n%s", reader->prompt);
     draw_flush();
     return 0;
   }

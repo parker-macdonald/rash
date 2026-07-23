@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "lib/ansi.h"
 #include "lib/buffer.h"
 #include "line_reader/actions.h"
 #include "line_reader/history.h"
@@ -65,7 +64,7 @@ static void reader_begin(void) {
 
   reader.history_curr = reader.history.length;
 
-  printf("\r" ANSI_CURSOR_SAVE "%s", reader.prompt);
+  printf("\r%s", reader.prompt);
   (void)fflush(stdout);
 }
 

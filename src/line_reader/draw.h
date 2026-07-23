@@ -25,6 +25,8 @@ void move_cursor_left_n(LineReader *reader, unsigned n);
 
 void move_cursor_right_n(LineReader *reader, unsigned n);
 
+void draw_cursor_begin_line(const LineReader *reader);
+
 // move cursor to the start of the line below the current buffer
 // i.e.
 //                    this is a line la la la <-- cursor here
