@@ -30,7 +30,7 @@
 #define CTRL_T 20
 #define CTRL_U 21
 #define CTRL_V 22
-#define CTRL_BACKSPACE 23
+#define CTRL_W 23
 #define CTRL_X 24
 #define CTRL_Y 25
 #define CTRL_Z 26
@@ -197,8 +197,8 @@ int preform_action(LineReader *reader) {
     return reader->acts.ctrl_v(reader);
   }
 
-  if (byte == CTRL_BACKSPACE) {
-    return reader->acts.ctrl_backspace(reader);
+  if (byte == CTRL_W) {
+    return reader->acts.ctrl_w(reader);
   }
 
   if (byte == CTRL_X) {
@@ -245,14 +245,16 @@ void actions_default(ActionSet *acts) {
   acts->ctrl_d = action_stop;
   acts->ctrl_l = action_clear;
   acts->ctrl_c = action_clear_line;
-  acts->ctrl_backspace = action_delete_word_left;
+  // on gnome terminal ctrl+backspace is the same as ctrl+w
+  acts->ctrl_w = action_delete_word_left;
+  // on kde's konsole ctrl+backspace is the same as ctrl+h
+  acts->ctrl_h = action_delete_word_left;
 
   acts->ctrl_a = action_nop;
   acts->ctrl_b = action_nop;
   acts->ctrl_e = action_nop;
   acts->ctrl_f = action_nop;
   acts->ctrl_g = action_nop;
-  acts->ctrl_h = action_nop;
   acts->ctrl_i = action_nop;
   acts->ctrl_j = action_nop;
   acts->ctrl_k = action_nop;

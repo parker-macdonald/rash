@@ -28,7 +28,6 @@ typedef struct {
   Action shift_tab;
   Action tab;
   Action backspace;
-  Action ctrl_backspace;
   Action ctrl_a;
   Action ctrl_b;
   Action ctrl_c;
@@ -51,7 +50,7 @@ typedef struct {
   Action ctrl_t;
   Action ctrl_u;
   Action ctrl_v;
-  // there is no ctrl+w since it's the same as ctrl+backspace
+  Action ctrl_w;
   Action ctrl_x;
   Action ctrl_y;
   Action ctrl_z;
