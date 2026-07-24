@@ -88,6 +88,7 @@ void trie_init(void) {
   trie_insert("exec", &builtin_exec);
   trie_insert("eval", &builtin_eval);
   trie_insert("time", &builtin_time);
+  trie_insert("mkdir", &builtin_mkdir);
 }
 
 static TrieNode *find_node(const char *str, size_t str_len) {

@@ -263,3 +263,15 @@ char *buffer_cstr(Buffer *self) {
 void buffer_clear(Buffer *self) {
   self->length = 0;
 }
+
+size_t buffer_find_from_offset(const Buffer *self, uint8_t search_for, size_t start_from) {
+  assert(start_from < self->length);
+
+  for (size_t i = start_from; i < self->length; i++) {
+    if (self->u8_ptr[i] == search_for) {
+      return i;
+    }
+  }
+
+  return (size_t)-1;
+}

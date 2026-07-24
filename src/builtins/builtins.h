@@ -47,4 +47,6 @@ int builtin_eval(char **argv);
 
 int builtin_time(char **argv);
 
+int builtin_mkdir(char **argv);
+
 #endif

@@ -104,4 +104,6 @@ char *buffer_cstr(Buffer *self);
 // set the length of a buffer to zero
 void buffer_clear(Buffer *self);
 
+size_t buffer_find_from_offset(const Buffer *self, uint8_t search_for, size_t start_from);
+
 #endif

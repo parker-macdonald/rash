@@ -16,6 +16,7 @@ static const char *const HELP_STRING =
     "  help: show this help text.\n"
     "  history: view and remove command history.\n"
     "  jobs: list all the paused and background jobs.\n"
+    "  mkdir: create directories.\n"
     "  pwd: prints the current working directory.\n"
     "  setvar: set an environment variable.\n"
     "  setvar: set a shell variable.\n"
