@@ -4,7 +4,6 @@
 #include "lib/hash_map.h"
 #include "lib/parse.h"
 #include "lib/slice.h"
-#include "lib/vector.h"
 #include "shell_vars/eval.h"
 #include "shell_vars/lexer.h"
 #include "shell_vars/token.h"
@@ -90,7 +89,7 @@ ShellVar *var_eval(const char *expr) {
 
   ShellVar *var = evaluate_tokens(&list);
 
-  VECTOR_DESTROY(list);
+  token_list_free(&list);
 
   return var;
 }

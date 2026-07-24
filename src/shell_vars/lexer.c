@@ -310,3 +310,19 @@ TokenList lex_shell_expr(const Slice *source) {
 
   return state.tokens;
 }
+
+void token_list_free(TokenList *list) {
+  for (size_t i = 0; i < list->length; i++) {
+    Token tk = list->data[i];
+
+    if (tk.kind == TK_STRING_LIT) {
+      buffer_destroy(&tk.str_lit);
+    }
+
+    else if (tk.kind == TK_IDENTIFIER) {
+      buffer_destroy(&tk.identifier);
+    }
+  }
+
+  VECTOR_DESTROY(*list);
+}

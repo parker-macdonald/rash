@@ -6,4 +6,6 @@
 
 TokenList lex_shell_expr(const Slice *source);
 
+void token_list_free(TokenList *list);
+
 #endif
