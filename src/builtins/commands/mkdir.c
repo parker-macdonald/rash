@@ -10,7 +10,7 @@
 #include "lib/buffer.h"
 #include "lib/error.h"
 
-static const char *const JOBS_HELP =
+static const char *const MKDIR_HELP =
 "Usage: mkdir [-p] [-c] [-m mode] directory ...\n"
 "Create the directories listed in the arguments. By default these directories\n"
 "will have the mode rwxrwxrwx (0777), but this can be overwritten with the `-m`\n"
@@ -96,12 +96,12 @@ int builtin_mkdir(char **argv) {
   argv++;
 
   if (*argv == NULL) {
-    puts(JOBS_HELP);
+    puts(MKDIR_HELP);
     return EXIT_FAILURE;
   }
 
   if (strcmp(*argv, "--help") == 0) {
-    puts(JOBS_HELP);
+    puts(MKDIR_HELP);
     return EXIT_SUCCESS;
   }
 
