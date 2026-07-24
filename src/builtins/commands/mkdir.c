@@ -20,7 +20,7 @@ static const char *const JOBS_HELP =
 "directory in the list will be set to the current working directory (i.e. cd\n"
 "dir) so long as there aren't any errors in the creation of the last directory.";
 
-int parse_mode(const char *str, mode_t *dest) {
+static int parse_mode(const char *str, mode_t *dest) {
   if (*str != '0') {
     error("mkdir: mode must start with `0` (i.e. 0777).\n");
     return -1;
@@ -51,7 +51,7 @@ int parse_mode(const char *str, mode_t *dest) {
   return 0;
 }
 
-int mkdir_good(const char *path, mode_t mode, bool parent_flag) {
+static int mkdir_good(const char *path, mode_t mode, bool parent_flag) {
   if (!parent_flag) {
     return mkdir(path, mode);
   }
