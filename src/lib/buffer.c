@@ -264,7 +264,7 @@ void buffer_clear(Buffer *self) {
 }
 
 size_t buffer_find_from_offset(const Buffer *self, uint8_t search_for, size_t start_from) {
-  assert(start_from < self->length);
+  rash_assert(start_from < self->length);
 
   for (size_t i = start_from; i < self->length; i++) {
     if (self->u8_ptr[i] == search_for) {
