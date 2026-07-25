@@ -15,6 +15,7 @@ typedef struct {
 
 #define slice_using_ptr(ptr_, length_) ((Slice){.void_ptr = (ptr_), .length = (length_)})
 #define slice_using_cstr(cstr_) slice_using_ptr((cstr_), strlen((cstr_)))
+#define slice_using_literal(cstr_) slice_using_ptr((cstr_), sizeof(cstr_) - 1)
 #define slice_using_buffer(buffer_) slice_using_ptr((buffer_).void_ptr, (buffer_).length)
 
 #endif
