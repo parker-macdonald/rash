@@ -6,9 +6,9 @@ const char *const VERSION_STRING = "rash version: "
 #else
                                    "no one knows"
 #endif
-                                   "\ncompiled on: "
-#ifdef __DATE__
-    __DATE__
+                                   "\r\nreleased on: "
+#ifdef RELEASED
+    RELEASED
 #else
                                    "who knows when"
 #endif

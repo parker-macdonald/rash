@@ -1,10 +1,11 @@
-VERSION=0.7.9
+VERSION=0.8.0
+RELEASED="July 24th, 2026"
 
 PREFIX := /usr/local
 
 SANITIZER :=
 INCLUDE := -Isrc/
-CFLAGS := -std=c17 -D_DEFAULT_SOURCE -DVERSION=\"$(VERSION)\" $(INCLUDE)
+CFLAGS := -std=c17 -D_DEFAULT_SOURCE -DVERSION=\"$(VERSION)\" -DRELEASED=\"$(RELEASED)\" $(INCLUDE)
 CFLAG_ERRORS := -Werror -Wall -Wvla -Wextra -Wunreachable-code -Wshadow -Wpedantic -Wconversion
 LDFLAGS := -lm
 CC := clang
