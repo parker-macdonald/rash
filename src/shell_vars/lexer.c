@@ -289,7 +289,6 @@ static int scan_token(LexState *s) {
 
       error_f("shell expression: unrecognized character `%c`.\n", c);
       return -1;
-      break;
   }
 
   return 0;

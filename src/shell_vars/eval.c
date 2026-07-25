@@ -280,7 +280,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
         Buffer result = var_to_string(lhs);
         buffer_append_buffer(&result, &rhs->string);
         
-        return var_create_string(result);;
+        return var_create_string(result);
       }
 
       if (lhs->kind == SV_NUMBER && rhs->kind == SV_NUMBER) {
