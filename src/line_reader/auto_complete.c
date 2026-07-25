@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -214,6 +215,7 @@ get_matches(CStrList *matches, Buffer *line, size_t cursor_pos) {
   return word_start;
 }
 
+ATTRIB_UNUSED
 static void pretty_print_strings(char *const strings[], const size_t length) {
   size_t width = (size_t)get_terminal_width();
   size_t max_len = 2;
@@ -258,111 +260,119 @@ void auto_complete(LineReader *reader) {
     return;
   }
 
-  size_t word_start = reader->buffer_offset - 1;
+  size_t word_start = buffer_find_prev(
+    reader->active_buffer,
+    ' ',
+    reader->buffer_offset
+  );
 
-  for (; word_start > 0; word_start--) {
-    if (reader->active_buffer->char_ptr[word_start] == ' ') {
-      word_start++;
-      break;
-    }
-  }
+  // word starts after the last space. this also works if buffer_find_prev
+  // returns -1 since if there are no spaces we want word_start to be 0
+  word_start++;
 
-  char *word = reader->active_buffer->char_ptr + word_start;
-  size_t word_len = reader->buffer_offset - word_start;
-  size_t bytes_written = 0;
+  Buffer word = buffer_slice(
+    reader->active_buffer,
+    word_start,
+    reader->buffer_offset
+  );
 
-  if (word_len == 0) {
+  // this can happen if the user presses tab following a space
+  if (word.length == 0) {
+    // this isn't necessary because buffers of zero length have no associated
+    // memory, but that could hypothetically change in the futur, and it also
+    // doesnt hurt anything to have it here
+    buffer_destroy(&word);
     return;
   }
 
-  CStrList matches = {0};
+  // CStrList matches = {0};
 
-  if (word_start == 0 && memchr(word, '/', word_len) == NULL) {
-    get_command_matches(&matches, word, word_len);
-  } else {
-    get_file_matches(&matches, word, word_len);
-  }
+  // if (word_start == 0 && memchr(word, '/', word_len) == NULL) {
+  //   get_command_matches(&matches, word, word_len);
+  // } else {
+  //   get_file_matches(&matches, word, word_len);
+  // }
 
-  if (matches.length == 0) {
-    VECTOR_DESTROY(matches);
-    return;
-  }
+  // if (matches.length == 0) {
+  //   VECTOR_DESTROY(matches);
+  //   return;
+  // }
 
-  if (matches.length == 1) {
-    size_t match_len = strlen(matches.data[0]);
+  // if (matches.length == 1) {
+  //   size_t match_len = strlen(matches.data[0]);
 
-    if (match_len > word_len) {
-      bytes_written = match_len - word_len;
+  //   if (match_len > word_len) {
+  //     bytes_written = match_len - word_len;
 
-      copy_hist_buf_if_needed(reader);
+  //     copy_hist_buf_if_needed(reader);
 
-      buffer_insert_ptr(
-          reader->active_buffer,
-          reader->buffer_offset,
-          (uint8_t *)matches.data[0] + word_len,
-          bytes_written
-      );
-    }
+  //     buffer_insert_ptr(
+  //         reader->active_buffer,
+  //         reader->buffer_offset,
+  //         (uint8_t *)matches.data[0] + word_len,
+  //         bytes_written
+  //     );
+  //   }
 
-    free(matches.data[0]);
-    VECTOR_DESTROY(matches);
-  } else {
-    size_t i;
+  //   free(matches.data[0]);
+  //   VECTOR_DESTROY(matches);
+  // } else {
+  //   size_t i;
 
-    for (i = 0;; i++) {
-      for (size_t j = 0; j < matches.length - 1; j++) {
-        if (matches.data[j][i] != matches.data[j + 1][i]) {
-          goto leave;
-        }
-        if (matches.data[j][i] == '\0' || matches.data[j + 1][i] == '\0') {
-          goto leave;
-        }
-      }
-    }
+  //   for (i = 0;; i++) {
+  //     for (size_t j = 0; j < matches.length - 1; j++) {
+  //       if (matches.data[j][i] != matches.data[j + 1][i]) {
+  //         goto leave;
+  //       }
+  //       if (matches.data[j][i] == '\0' || matches.data[j + 1][i] == '\0') {
+  //         goto leave;
+  //       }
+  //     }
+  //   }
 
-  leave: {
-    if (i > word_len) {
-      bytes_written = i - word_len;
+  // leave: {
+  //   if (i > word_len) {
+  //     bytes_written = i - word_len;
 
-      copy_hist_buf_if_needed(reader);
+  //     copy_hist_buf_if_needed(reader);
 
-      buffer_insert_ptr(
-          reader->active_buffer,
-          reader->buffer_offset,
-          (uint8_t *)matches.data[0] + word_len,
-          bytes_written
-      );
-    } else {
-      sort_strings(&matches);
-      draw_cursor_post_line(reader);
-      pretty_print_strings(matches.data, matches.length);
+  //     buffer_insert_ptr(
+  //         reader->active_buffer,
+  //         reader->buffer_offset,
+  //         (uint8_t *)matches.data[0] + word_len,
+  //         bytes_written
+  //     );
+  //   } else {
+  //     sort_strings(&matches);
+  //     draw_cursor_post_line(reader);
+  //     pretty_print_strings(matches.data, matches.length);
 
-      draw_entire_state(reader);
-      draw_flush();
-    }
+  //     draw_entire_state(reader);
+  //     draw_flush();
+  //   }
 
-    for (size_t j = 0; j < matches.length; j++) {
-      free(matches.data[j]);
-    }
-    VECTOR_DESTROY(matches);
-  }
-  }
+  //   for (size_t j = 0; j < matches.length; j++) {
+  //     free(matches.data[j]);
+  //   }
+  //   VECTOR_DESTROY(matches);
+  // }
+  // }
 
-  if (bytes_written) {
-    Buffer buffer = buffer_slice(
-        reader->active_buffer,
-        reader->buffer_offset,
-        reader->buffer_offset + bytes_written
-    );
+  // if (bytes_written) {
+  //   Buffer buffer = buffer_slice(
+  //       reader->active_buffer,
+  //       reader->buffer_offset,
+  //       reader->buffer_offset + bytes_written
+  //   );
 
-    const unsigned n = utf8_count_codepoint(&buffer);
+  //   const unsigned n = utf8_count_codepoint(&buffer);
 
-    buffer_destroy(&buffer);
+  //   buffer_destroy(&buffer);
 
-    reader->buffer_offset += bytes_written;
-    reader->cursor_pos += n;
+  //   reader->buffer_offset += bytes_written;
+  //   reader->cursor_pos += n;
 
-    draw_entire_state(reader);
-    draw_flush();
-  }
+  //   draw_entire_state(reader);
+  //   draw_flush();
+  // }
 }

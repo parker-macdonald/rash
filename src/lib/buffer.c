@@ -39,6 +39,14 @@ Buffer buffer_create(size_t capacity) {
 Buffer buffer_from_ptr(const void *data, size_t length) {
   Buffer buffer;
 
+  if (length == 0) {
+    buffer._capacity = 0;
+    buffer.length = 0;
+    buffer.void_ptr = NULL;
+
+    return buffer;
+  }
+
   buffer._capacity = next_pow_2(length);
   buffer.length = length;
   buffer.void_ptr = malloc(buffer._capacity);
@@ -264,13 +272,32 @@ void buffer_clear(Buffer *self) {
   self->length = 0;
 }
 
-size_t buffer_find_from_offset(const Buffer *self, uint8_t search_for, size_t start_from) {
+size_t buffer_find_next(const Buffer *self, uint8_t search_for, size_t start_from) {
   assert(start_from < self->length);
 
   for (size_t i = start_from; i < self->length; i++) {
     if (self->u8_ptr[i] == search_for) {
       return i;
     }
+  }
+
+  return (size_t)-1;
+}
+
+size_t buffer_find_prev(const Buffer *self, uint8_t search_for, size_t start_from) {
+  assert(start_from <= self->length);
+
+  size_t i = start_from - 1;
+  while (1) {
+    if (self->u8_ptr[i] == search_for) {
+      return i;
+    }
+
+    if (i == 0) {
+      break;
+    }
+
+    i--;
   }
 
   return (size_t)-1;
