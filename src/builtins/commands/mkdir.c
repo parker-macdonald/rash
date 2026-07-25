@@ -60,7 +60,7 @@ static int mkdir_good(const char *path, mode_t mode, bool parent_flag) {
   size_t i = 1;
 
   while (1) {
-    i = buffer_find_from_offset(&path_buf, '/', i);
+    i = buffer_find_next(&path_buf, '/', i);
 
     if (i == (size_t)-1) {
       int status = mkdir(buffer_cstr(&path_buf), mode);
