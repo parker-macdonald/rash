@@ -2,6 +2,9 @@
 #define BUFFER_H
 
 #include "lib/attrib.h"
+#include "lib/vector.h"
+
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -111,5 +114,32 @@ size_t buffer_find_prev(const Buffer *self, uint8_t search_for, size_t start_fro
 #define buffer_find_first(self, search_for) buffer_find_next(self, search_for, 0)
 
 #define buffer_find_last(self, search_for) buffer_find_prev(self, search_for, (self)->length)
+
+bool buffer_contains_byte(const Buffer *self, uint8_t search_for);
+
+// functions to check if a buffer starts with something
+
+bool buffer_starts_with_ptr(const Buffer *self, const void *starts_with, size_t starts_with_length);
+
+bool buffer_starts_with_cstr(const Buffer *self, const char *starts_with);
+
+bool buffer_starts_with_buffer(const Buffer *self, const Buffer *starts_with);
+
+bool buffer_starts_with_char(const Buffer *self, char starts_with);
+
+bool buffer_starts_with_byte(const Buffer *self, uint8_t starts_with);
+
+// ------ buffer list -------
+
+// since this is just a typedef'd vector, you can use the vector macros on it (like VECTOR_PUSH).
+typedef VECTOR(Buffer) BufferList;
+
+void buffer_list_destroy(BufferList *list);
+
+void buffer_list_sort(BufferList *list);
+
+Buffer buffer_list_longest_common_prefix(const BufferList *list);
+
+BufferList buffer_split(const Buffer *self, const char *delim);
 
 #endif

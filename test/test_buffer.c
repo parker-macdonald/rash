@@ -137,4 +137,37 @@ TEST_SUITE("buffer", {
 
     buffer_destroy(&buffer);
   });
+
+  TEST("split", {
+    Buffer buffer = buffer_from_cstr("////this/is/an/example////path///");
+
+    BufferList list = buffer_split(&buffer, "/");
+
+    ASSERT_EQ(buffer_compare_cstr(list.data + 0, "this"), 0);
+    ASSERT_EQ(buffer_compare_cstr(list.data + 1, "is"), 0);
+    ASSERT_EQ(buffer_compare_cstr(list.data + 2, "an"), 0);
+    ASSERT_EQ(buffer_compare_cstr(list.data + 3, "example"), 0);
+    ASSERT_EQ(buffer_compare_cstr(list.data + 4, "path"), 0);
+    ASSERT_EQ(list.length, 5);
+
+    buffer_destroy(&buffer);
+    buffer_list_destroy(&list);
+  });
+
+  TEST("split_multi_delim", {
+    Buffer buffer = buffer_from_cstr("words    \r\nin a sentence\t with\n whitespace\r\n");
+
+    BufferList list = buffer_split(&buffer, " \t\r\n");
+
+    ASSERT_EQ(buffer_compare_cstr(list.data + 0, "words"), 0);
+    ASSERT_EQ(buffer_compare_cstr(list.data + 1, "in"), 0);
+    ASSERT_EQ(buffer_compare_cstr(list.data + 2, "a"), 0);
+    ASSERT_EQ(buffer_compare_cstr(list.data + 3, "sentence"), 0);
+    ASSERT_EQ(buffer_compare_cstr(list.data + 4, "with"), 0);
+    ASSERT_EQ(buffer_compare_cstr(list.data + 5, "whitespace"), 0);
+    ASSERT_EQ(list.length, 6);
+
+    buffer_destroy(&buffer);
+    buffer_list_destroy(&list);
+  });
 })

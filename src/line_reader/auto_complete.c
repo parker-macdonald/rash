@@ -1,228 +1,286 @@
-/*
- * The code in this file is absolutely diabolical and has outlived many
- * refactors because I don't want to touch it. Maybe I'll refactor it
- * eventually, but today is not that day...
- */
-
 #include "auto_complete.h"
 
+#include <stdio.h>
+#include <fcntl.h>
 #include <assert.h>
 #include <dirent.h>
-#include <fcntl.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
-#ifndef _DIRENT_HAVE_D_TYPE
-  #include <sys/stat.h>
-#endif
-
-#include "lib/attrib.h"
-#include "lib/cstrlist.h"
-#include "lib/sort.h"
 #include "lib/utf_8.h"
-#include "line_reader/action_utils.h"
+#include "lib/buffer.h"
+#include "lib/vector.h"
 #include "line_reader/draw.h"
 #include "line_reader/types.h"
 #include "builtins/find_builtin.h"
-#include "lib/buffer.h"
-#include "lib/vector.h"
+#include "line_reader/action_utils.h"
 
-static void
-get_file_matches(CStrList *matches, const char *word, size_t word_len) {
-  DIR *dir;
-  const char *basename;
-  size_t basename_len;
-  size_t last_slash = (size_t)(-1);
+static Buffer expand_path(const Buffer *path) {
+  if (buffer_starts_with_byte(path, '~')) {
+    const char *home = getenv("HOME");
 
-  for (size_t i = 0; i < word_len; i++) {
-    if (word[i] == '/') {
-      last_slash = i;
+    if (home == NULL) {
+      // lol
+      return buffer_clone(path);
     }
+
+    Buffer full_path = buffer_clone(path);
+
+    // remove '~'
+    buffer_remove_n(&full_path, 0, 1);
+
+    buffer_insert_cstr(&full_path, 0, home);
+
+    return full_path;
   }
 
-  // relative path
+  return buffer_clone(path);
+}
+
+static DIR *open_parent_dir(const Buffer *path, Buffer *basename) {
+  DIR *dir;
+  Buffer expanded_path = expand_path(path);
+
+  size_t last_slash = buffer_find_last(&expanded_path, '/');
+
+  // no slash means to search the current directory
   if (last_slash == (size_t)-1) {
     dir = opendir(".");
-    basename = word;
-    basename_len = word_len;
+    *basename = buffer_clone(&expanded_path);
   } else {
-    // absolute path
-    size_t path_len = last_slash;
+    Buffer dirname = buffer_slice(&expanded_path, 0, last_slash);
 
-    if (path_len == 0) {
-      path_len++;
-    }
+    dir = opendir(buffer_cstr(&dirname));
 
-    char *path = malloc(path_len + 1);
-    if (path == NULL) {
-      return;
-    }
+    buffer_destroy(&dirname);
 
-    memcpy(path, word, path_len);
-    path[path_len] = '\0';
-
-    dir = opendir(path);
-
-    free(path);
-
-    basename = (const char *)(word + last_slash + 1);
-    basename_len = word_len - last_slash - 1;
+    // using last_slash + 1 is ok because if last_slash is the last character
+    // of path, the resulting buffer will be empty
+    // i.e.
+    // path = "example_path/"
+    // basename = buffer_slice(word, 13, 13)
+    // basename = ""
+    *basename = buffer_slice(&expanded_path, last_slash + 1, expanded_path.length);
   }
 
+  buffer_destroy(&expanded_path);
+
+  return dir;
+}
+
+static void match_file(BufferList *matches, const Buffer *word) {
+  Buffer basename;
+  DIR *dir = open_parent_dir(word, &basename);
+
+  size_t last_slash = buffer_find_last(word, '/');
+
+  // cant open directory, nothing we can do
   if (dir == NULL) {
+    buffer_destroy(&basename);
     return;
   }
 
-#ifndef _DIRENT_HAVE_D_TYPE
   int fd = dirfd(dir);
   assert(fd != -1);
-#endif
 
   struct dirent *ent;
 
   while ((ent = readdir(dir))) {
-    // must match hidden files explicitly
-    if (ent->d_name[0] == '.' && basename[0] != '.') {
+    Buffer filename = buffer_from_cstr(ent->d_name);
+
+    // must match dot files explicitly
+    // basename can have a length of zero, so checking if basename.u8_ptr[0] == '.'
+    // is unsafe. that's why i'm using buffer_starts_with instead
+    if (ent->d_name[0] == '.' && !buffer_starts_with_byte(&basename, '.')) {
+      buffer_destroy(&filename);
       continue;
     }
-    if (strncmp(ent->d_name, basename, basename_len) != 0) {
+
+    if (!buffer_starts_with_buffer(&filename, &basename)) {
+      buffer_destroy(&filename);
       continue;
     }
 
-    size_t file_len = strlen(ent->d_name);
-    char *file_path = malloc(last_slash + file_len + 3);
-
-    memcpy(file_path, word, last_slash + 1);
-    memcpy(file_path + last_slash + 1, ent->d_name, file_len);
-
-#ifdef _DIRENT_HAVE_D_TYPE
-    if (ent->d_type == DT_DIR) {
-      file_path[last_slash + file_len + 1] = '/';
+    struct stat sb = {0};
+    if (
+      fstatat(
+        fd,
+        ent->d_name,
+        &sb,
+        AT_SYMLINK_NOFOLLOW
+      ) == 0 &&
+      S_ISDIR(sb.st_mode)
+    ) {
+      // true if filepath is a directory
+      buffer_append_byte(&filename, '/');
     } else {
-      file_path[last_slash + file_len + 1] = ' ';
+      // true if filepath is not a directory (i.e. regular file or sym link)
+      buffer_append_byte(&filename, ' ');
     }
-#else
-    {
-      struct stat sb = {0};
-      if (fstatat(fd, ent->d_name, &sb, AT_SYMLINK_NOFOLLOW) == 0 &&
-          S_ISDIR(sb.st_mode)) {
-        file_path[last_slash + file_len + 1] = '/';
-      } else {
-        file_path[last_slash + file_len + 1] = ' ';
-      }
-    }
-#endif
 
-    file_path[last_slash + file_len + 2] = '\0';
-    VECTOR_PUSH(*matches, file_path);
+    // insert path to be beginning of filename
+    if (last_slash != (size_t)-1) {
+      buffer_insert_ptr(
+        &filename,
+        0,
+        word->void_ptr,
+        last_slash + 1
+      );
+    }
+
+    VECTOR_PUSH(*matches, filename);
   }
 
+  buffer_destroy(&basename);
   closedir(dir);
 }
 
-static void
-get_command_matches(CStrList *matches, const char *word, size_t word_len) {
-  find_matching_builtins(word, word_len, matches);
-  const char *path = getenv("PATH");
+// TODO: maybe find a way to make this not just a copy paste of match_file with
+// minor changes? code duplication bad
+static void match_exe_file(BufferList *matches, const Buffer *word) {
+  Buffer basename;
+  DIR *dir = open_parent_dir(word, &basename);
 
-  if (path == NULL) {
+  size_t last_slash = buffer_find_last(word, '/');
+
+  // cant open directory, nothing we can do
+  if (dir == NULL) {
+    buffer_destroy(&basename);
     return;
   }
 
-  Buffer file_path = buffer_create(16);
+  int fd = dirfd(dir);
+  assert(fd != -1);
 
-  for (size_t i = 0; path[i] != '\0'; i++) {
-    if (path[i] != ':' && path[i] != '\0') {
-      buffer_append_char(&file_path, path[i]);
+  struct dirent *ent;
+
+  while ((ent = readdir(dir))) {
+    Buffer filename = buffer_from_cstr(ent->d_name);
+
+    // must match dot files explicitly
+    // basename can have a length of zero, so checking if basename.u8_ptr[0] == '.'
+    // is unsafe. that's why i'm using buffer_starts_with instead
+    if (ent->d_name[0] == '.' && !buffer_starts_with_byte(&basename, '.')) {
+      buffer_destroy(&filename);
       continue;
     }
 
-    DIR *dir;
- 
-    {
-      char *cstr = buffer_cstr(&file_path);
-      dir = opendir(cstr);
-    }
-
-    if (dir == NULL) {
+    if (!buffer_starts_with_buffer(&filename, &basename)) {
+      buffer_destroy(&filename);
       continue;
     }
 
-    int fd = dirfd(dir);
-    assert(fd != -1);
-    struct dirent *ent;
-
-    while ((ent = readdir(dir))) {
-      // must match hidden files explicitly
-      if (ent->d_name[0] == '.' && word[0] != '.') {
-        continue;
-      }
-      if (strncmp(ent->d_name, word, word_len) != 0) {
-        continue;
-      }
-      // if file is not executable
-      if (faccessat(fd, ent->d_name, X_OK, AT_EACCESS) != 0) {
-        continue;
-      }
-
-      size_t file_len = strlen(ent->d_name);
-      char *file = malloc(file_len + 2);
-
-      memcpy(file, ent->d_name, file_len);
-      file[file_len] = ' ';
-      file[file_len + 1] = '\0';
-
-      VECTOR_PUSH(*matches, file);
+    struct stat sb = {0};
+    // if fstatat fails, or file is not a directory, or file is not executable
+    if (fstatat(fd, ent->d_name, &sb, AT_SYMLINK_NOFOLLOW) != 0) {
+      buffer_destroy(&filename);
+      continue;
     }
 
-    closedir(dir);
-
-    buffer_clear(&file_path);
-  }
-
-  buffer_destroy(&file_path);
-}
-
-ATTRIB_UNUSED
-static size_t
-get_matches(CStrList *matches, Buffer *line, size_t cursor_pos) {
-  size_t word_start = cursor_pos - 1;
-
-  for (; word_start > 0; word_start--) {
-    if (line->char_ptr[word_start] == ' ') {
-      word_start++;
-      break;
+    // if is directory
+    if (S_ISDIR(sb.st_mode)) {
+      buffer_append_byte(&filename, '/');
     }
+    // if is executable
+    else if (sb.st_mode & S_IXUSR) {
+      buffer_append_byte(&filename, ' ');
+    }
+    // fail if file is not a directory or executable
+    else {
+      buffer_destroy(&filename);
+      continue;
+    }
+
+
+    // insert path to be beginning of filename
+    if (last_slash != (size_t)-1) {
+      buffer_insert_ptr(
+        &filename,
+        0,
+        word->void_ptr,
+        last_slash + 1
+      );
+    }
+
+    VECTOR_PUSH(*matches, filename);
   }
 
-  char *word = line->char_ptr + word_start;
-  size_t word_len = cursor_pos - word_start;
-
-  if (word_len == 0) {
-    return 0;
-  }
-
-  if (word_start == 0 && memchr(word, '/', word_len) == NULL) {
-    get_command_matches(matches, word, word_len);
-  } else {
-    get_file_matches(matches, word, word_len);
-  }
-
-  return word_start;
+  buffer_destroy(&basename);
+  closedir(dir);
 }
 
-ATTRIB_UNUSED
-static void pretty_print_strings(char *const strings[], const size_t length) {
+static void match_command(BufferList *matches, const Buffer *word) {
+  find_matching_builtins(word, matches);
+
+  char *path_env;
+
+  {
+    const char *path_cstr = getenv("PATH");
+  
+    if (path_cstr == NULL) {
+      return;
+    }
+
+    path_env = strdup(path_cstr);
+  }
+
+  char *path = strtok(path_env, ":");
+
+  while (path != NULL) {
+    DIR *dir = opendir(path);
+
+    if (dir != NULL) {
+      int fd = dirfd(dir);
+      assert(fd != -1);
+      
+      struct dirent *ent;
+      while ((ent = readdir(dir))) {
+        Buffer filename = buffer_from_cstr(ent->d_name);
+
+        // must match dot files explicitly
+        // basename can have a length of zero, so checking if basename.u8_ptr[0] == '.'
+        // is unsafe. that's why i'm using buffer_starts_with instead
+        if (ent->d_name[0] == '.' && !buffer_starts_with_byte(word, '.')) {
+          buffer_destroy(&filename);
+          continue;
+        }
+
+        if (!buffer_starts_with_buffer(&filename, word)) {
+          buffer_destroy(&filename);
+          continue;
+        }
+
+        // if file is not executable
+        if (faccessat(fd, ent->d_name, X_OK, AT_EACCESS) != 0) {
+          buffer_destroy(&filename);
+          continue;
+        }
+
+        buffer_append_byte(&filename, ' ');
+
+        VECTOR_PUSH(*matches, filename);
+      }
+
+      closedir(dir);
+    }
+
+    path = strtok(NULL, ":");
+  }
+
+  free(path_env);
+}
+
+static void pretty_print_strings(const BufferList *list) {
   size_t width = (size_t)get_terminal_width();
   size_t max_len = 2;
 
   size_t num_printed = 0;
-  for (; num_printed < length; num_printed++) {
-    const size_t new_len = strlen(strings[num_printed]) + 2;
+  for (; num_printed < list->length; num_printed++) {
+    const size_t new_len = list->data[num_printed].length + 2;
 
     if (new_len > max_len) {
       if ((num_printed + 2) * new_len / width > 3) {
@@ -240,18 +298,40 @@ static void pretty_print_strings(char *const strings[], const size_t length) {
   size_t col = width / max_len;
 
   for (size_t i = 0; i < num_printed; i++) {
-    printf("%-*s", (int)max_len, strings[i]);
+    Buffer string = buffer_clone(list->data + i);
+
+    printf("%-*s", (int)max_len, buffer_cstr(&string));
+
+    buffer_destroy(&string);
 
     if ((i + 1) % col == 0) {
       printf("\r\n");
     }
   }
 
-  if (num_printed != length) {
+  if (num_printed != list->length) {
     printf("...");
   }
 
   printf("\r\n");
+}
+
+static void reader_insert_bulk(LineReader *reader, const Buffer *to_insert) {
+  copy_hist_buf_if_needed(reader);
+
+  buffer_insert_buffer(
+    reader->active_buffer,
+    reader->buffer_offset,
+    to_insert
+  );
+
+  const unsigned n = utf8_count_codepoint(to_insert);
+
+  reader->buffer_offset += to_insert->length;
+  reader->cursor_pos += n;
+
+  draw_entire_state(reader);
+  draw_flush();
 }
 
 void auto_complete(LineReader *reader) {
@@ -278,101 +358,96 @@ void auto_complete(LineReader *reader) {
 
   // this can happen if the user presses tab following a space
   if (word.length == 0) {
-    // this isn't necessary because buffers of zero length have no associated
-    // memory, but that could hypothetically change in the futur, and it also
-    // doesnt hurt anything to have it here
+    // buffer_destroy isn't necessary because buffers of zero length have no
+    // associated memory, but that could hypothetically change in the future
+    // (likely because of a regression), and it also doesnt hurt anything to
+    // have it here
     buffer_destroy(&word);
     return;
   }
 
-  // CStrList matches = {0};
+  BufferList matches = {0};
 
-  // if (word_start == 0 && memchr(word, '/', word_len) == NULL) {
-  //   get_command_matches(&matches, word, word_len);
-  // } else {
-  //   get_file_matches(&matches, word, word_len);
-  // }
+  bool is_first_word;
+  
+  {
+    size_t first_space = buffer_find_first(reader->active_buffer, ' ');
 
-  // if (matches.length == 0) {
-  //   VECTOR_DESTROY(matches);
-  //   return;
-  // }
+    if (first_space == (size_t)-1) {
+      first_space = 0;
+    }
 
-  // if (matches.length == 1) {
-  //   size_t match_len = strlen(matches.data[0]);
+    is_first_word = first_space == word_start;
+  }
 
-  //   if (match_len > word_len) {
-  //     bytes_written = match_len - word_len;
+  if (is_first_word) {
+    if (buffer_contains_byte(&word, '/')) {
+      match_exe_file(&matches, &word);
+    } else {
+      match_command(&matches, &word);
+    }
+  } else {
+    match_file(&matches, &word);
+  }
 
-  //     copy_hist_buf_if_needed(reader);
+  // cant match anything = nothing to do
+  if (matches.length == 0) {
+    buffer_list_destroy(&matches);
+    return;
+  }
 
-  //     buffer_insert_ptr(
-  //         reader->active_buffer,
-  //         reader->buffer_offset,
-  //         (uint8_t *)matches.data[0] + word_len,
-  //         bytes_written
-  //     );
-  //   }
+  if (matches.length == 1) {
+    Buffer *match = matches.data;
 
-  //   free(matches.data[0]);
-  //   VECTOR_DESTROY(matches);
-  // } else {
-  //   size_t i;
+    // this happens when there's one match that's the same as the word
+    // i.e.
+    // matches = ["hello"]
+    // word = "hello"
+    if (match->length == word.length) {
+      buffer_list_destroy(&matches);
+      return;
+    }
 
-  //   for (i = 0;; i++) {
-  //     for (size_t j = 0; j < matches.length - 1; j++) {
-  //       if (matches.data[j][i] != matches.data[j + 1][i]) {
-  //         goto leave;
-  //       }
-  //       if (matches.data[j][i] == '\0' || matches.data[j + 1][i] == '\0') {
-  //         goto leave;
-  //       }
-  //     }
-  //   }
+    copy_hist_buf_if_needed(reader);
 
-  // leave: {
-  //   if (i > word_len) {
-  //     bytes_written = i - word_len;
+    Buffer to_insert = buffer_slice(match, word.length, match->length);
 
-  //     copy_hist_buf_if_needed(reader);
+    reader_insert_bulk(reader, &to_insert);
 
-  //     buffer_insert_ptr(
-  //         reader->active_buffer,
-  //         reader->buffer_offset,
-  //         (uint8_t *)matches.data[0] + word_len,
-  //         bytes_written
-  //     );
-  //   } else {
-  //     sort_strings(&matches);
-  //     draw_cursor_post_line(reader);
-  //     pretty_print_strings(matches.data, matches.length);
+    buffer_destroy(&to_insert);
+    buffer_list_destroy(&matches);
 
-  //     draw_entire_state(reader);
-  //     draw_flush();
-  //   }
+    return;
+  }
 
-  //   for (size_t j = 0; j < matches.length; j++) {
-  //     free(matches.data[j]);
-  //   }
-  //   VECTOR_DESTROY(matches);
-  // }
-  // }
+  // code below this comment runs when matches.length > 1
 
-  // if (bytes_written) {
-  //   Buffer buffer = buffer_slice(
-  //       reader->active_buffer,
-  //       reader->buffer_offset,
-  //       reader->buffer_offset + bytes_written
-  //   );
+  Buffer prefix = buffer_list_longest_common_prefix(&matches);
 
-  //   const unsigned n = utf8_count_codepoint(&buffer);
+  // this happens with the word matches multiple things, but the largest common
+  // prefix of the matches is the word.
+  // i.e.
+  // matches = ["abcd", "abba", "aboba"]
+  // word = "ab"
+  if (prefix.length == word.length) {
+    buffer_list_sort(&matches);
 
-  //   buffer_destroy(&buffer);
+    draw_cursor_post_line(reader);
+    pretty_print_strings(&matches);
+    draw_entire_state(reader);
 
-  //   reader->buffer_offset += bytes_written;
-  //   reader->cursor_pos += n;
+    draw_flush();
 
-  //   draw_entire_state(reader);
-  //   draw_flush();
-  // }
+    buffer_destroy(&prefix);
+    buffer_list_destroy(&matches);
+    return;
+  }
+
+  Buffer to_insert = buffer_slice(&prefix, word.length, prefix.length);
+  buffer_destroy(&prefix);
+      
+  reader_insert_bulk(reader, &to_insert);
+
+  buffer_destroy(&to_insert);
+  buffer_list_destroy(&matches);
 }
