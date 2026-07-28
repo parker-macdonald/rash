@@ -137,7 +137,7 @@ void find_matching_builtins(const Buffer *prefix, BufferList *list) {
   do {
     if (node->function != NULL) {
       Buffer name = buffer_from_cstr(node->name);
-      buffer_append_byte(&name, ' ');
+      buffer_append(&name, ' ');
 
       VECTOR_PUSH(*list, name);
       continue;

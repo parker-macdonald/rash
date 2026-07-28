@@ -53,7 +53,7 @@ const Buffer *file_reader_read(FileReader *file) {
       continue;
     }
 
-    buffer_append_byte(&file->line, (uint8_t)c);
+    buffer_append(&file->line, (uint8_t)c);
   }
 }
 

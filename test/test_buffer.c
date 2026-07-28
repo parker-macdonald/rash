@@ -15,12 +15,12 @@ TEST_SUITE("buffer", {
   
   TEST("append", {
     Buffer buffer = {0};
-    buffer_append_cstr(&buffer, "abcdefgh");
+    buffer_append(&buffer, "abcdefgh");
 
     ASSERT_EQ(buffer.length, 8)
     ASSERT_EQ(memcmp(buffer.void_ptr, "abcdefgh", 8), 0);
 
-    buffer_append_byte(&buffer, 'i');
+    buffer_append(&buffer, 'i');
 
     ASSERT_EQ(buffer.length, 9)
     ASSERT_EQ(memcmp(buffer.void_ptr, "abcdefghi", 9), 0);
@@ -45,12 +45,12 @@ TEST_SUITE("buffer", {
   
   TEST("insert", {
     Buffer buffer = buffer_from_cstr("abcdefgh");
-    buffer_insert_cstr(&buffer, 0, "yo ");
+    buffer_insert(&buffer, 0, "yo ");
     
     ASSERT_EQ(buffer.length, 11);
     ASSERT_EQ(memcmp(buffer.void_ptr, "yo abcdefgh", 11), 0);
     
-    buffer_insert_cstr(&buffer, buffer.length, " :3333");
+    buffer_insert(&buffer, buffer.length, " :3333");
 
     ASSERT_EQ(buffer.length, 17);
     ASSERT_EQ(memcmp(buffer.void_ptr, "yo abcdefgh :3333", 17), 0);
@@ -60,12 +60,12 @@ TEST_SUITE("buffer", {
 
   TEST("insert", {
     Buffer buffer = buffer_from_cstr("abcdefgh");
-    buffer_insert_cstr(&buffer, 0, "yo ");
+    buffer_insert(&buffer, 0, "yo ");
     
     ASSERT_EQ(buffer.length, 11);
     ASSERT_EQ(memcmp(buffer.void_ptr, "yo abcdefgh", 11), 0);
     
-    buffer_insert_cstr(&buffer, buffer.length, " :3333");
+    buffer_insert(&buffer, buffer.length, " :3333");
 
     ASSERT_EQ(buffer.length, 17);
     ASSERT_EQ(memcmp(buffer.void_ptr, "yo abcdefgh :3333", 17), 0);

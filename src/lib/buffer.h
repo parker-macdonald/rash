@@ -55,6 +55,18 @@ void buffer_append_ptr(Buffer *self, const void *data, size_t length);
 
 void buffer_append_buffer(Buffer *self, const Buffer *other);
 
+#define buffer_append(self, to_append) \
+  _Generic( \
+    to_append, \
+    char *:         buffer_append_cstr, \
+    const char *:   buffer_append_cstr, \
+    Buffer *:       buffer_append_buffer, \
+    const Buffer *: buffer_append_buffer, \
+    int:            buffer_append_byte, \
+    uint8_t:        buffer_append_byte, \
+    char:           buffer_append_char \
+  ) (self, to_append)
+
 /*
  * Helper functions to insert into an arbitrary place in an existing buffer
  */
@@ -69,6 +81,18 @@ void buffer_insert_ptr(Buffer *self, size_t at, const void *data,
                        size_t length);
 
 void buffer_insert_buffer(Buffer *self, size_t at, const Buffer *other);
+
+#define buffer_insert(self, at, to_insert) \
+  _Generic( \
+    to_insert, \
+    char *:         buffer_insert_cstr, \
+    const char *:   buffer_insert_cstr, \
+    Buffer *:       buffer_insert_buffer, \
+    const Buffer *: buffer_insert_buffer, \
+    int:            buffer_insert_byte, \
+    uint8_t:        buffer_insert_byte, \
+    char:           buffer_insert_char \
+  ) (self, at, to_insert)
 
 /*
  * Extra helper functions
@@ -128,6 +152,18 @@ bool buffer_starts_with_buffer(const Buffer *self, const Buffer *starts_with);
 bool buffer_starts_with_char(const Buffer *self, char starts_with);
 
 bool buffer_starts_with_byte(const Buffer *self, uint8_t starts_with);
+
+#define buffer_starts_with(self, starts_with) \
+  _Generic( \
+    starts_with, \
+    char *:         buffer_starts_with_cstr, \
+    const char *:   buffer_starts_with_cstr, \
+    Buffer *:       buffer_starts_with_buffer, \
+    const Buffer *: buffer_starts_with_buffer, \
+    int:            buffer_starts_with_byte, \
+    uint8_t:        buffer_starts_with_byte, \
+    char:           buffer_starts_with_char \
+  ) (self, starts_with)
 
 // ------ buffer list -------
 

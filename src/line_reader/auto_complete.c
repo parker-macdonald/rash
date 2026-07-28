@@ -20,7 +20,7 @@
 #include "line_reader/action_utils.h"
 
 static Buffer expand_path(const Buffer *path) {
-  if (buffer_starts_with_byte(path, '~')) {
+  if (buffer_starts_with(path, '~')) {
     const char *home = getenv("HOME");
 
     if (home == NULL) {
@@ -33,7 +33,7 @@ static Buffer expand_path(const Buffer *path) {
     // remove '~'
     buffer_remove_n(&full_path, 0, 1);
 
-    buffer_insert_cstr(&full_path, 0, home);
+    buffer_insert(&full_path, 0, home);
 
     return full_path;
   }
@@ -95,12 +95,12 @@ static void match_file(BufferList *matches, const Buffer *word) {
     // must match dot files explicitly
     // basename can have a length of zero, so checking if basename.u8_ptr[0] == '.'
     // is unsafe. that's why i'm using buffer_starts_with instead
-    if (ent->d_name[0] == '.' && !buffer_starts_with_byte(&basename, '.')) {
+    if (ent->d_name[0] == '.' && !buffer_starts_with(&basename, '.')) {
       buffer_destroy(&filename);
       continue;
     }
 
-    if (!buffer_starts_with_buffer(&filename, &basename)) {
+    if (!buffer_starts_with(&filename, &basename)) {
       buffer_destroy(&filename);
       continue;
     }
@@ -116,10 +116,10 @@ static void match_file(BufferList *matches, const Buffer *word) {
       S_ISDIR(sb.st_mode)
     ) {
       // true if filepath is a directory
-      buffer_append_byte(&filename, '/');
+      buffer_append(&filename, '/');
     } else {
       // true if filepath is not a directory (i.e. regular file or sym link)
-      buffer_append_byte(&filename, ' ');
+      buffer_append(&filename, ' ');
     }
 
     // insert path to be beginning of filename
@@ -164,12 +164,12 @@ static void match_exe_file(BufferList *matches, const Buffer *word) {
     // must match dot files explicitly
     // basename can have a length of zero, so checking if basename.u8_ptr[0] == '.'
     // is unsafe. that's why i'm using buffer_starts_with instead
-    if (ent->d_name[0] == '.' && !buffer_starts_with_byte(&basename, '.')) {
+    if (ent->d_name[0] == '.' && !buffer_starts_with(&basename, '.')) {
       buffer_destroy(&filename);
       continue;
     }
 
-    if (!buffer_starts_with_buffer(&filename, &basename)) {
+    if (!buffer_starts_with(&filename, &basename)) {
       buffer_destroy(&filename);
       continue;
     }
@@ -183,11 +183,11 @@ static void match_exe_file(BufferList *matches, const Buffer *word) {
 
     // if is directory
     if (S_ISDIR(sb.st_mode)) {
-      buffer_append_byte(&filename, '/');
+      buffer_append(&filename, '/');
     }
     // if is executable
     else if (sb.st_mode & S_IXUSR) {
-      buffer_append_byte(&filename, ' ');
+      buffer_append(&filename, ' ');
     }
     // fail if file is not a directory or executable
     else {
@@ -244,12 +244,12 @@ static void match_command(BufferList *matches, const Buffer *word) {
         // must match dot files explicitly
         // basename can have a length of zero, so checking if basename.u8_ptr[0] == '.'
         // is unsafe. that's why i'm using buffer_starts_with instead
-        if (ent->d_name[0] == '.' && !buffer_starts_with_byte(word, '.')) {
+        if (ent->d_name[0] == '.' && !buffer_starts_with(word, '.')) {
           buffer_destroy(&filename);
           continue;
         }
 
-        if (!buffer_starts_with_buffer(&filename, word)) {
+        if (!buffer_starts_with(&filename, word)) {
           buffer_destroy(&filename);
           continue;
         }
@@ -260,7 +260,7 @@ static void match_command(BufferList *matches, const Buffer *word) {
           continue;
         }
 
-        buffer_append_byte(&filename, ' ');
+        buffer_append(&filename, ' ');
 
         VECTOR_PUSH(*matches, filename);
       }
@@ -319,7 +319,7 @@ static void pretty_print_strings(const BufferList *list) {
 static void reader_insert_bulk(LineReader *reader, const Buffer *to_insert) {
   copy_hist_buf_if_needed(reader);
 
-  buffer_insert_buffer(
+  buffer_insert(
     reader->active_buffer,
     reader->buffer_offset,
     to_insert
