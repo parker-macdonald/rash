@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "builtins.h"
-#include "lib/cstrlist.h"
+#include "lib/buffer.h"
 #include "lib/vector.h"
 
 #define ALPHABET_SIZE 26
@@ -124,10 +124,8 @@ builtin_t find_builtin(const char *const str) {
   return node->function;
 }
 
-void find_matching_builtins(
-    const char *prefix, size_t prefix_len, CStrList *vec
-) {
-  TrieNode *node = find_node(prefix, prefix_len);
+void find_matching_builtins(const Buffer *prefix, BufferList *list) {
+  TrieNode *node = find_node(prefix->char_ptr, prefix->length);
 
   if (node == NULL) {
     return;
@@ -138,13 +136,10 @@ void find_matching_builtins(
 
   do {
     if (node->function != NULL) {
-      size_t name_len = strlen(node->name);
-      char *name = malloc(name_len + 2);
-      memcpy(name, node->name, name_len);
-      name[name_len] = ' ';
-      name[name_len + 1] = '\0';
+      Buffer name = buffer_from_cstr(node->name);
+      buffer_append(&name, ' ');
 
-      VECTOR_PUSH(*vec, name);
+      VECTOR_PUSH(*list, name);
       continue;
     }
     for (size_t i = 0; i < ALPHABET_SIZE; i++) {

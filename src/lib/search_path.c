@@ -21,9 +21,9 @@ char *search_path(const char *file) {
     if (path[i] == ':' || path[i] == '\0') {
       assert(file_path.length != 0);
 
-      buffer_append_byte(&file_path, '/');
+      buffer_append(&file_path, '/');
 
-      buffer_append_cstr(&file_path, file);
+      buffer_append(&file_path, file);
 
       char *cstr = buffer_cstr(&file_path);
 
@@ -39,7 +39,7 @@ char *search_path(const char *file) {
       continue;
     }
 
-    buffer_append_char(&file_path, path[i]);
+    buffer_append(&file_path, path[i]);
   }
 
   buffer_destroy(&file_path);

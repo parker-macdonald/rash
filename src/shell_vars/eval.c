@@ -270,7 +270,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
         // promote rhs to a string
         Buffer right_str = var_to_string(rhs);
         Buffer result = buffer_clone(&lhs->string);
-        buffer_append_buffer(&result, &right_str);
+        buffer_append(&result, &right_str);
         buffer_destroy(&right_str);
         
         return var_create_string(result);
@@ -278,7 +278,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
 
       if (rhs->kind == SV_STRING) {
         Buffer result = var_to_string(lhs);
-        buffer_append_buffer(&result, &rhs->string);
+        buffer_append(&result, &rhs->string);
         
         return var_create_string(result);
       }

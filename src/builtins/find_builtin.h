@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#include "lib/cstrlist.h"
+#include "lib/buffer.h"
 
 typedef int (*builtin_t)(char **);
 
@@ -13,8 +13,6 @@ void trie_destroy(void);
 
 builtin_t find_builtin(const char *str);
 
-void find_matching_builtins(
-    const char *prefix, size_t prefix_len, CStrList *vec
-);
+void find_matching_builtins(const Buffer *prefix, BufferList *list);
 
 #endif

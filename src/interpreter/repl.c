@@ -20,7 +20,7 @@ int repl(const Buffer *(*reader)(void *), void *reader_data) {
 
     // need to refactor lex to use a buffer instead of a null terminated string
     Buffer null_terminated_line = buffer_clone(line);
-    buffer_append_byte(&null_terminated_line, '\0');
+    buffer_append(&null_terminated_line, '\0');
 
     Token *tokens = lex(null_terminated_line.u8_ptr);
 
@@ -42,7 +42,7 @@ int repl_once(const Buffer *line) {
 
   // need to refactor lex to use a buffer instead of a null terminated string
   Buffer null_terminated_line = buffer_clone(line);
-  buffer_append_byte(&null_terminated_line, '\0');
+  buffer_append(&null_terminated_line, '\0');
 
   Token *tokens = lex(null_terminated_line.u8_ptr);
 

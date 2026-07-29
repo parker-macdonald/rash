@@ -217,7 +217,7 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
 
   for (;; (*tokens)++) {
     if ((*tokens)->type == TK_STRING) {
-      buffer_append_cstr(&buffer, (char *)((*tokens)->data));
+      buffer_append(&buffer, (char *)((*tokens)->data));
 
       continue;
     }
@@ -231,7 +231,7 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
         goto error;
       }
 
-      buffer_append_cstr(&buffer, value);
+      buffer_append(&buffer, value);
 
       continue;
     }
@@ -240,7 +240,7 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
       if (((char *)(*tokens)->data)[0] == '\0') {
         char *home = getenv("HOME");
         if (home != NULL) {
-          buffer_append_cstr(&buffer, home);
+          buffer_append(&buffer, home);
           continue;
         }
         error_f("cannot expand ‘~’, HOME is not set.\n");
@@ -253,7 +253,7 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
         goto error;
       }
 
-      buffer_append_cstr(&buffer, pw->pw_dir);
+      buffer_append(&buffer, pw->pw_dir);
       continue;
     }
 
@@ -264,7 +264,7 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
         goto error;
       }
 
-      buffer_append_cstr(&buffer, value);
+      buffer_append(&buffer, value);
       free(value);
 
       continue;
@@ -330,7 +330,7 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
 
         for (ssize_t i = 0; i < nread; i++) {
           if (!iscntrl((int)read_bytes[i])) {
-            buffer_append_byte(&buffer, read_bytes[i]);
+            buffer_append(&buffer, read_bytes[i]);
           }
         }
       } while (nread > 0);
@@ -345,7 +345,7 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
       // forget to strip out '\033' when i implement shell scripts. also if
       // futures globs besides the wildcard are added, this will need to be
       // reworked
-      buffer_append_byte(&buffer, '\033');
+      buffer_append(&buffer, '\033');
       *needs_globbing = true;
       continue;
     }

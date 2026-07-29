@@ -81,7 +81,7 @@ void var_release(ShellVar *var) {
 }
 
 ShellVar *var_eval(const char *expr) {
-  TokenList list = lex_shell_expr(&slice_using_cstr(expr));
+  TokenList list = lex_shell_expr(&slice_lit_from_cstr(expr));
 
   if (list.length == 0) {
     return NULL;

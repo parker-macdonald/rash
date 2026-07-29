@@ -1,13 +1,15 @@
 #include "lib/buffer.h"
 
+#include <stdio.h>
 #include <assert.h>
 #include <stdarg.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "lib/error.h"
+#include "lib/vector.h"
 #include "lib/next_pow_2.h"
 
 /*
@@ -38,6 +40,14 @@ Buffer buffer_create(size_t capacity) {
 // constructs a buffer by copying the data at `data` of length `length` bytes.
 Buffer buffer_from_ptr(const void *data, size_t length) {
   Buffer buffer;
+
+  if (length == 0) {
+    buffer._capacity = 0;
+    buffer.length = 0;
+    buffer.void_ptr = NULL;
+
+    return buffer;
+  }
 
   buffer._capacity = next_pow_2(length);
   buffer.length = length;
@@ -264,7 +274,7 @@ void buffer_clear(Buffer *self) {
   self->length = 0;
 }
 
-size_t buffer_find_from_offset(const Buffer *self, uint8_t search_for, size_t start_from) {
+size_t buffer_find_next(const Buffer *self, uint8_t search_for, size_t start_from) {
   assert(start_from < self->length);
 
   for (size_t i = start_from; i < self->length; i++) {
@@ -274,4 +284,172 @@ size_t buffer_find_from_offset(const Buffer *self, uint8_t search_for, size_t st
   }
 
   return (size_t)-1;
+}
+
+size_t buffer_find_prev(const Buffer *self, uint8_t search_for, size_t start_from) {
+  assert(start_from <= self->length);
+
+  size_t i = start_from - 1;
+  while (1) {
+    if (self->u8_ptr[i] == search_for) {
+      return i;
+    }
+
+    if (i == 0) {
+      break;
+    }
+
+    i--;
+  }
+
+  return (size_t)-1;
+}
+
+bool buffer_contains_byte(const Buffer *self, uint8_t search_for) {
+  for (size_t i = 0; i < self->length; i++) {
+    if (self->u8_ptr[i] == search_for) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool buffer_starts_with_ptr(
+  const Buffer *self,
+  const void *starts_with,
+  size_t starts_with_length
+) {
+  if (starts_with_length > self->length) {
+    return false;
+  }
+
+  for (size_t i = 0; i < starts_with_length; i++) {
+    if (self->u8_ptr[i] != ((uint8_t *)starts_with)[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool buffer_starts_with_cstr(const Buffer *self, const char *starts_with) {
+  return buffer_starts_with_ptr(self, starts_with, strlen(starts_with));
+}
+
+bool buffer_starts_with_buffer(const Buffer *self, const Buffer *starts_with) {
+  return buffer_starts_with_ptr(self, starts_with->void_ptr, starts_with->length);
+}
+
+bool buffer_starts_with_char(const Buffer *self, char starts_with) {
+  return buffer_starts_with_ptr(self, &starts_with, 1);
+}
+
+bool buffer_starts_with_byte(const Buffer *self, uint8_t starts_with) {
+  return buffer_starts_with_ptr(self, &starts_with, 1);
+}
+
+// ---------- buffer list ------------
+
+void buffer_list_destroy(BufferList *list) {
+  for (size_t i = 0; i < list->length; i++) {
+    buffer_destroy(list->data + i);
+  }
+
+  VECTOR_DESTROY(*list);
+}
+
+static int compare(const void *a, const void *b) {
+  return buffer_compare((const Buffer *)a, (const Buffer *)b);
+}
+
+void buffer_list_sort(BufferList *list) {
+  qsort(list->data, list->length, sizeof(Buffer), compare);
+}
+
+Buffer buffer_list_longest_common_prefix(const BufferList *list) {
+  if (list->length == 0) {
+    return buffer_create(0);
+  }
+
+  size_t min_length = list->data[0].length;
+
+  for (size_t i = 1; i < list->length; i++) {
+    if (list->data[i].length < min_length) {
+      min_length = list->data[i].length;
+    }
+  }
+
+  if (min_length == 0) {
+    return buffer_create(0);
+  }
+
+  Buffer result = buffer_create(0);
+
+  for (size_t i = 0; i < min_length; i++) {
+    uint8_t byte = list->data[0].u8_ptr[i];
+
+    for (size_t j = 1; j < list->length; j++) {
+      if (byte != list->data[j].u8_ptr[i]) {
+        return result;
+      }
+    }
+
+    buffer_append_byte(&result, byte);
+  }
+
+  return result;
+}
+
+static bool char_is_one_of(char c, const char *accept) {
+  size_t accept_len = strlen(accept);
+
+  for (size_t i = 0; i < accept_len; i++) {
+    if (c == accept[i]) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// similar to strspn
+static size_t buffer_prefix_length(const Buffer *self, size_t from, const char *accept) {
+  if (from >= self->length) {
+    return 0;
+  }
+
+  size_t i = from;
+
+  while (1) {
+    if (i == self->length) {
+      break;
+    }
+
+    if (!char_is_one_of(self->char_ptr[i], accept)) {
+      break;
+    }
+
+    i++;
+  }
+
+  return i;
+}
+
+BufferList buffer_split(const Buffer *self, const char *delim) {
+  BufferList list = {0};
+
+  size_t start = buffer_prefix_length(self, 0, delim);
+
+  for (size_t i = start; i < self->length; i++) {
+    if (char_is_one_of(self->char_ptr[i], delim)) {
+      Buffer item = buffer_slice(self, start, i);
+      VECTOR_PUSH(list, item);
+
+      start = buffer_prefix_length(self, i, delim);
+      i = start;
+    }
+  }
+
+  return list;
 }

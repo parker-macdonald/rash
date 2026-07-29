@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
 
     for (size_t i = 0; argv[2][i] != '\0'; i++) {
       if (!iscntrl((int)argv[2][i])) {
-        buffer_append_char(&command, argv[2][i]);
+        buffer_append(&command, argv[2][i]);
       }
     }
 
