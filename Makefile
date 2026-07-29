@@ -1,5 +1,5 @@
-VERSION=0.8.0
-RELEASED="July 24th, 2026"
+VERSION=0.8.1
+RELEASED="July 28th, 2026"
 
 PREFIX := /usr/local
 
