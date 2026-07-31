@@ -1,451 +1,272 @@
-#include "lex.h"
+#include "interpreter/lex.h"
 
-#include <ctype.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-
+#include "lib/attrib.h"
+#include "lib/buffer.h"
 #include "lib/error.h"
 #include "lib/vector.h"
 
-enum lexer_state {
-  DEFAULT,
-  WHITESPACE,
-  SINGLE_QUOTE,
-  DOUBLE_QUOTE,
-  SINGLE_LITERAL
-};
-
-#define ADD_NONSTR_TOKEN(token_type)                                           \
-  do {                                                                         \
-    if (buffer.length != 0) {                                                  \
-      VECTOR_PUSH(buffer, '\0');                                               \
-      VECTOR_PUSH(tokens, ((Token){.type = TK_STRING, .data = buffer.data}));     \
-      VECTOR_INIT(buffer);                                                     \
-    }                                                                          \
-    if (has_arguments) {                                                       \
-      VECTOR_PUSH(tokens, ((Token){.type = TK_END_ARG}));                         \
-      has_arguments = false;                                                   \
-    }                                                                          \
-    VECTOR_PUSH(tokens, (Token){.type = (token_type)});                        \
-  } while (0)
-
-Token *lex(const uint8_t *source) {
-  VECTOR(Token) tokens;
-  VECTOR_INIT(tokens);
-
-  VECTOR(uint8_t) buffer;
-  VECTOR_INIT(buffer);
-
-  bool has_arguments = false;
-
-  enum lexer_state state = WHITESPACE;
-
-  for (size_t i = 0; source[i] != '\0'; i++) {
-    const uint8_t curr = source[i];
-
-    switch (state) {
-      case DEFAULT:
-        if (curr == '"') {
-          has_arguments = true;
-          state = DOUBLE_QUOTE;
-          break;
-        }
-
-        if (curr == '\'') {
-          has_arguments = true;
-          state = SINGLE_QUOTE;
-          break;
-        }
-
-        if (curr == '\\') {
-          has_arguments = true;
-          state = SINGLE_LITERAL;
-          break;
-        }
-
-        if (isspace((int)curr)) {
-          state = WHITESPACE;
-          if (buffer.length != 0) {
-            VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(tokens, ((Token){.type = TK_STRING, .data = buffer.data}));
-
-            VECTOR_INIT(buffer);
-          }
-          if (has_arguments) {
-            VECTOR_PUSH(tokens, ((Token){.type = TK_END_ARG}));
-            has_arguments = false;
-          }
-
-          break;
-        }
-
-        // stdin redirection
-        if (curr == '<') {
-          if (source[i + 1] == '<' && source[i + 2] == '<') {
-            ADD_NONSTR_TOKEN(TK_STDIN_REDIR_STRING);
-            i += 2;
-            break;
-          }
-          ADD_NONSTR_TOKEN(TK_STDIN_REDIR);
-          break;
-        }
-
-        // stdout redirection
-        if (curr == '>') {
-          if (source[i + 1] == '>') {
-            ADD_NONSTR_TOKEN(TK_STDOUT_REDIR_APPEND);
-            i++;
-            break;
-          }
-          ADD_NONSTR_TOKEN(TK_STDOUT_REDIR);
-          break;
-        }
-
-        if (curr == '2') {
-          if (source[i + 1] == '>') {
-            if (source[i + 2] == '>') {
-              ADD_NONSTR_TOKEN(TK_STDERR_REDIR_APPEND);
-              i += 2;
-              break;
-            }
-            ADD_NONSTR_TOKEN(TK_STDERR_REDIR);
-            i++;
-            continue;
-          }
-        }
-
-        if (curr == '|') {
-          if (source[i + 1] == '|') {
-            ADD_NONSTR_TOKEN(TK_LOGICAL_OR);
-            i++;
-            break;
-          }
-          ADD_NONSTR_TOKEN(TK_PIPE);
-          break;
-        }
-
-        if (curr == ';') {
-          ADD_NONSTR_TOKEN(TK_SEMI);
-          break;
-        }
-
-        if (curr == '&') {
-          if (source[i + 1] == '&') {
-            ADD_NONSTR_TOKEN(TK_LOGICAL_AND);
-            i++;
-            break;
-          }
-          ADD_NONSTR_TOKEN(TK_AMP);
-          break;
-        }
-
-        // crazy logic for enviroment variables and subshells
-        if (curr == '$') {
-          has_arguments = true;
-
-          i++;
-
-          // subshells
-          if (source[i] == '(') {
-            i++;
-
-            size_t subshell_len = 0;
-            const uint8_t *subshell_start = source + i;
-
-            for (;;) {
-              if (source[i] == ')') {
-                break;
-              }
-
-              if (source[i] == '\0') {
-                error_f("rash: expected closing ‘)’ character.\n");
-                goto error;
-              }
-
-              i++;
-              subshell_len++;
-            }
-
-            if (subshell_len == 0) {
-              error_f("rash: subshell cannot be empty.\n");
-              goto error;
-            }
-
-            char *subshell_cmd = malloc(subshell_len + 1);
-            memcpy(subshell_cmd, subshell_start, subshell_len);
-            subshell_cmd[subshell_len] = '\0';
-
-            if (buffer.length != 0) {
-              VECTOR_PUSH(buffer, '\0');
-              VECTOR_PUSH(
-                  tokens, ((Token){.type = TK_STRING, .data = buffer.data})
-              );
-              VECTOR_INIT(buffer);
-            }
-
-            VECTOR_PUSH(
-                tokens, ((Token){.type = TK_SUBSHELL, .data = subshell_cmd})
-            );
-            break;
-          }
-
-          if (source[i] == '{') {
-            i++;
-
-            size_t env_len = 0;
-            const uint8_t *env_start = source + i;
-
-            for (;;) {
-              if (source[i] == '}') {
-                break;
-              }
-
-              if (source[i] == '\0') {
-                error_f("rash: expected closing ‘}’ character.\n");
-                goto error;
-              }
-
-              i++;
-              env_len++;
-            }
-
-            if (env_len == 0) {
-              error_f("rash: cannot expand empty enviroment variable.\n");
-              goto error;
-            }
-
-            char *env_name = malloc(env_len + 1);
-            memcpy(env_name, env_start, env_len);
-            env_name[env_len] = '\0';
-
-            if (buffer.length != 0) {
-              VECTOR_PUSH(buffer, '\0');
-              VECTOR_PUSH(
-                  tokens, ((Token){.type = TK_STRING, .data = buffer.data})
-              );
-              VECTOR_INIT(buffer);
-            }
-
-            VECTOR_PUSH(
-                tokens, ((Token){.type = TK_ENV_EXPANSION, .data = env_name})
-            );
-            break;
-          }
-
-          size_t env_len = 0;
-          const uint8_t *env_start = source + i;
-
-          for (;;) {
-            if ((!isalnum((int)source[i]) && source[i] != '_') ||
-                source[i] == '\0') {
-              i--;
-              break;
-            }
-
-            i++;
-            env_len++;
-          }
-
-          if (env_len == 0) {
-            VECTOR_PUSH(buffer, '$');
-            break;
-          }
-
-          char *env_name = malloc(env_len + 1);
-          memcpy(env_name, env_start, env_len);
-          env_name[env_len] = '\0';
-
-          if (buffer.length != 0) {
-            VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(tokens, ((Token){.type = TK_STRING, .data = buffer.data}));
-            VECTOR_INIT(buffer);
-          }
-
-          VECTOR_PUSH(
-              tokens, ((Token){.type = TK_ENV_EXPANSION, .data = env_name})
-          );
-          break;
-        }
-
-        if (curr == '{') {
-          has_arguments = true;
-          i++;
-          const uint8_t *var_start = source + i;
-          size_t var_len = 0;
-
-          for (;;) {
-            if (source[i] == '}') {
-              break;
-            }
-
-            if (source[i] == '\0') {
-              error_f("rash: expected closing ‘}’ character.\n");
-              goto error;
-            }
-
-            i++;
-            var_len++;
-          }
-
-          if (var_len == 0) {
-            error_f("rash: cannot expand empty shell variable.\n");
-            goto error;
-          }
-
-          char *var_name = malloc(var_len + 1);
-          memcpy(var_name, var_start, var_len);
-          var_name[var_len] = '\0';
-
-          if (buffer.length != 0) {
-            VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(tokens, ((Token){.type = TK_STRING, .data = buffer.data}));
-            VECTOR_INIT(buffer);
-          }
-
-          VECTOR_PUSH(
-              tokens, ((Token){.type = TK_VAR_EXPANSION, .data = var_name})
-          );
-          break;
-        }
-
-        if (curr == '*') {
-          has_arguments = true;
-          if (buffer.length != 0) {
-            VECTOR_PUSH(buffer, '\0');
-            VECTOR_PUSH(tokens, ((Token){.type = TK_STRING, .data = buffer.data}));
-            VECTOR_INIT(buffer);
-          }
-          VECTOR_PUSH(tokens, ((Token){.type = TK_GLOB_WILDCARD}));
-
-          break;
-        }
-
-        if (curr == '#') {
-          goto success;
-        }
-
-        has_arguments = true;
-        VECTOR_PUSH(buffer, curr);
-        break;
-
-      case WHITESPACE:
-        if (curr == '~') {
-          i++;
-          const uint8_t *user_start = source + i;
-          size_t user_len = 0;
-
-          for (;;) {
-            if (source[i] == '/' || source[i] == '\0' ||
-                isspace((int)source[i])) {
-              break;
-            }
-            user_len++;
-            i++;
-          }
-
-          char *user = malloc(user_len + 1);
-          memcpy(user, user_start, user_len);
-          user[user_len] = '\0';
-
-          VECTOR_PUSH(tokens, ((Token){.type = TK_TILDE, .data = user}));
-          i--;
-          state = DEFAULT;
-
-          has_arguments = true;
-          continue;
-        }
-
-        if (!isspace((int)curr)) {
-          state = DEFAULT;
-          i--;
-        }
-        break;
-
-      case DOUBLE_QUOTE:
-        if (curr == '"') {
-          state = DEFAULT;
-          break;
-        }
-
-        VECTOR_PUSH(buffer, curr);
-        break;
-
-      case SINGLE_QUOTE:
-        if (curr == '\'') {
-          state = DEFAULT;
-          break;
-        }
-
-        VECTOR_PUSH(buffer, curr);
-        break;
-
-      case SINGLE_LITERAL:
-        VECTOR_PUSH(buffer, curr);
-        state = DEFAULT;
-        break;
-    }
-  }
-
-  switch (state) {
-    case SINGLE_LITERAL:
-      error_f("rash: Expected character after ‘\\’.\n");
-      goto error;
-    case SINGLE_QUOTE:
-      error_f("rash: Expected closing ‘'’ character.\n");
-      goto error;
-    case DOUBLE_QUOTE:
-      error_f("rash: Expected closing ‘\"’ character.\n");
-      goto error;
-    default:
-      break;
-  }
-
-success:
-
-  if (buffer.length != 0) {
-    VECTOR_PUSH(buffer, '\0');
-    VECTOR_PUSH(tokens, ((Token){.type = TK_STRING, .data = buffer.data}));
-  } else {
-    VECTOR_DESTROY(buffer);
-  }
-
-  if (has_arguments) {
-    VECTOR_PUSH(tokens, ((Token){.type = TK_END_ARG}));
-  }
-
-  VECTOR_PUSH(tokens, (Token){.type = TK_END});
-
-  return tokens.data;
-
-error:
-  VECTOR_DESTROY(buffer);
-
-  // pro tip: do not refactor this to use the free tokens function because
-  // tokens does not have an END token to mark the end of the array (ask me how
-  // i know).
-  for (size_t i = 0; i < tokens.length; i++) {
-    if (tokens.data[i].type == TK_STRING || tokens.data[i].type == TK_ENV_EXPANSION ||
-        tokens.data[i].type == TK_VAR_EXPANSION || tokens.data[i].type == TK_TILDE ||
-        tokens.data[i].type == TK_SUBSHELL) {
-      free(tokens.data[i].data);
-    }
-  }
-
-  VECTOR_DESTROY(tokens);
-
-  return NULL;
+#include "token.h"
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <unistd.h>
+
+typedef struct {
+  const Buffer *source;
+  TokenList tokens;
+  size_t start;
+  size_t current;
+} LexState;
+
+static bool is_at_end(LexState *s) {
+  return s->current >= s->source->length;
 }
 
-void free_tokens(Token **tokens) {
-  for (size_t i = 0; (*tokens)[i].type != TK_END; i++) {
-    if ((*tokens)[i].type == TK_STRING || (*tokens)[i].type == TK_ENV_EXPANSION ||
-        (*tokens)[i].type == TK_VAR_EXPANSION || (*tokens)[i].type == TK_TILDE ||
-        (*tokens)[i].type == TK_SUBSHELL) {
-      free((*tokens)[i].data);
+static uint8_t advance(LexState *s) {
+  if (is_at_end(s)) {
+    rash_panic();
+  }
+
+  return s->source->u8_ptr[s->current++];
+}
+
+static uint8_t peek(LexState *s) {
+  if (is_at_end(s)) {
+    return '\0';
+  }
+
+  return s->source->u8_ptr[s->current];
+}
+
+ATTRIB_UNUSED
+static uint8_t peek_next(LexState *s) {
+  if (s->current + 1 >= s->source->length) {
+    rash_panic();
+  }
+
+  return s->source->u8_ptr[s->current + 1];
+}
+
+static bool match(LexState *s, uint8_t expected) {
+  if (is_at_end(s)) {
+    return false;
+  }
+
+  if (s->source->u8_ptr[s->current] != expected) {
+    return false;
+  }
+
+  s->current++;
+  return true;
+}
+
+static bool match_many(LexState *s, const char *expected) {
+  size_t i;
+  for (i = 0; expected[i] != '\0'; i++) {
+    if (
+      is_at_end(s) ||
+      s->source->char_ptr[s->current + i] != expected[i]
+    ) {
+      return false;
     }
   }
 
-  free(*tokens);
+  s->current += i;
+  return true;
+}
+
+static bool is_last_token_argument(LexState *s) {
+  if (
+    s->tokens.length != 0 &&
+    IS_ARGUMENT_TOKEN(s->tokens.data[s->tokens.length - 1].kind)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+static void add_token(LexState *s, TokenKind kind) {
+  // if we insert a non-argument token following an argument token, we need an ARG_END_TOKEN
+  if (
+    !IS_ARGUMENT_TOKEN(kind) &&
+    is_last_token_argument(s)
+  ) {
+    VECTOR_PUSH(s->tokens, ((Token){.kind = TK_ARG_END}));
+  }
+
+  VECTOR_PUSH(s->tokens, ((Token){.kind = kind}));
+}
+
+static void add_buffer_token(LexState *s, TokenKind kind, Buffer buffer) {
+  assert(IS_BUFFER_TOKEN(kind));
+
+  if (
+    !IS_ARGUMENT_TOKEN(kind) &&
+    is_last_token_argument(s)
+  ) {
+    VECTOR_PUSH(s->tokens, ((Token){.kind = TK_ARG_END}));
+  }
+
+  VECTOR_PUSH(s->tokens, ((Token){
+    .kind = kind,
+    .buffer = buffer
+  }));
+}
+
+// what is and isn't allowed in a username isn't set in stone. i'm limiting it
+// to lower and upper case ASCII letters, digits, period, underscore, and hyphen
+// see here: https://systemd.io/USER_NAMES/
+static bool is_username_allowed(uint8_t c) {
+  return (
+    (c >= 'a' && c <= 'z') ||
+    (c >= 'A' && c <= 'Z') ||
+    (c == '.') ||
+    (c == '_') ||
+    (c == '-')
+  );
+}
+
+static int tilde(LexState *s) {
+  while (is_username_allowed(peek(s))) {
+    advance(s);
+  }
+
+  Buffer username = buffer_slice(
+    s->source,
+    s->start + 1,
+    s->current
+  );
+
+  add_buffer_token(s, TK_ARG_TILDE, username);
+  return 0;
+}
+
+static int scan_token(LexState *s) {
+  // stdin redirects
+  if (match_many(s, "<<<")) {
+    add_token(s, TK_STDIN_REDIR_STRING);
+    return 0;
+  }
+
+  if (match(s, '<')) {
+    add_token(s, TK_STDIN_REDIR);
+    return 0;
+  }
+
+  // stdout redirects
+  if (match_many(s, ">>")) {
+    add_token(s, TK_STDOUT_REDIR_APPEND);
+    return 0;
+  }
+
+  if (match(s, '>')) {
+    add_token(s, TK_STDOUT_REDIR);
+    return 0;
+  }
+
+  if (match_many(s, "1>>")) {
+    add_token(s, TK_STDOUT_REDIR_APPEND);
+    return 0;
+  }
+
+  if (match_many(s, "1>")) {
+    add_token(s, TK_STDOUT_REDIR);
+    return 0;
+  }
+
+  // stderr redirects
+  if (match_many(s, "2>>")) {
+    add_token(s, TK_STDERR_REDIR_APPEND);
+    return 0;
+  }
+
+  if (match_many(s, "2>")) {
+    add_token(s, TK_STDERR_REDIR);
+    return 0;
+  }
+
+  // stdout and stderr redirects
+  if (match_many(s, "&>>")) {
+    add_token(s, TK_STDOUT_ERR_REDIR_APPEND);
+    return 0;
+  }
+
+  if (match_many(s, "&>")) {
+    add_token(s, TK_STDOUT_ERR_REDIR);
+    return 0;
+  }
+
+  if (match_many(s, "||")) {
+    add_token(s, TK_LOGICAL_OR);
+    return 0;
+  }
+
+  if (match(s, '|')) {
+    add_token(s, TK_PIPE);
+    return 0;
+  }
+
+  if (match(s, ';')) {
+    add_token(s, TK_SEMI);
+    return 0;
+  }
+
+  if (match_many(s, "&&")) {
+    add_token(s, TK_LOGICAL_AND);
+    return 0;
+  }
+
+  if (match(s, '&')) {
+    add_token(s, TK_AMP);
+    return 0;
+  }
+
+  if (match_many(s, "&&")) {
+    add_token(s, TK_LOGICAL_AND);
+    return 0;
+  }
+
+  if (match(s, '&')) {
+    add_token(s, TK_AMP);
+    return 0;
+  }
+
+  if (match_many(s, "**")) {
+    add_token(s, TK_ARG_DOUBLESTAR);
+    return 0;
+  }
+
+  if (match(s, '*')) {
+    add_token(s, TK_ARG_WILDCARD);
+    return 0;
+  }
+
+  if (match(s, '!')) {
+    add_token(s, TK_MACRO);
+    return 0;
+  }
+
+  if (match(s, '~')) {
+    return tilde(s);
+  }
+
+  return 0;
+}
+
+TokenList lex(const Buffer *source) {
+  LexState state = {.source = source, .current = 0, .start = 0};
+  VECTOR_INIT(state.tokens);
+
+  while (!is_at_end(&state)) {
+    // We are at the beginning of the next lexeme.
+    state.start = state.current;
+    if (scan_token(&state)) {
+      token_list_destroy(&state.tokens);
+      return (TokenList){.length = 0, ._capacity = 0, .data = NULL};
+    }
+  }
+
+  return state.tokens;
 }

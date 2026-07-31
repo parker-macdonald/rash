@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
     interactive = true;
     // interactive must be set before calling sig_handler_init
     sig_handler_init();
-    load_rashrc();
+    // load_rashrc();
 
     line_reader_init();
     int status = repl(line_reader_read_void, NULL);
