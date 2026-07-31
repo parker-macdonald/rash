@@ -107,6 +107,8 @@ Buffer var_to_string(const ShellVar *var) {
     default:
       unreachable();
   }
+
+  return (Buffer){0};
 }
 
 ShellVar *var_cast_to_string(const ShellVar *var) {

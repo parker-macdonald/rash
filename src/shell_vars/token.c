@@ -62,4 +62,6 @@ bool is_binary_op(TokenKind kind) {
     }
 
   unreachable();
+
+  return false;
 }
