@@ -4,6 +4,37 @@
 #include "lib/buffer.h"
 #include "lib/vector.h"
 
+// the string `echo "shell lvl: ${SHLVL}"; echo c files: src/*.c` lexed looks like:
+
+// TK_ARG_STRING("echo")
+// TK_ARG_END
+// TK_ARG_STRING("shell lvl: ")
+// TK_ARG_ENV("SHLVL")
+// TK_ARG_END
+// TK_SEMI
+// TK_ARG_STRING("echo")
+// TK_ARG_END
+// TK_ARG_STRING("c")
+// TK_ARG_END
+// TK_ARG_STRING("files:")
+// TK_ARG_END
+// TK_ARG_STRING("src/")
+// TK_ARG_WILDCARD
+// TK_ARG_STRING(".c")
+// TK_ARG_END
+
+// argument tokens (tokens that have an impact on the argv of run commands) all begin with TK_ARG
+// TK_ARG_END tokens are special tokens used to end a list of connected argument tokens all the 
+// connected argument tokens make up a single element of argv in a command.
+// for example `~/$EXAMPLE_FOLDER` will lex to:
+
+// TK_ARG_TILDE("")
+// TK_ARG_STRING("/")
+// TK_ARG_ENV("EXAMPLE_FOLDER")
+
+// when this gets evaluated these operations will be preformed one after another appending to a string
+// that contains the final element of argv. that element might look like `/root/example`
+
 typedef enum {
   // '<' used to redirect stdin from a file
   TK_STDIN_REDIR,
@@ -33,7 +64,6 @@ typedef enum {
   TK_LOGICAL_AND,
   // '&' run a program in the background
   TK_AMP,
-  TK_ARGUMENT,
   // '!' marking the last argument is a macro
   TK_MACRO,
 
@@ -51,7 +81,10 @@ typedef enum {
   // '~' used for home folder expansion
   TK_ARG_TILDE,
   // marks the end of a list of argument tokens
-  TK_ARG_END
+  TK_ARG_END,
+
+  // this token will never be the result of a lex and is used a sentinal value
+  TK_NONE
 } TokenKind;
 
 // NOTE: TK_ARG_END is not an argument token

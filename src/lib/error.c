@@ -1,9 +1,11 @@
 #include "lib/error.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "lib/attrib.h"
 
@@ -45,4 +47,8 @@ void fatal_f(const char *restrict format, ...) {
   assert(res != -1);
 
   exit(EXIT_FAILURE);
+}
+
+void print_errno(void) {
+  error_f("errno is %d (%s)\n", errno, strerror(errno));
 }

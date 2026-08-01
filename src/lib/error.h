@@ -15,12 +15,15 @@ ATTRIB_NORETURN
 ATTRIB_PRINTF(1, 2)
 void fatal_f(const char *restrict format, ...);
 
+void print_errno(void);
+
 void rash_unwind(void);
 
 #define rash_panic()                                                           \
   do {                                                                         \
     ATTRIB_NORETURN extern void _exit(int status);                             \
     error_f("rash has panicked at %s:%d\n", __FILE__, __LINE__);               \
+    print_errno();                                                             \
     _exit(1);                                                                  \
   } while (0)
 

@@ -5,4 +5,6 @@
 
 typedef VECTOR(char *) CStrList;
 
+void cstr_list_destroy(CStrList *list);
+
 #endif
