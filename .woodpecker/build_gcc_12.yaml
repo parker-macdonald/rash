@@ -7,4 +7,4 @@ steps:
     image: gcc:12
     commands:
       - make CC=gcc DEBUG=0
-      - make test DEBUG=0
+      - make test CC=gcc DEBUG=0
