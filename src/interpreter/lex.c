@@ -103,13 +103,16 @@ static void current_word_flush(LexState *s) {
   }
 }
 
-static void add_token(LexState *s, TokenKind kind) {
-  current_word_flush(s);
-
+static void add_arg_end_token_if_needed(LexState *s) {
   // if we insert a non-argument token following an argument token, we need an ARG_END token
   if (is_last_token_argument(s)) {
     VECTOR_PUSH(s->tokens, ((Token){.kind = TK_ARG_END}));
   }
+}
+
+static void add_token(LexState *s, TokenKind kind) {
+  current_word_flush(s);
+  add_arg_end_token_if_needed(s);
 
   VECTOR_PUSH(s->tokens, ((Token){.kind = kind}));
 }
@@ -119,11 +122,7 @@ static void add_buffer_token(LexState *s, TokenKind kind, Buffer buffer) {
   assert(IS_BUFFER_TOKEN(kind));
 
   current_word_flush(s);
-
-  // if we insert a non-argument token following an argument token, we need an ARG_END token
-  if (is_last_token_argument(s)) {
-    VECTOR_PUSH(s->tokens, ((Token){.kind = TK_ARG_END}));
-  }
+  add_arg_end_token_if_needed(s);
 
   VECTOR_PUSH(s->tokens, ((Token){
     .kind = kind,
@@ -131,6 +130,8 @@ static void add_buffer_token(LexState *s, TokenKind kind, Buffer buffer) {
   }));
 }
 
+// we might need this function at some point, but today is not that day
+ATTRIB_UNUSED
 static void add_arg_token(LexState *s, TokenKind kind) {
   current_word_flush(s);
 
@@ -464,9 +465,9 @@ static int scan_token(LexState *s) {
     return double_quote(s);
   }
 
-  if (is_at_end(s) || match(s, ' ')) {
-    // this will also flush word
-    add_arg_token(s, TK_ARG_END);
+  if (match(s, ' ')) {
+    current_word_flush(s);
+    add_arg_end_token_if_needed(s);
     return 0;
   }
 
@@ -496,10 +497,7 @@ TokenList lex(const Buffer *source) {
   }
 
   current_word_flush(&state);
-
-  if (is_last_token_argument(&state)) {
-    add_arg_token(&state, TK_ARG_END);
-  }
+  add_arg_end_token_if_needed(&state);
 
   buffer_destroy(&state.current_word);
 
