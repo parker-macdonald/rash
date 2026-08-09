@@ -1,0 +1,10 @@
+when:
+  - event: push
+  - event: manual
+
+steps:
+  - name: gcc-14
+    image: gcc:14
+    commands:
+      - make CC=gcc DEBUG=0
+      - make test DEBUG=0

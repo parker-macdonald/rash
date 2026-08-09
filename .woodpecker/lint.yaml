@@ -1,0 +1,8 @@
+when:
+  - event: push
+
+steps:
+  - name: lint
+    image: silkeh/clang
+    commands:
+      - make lint

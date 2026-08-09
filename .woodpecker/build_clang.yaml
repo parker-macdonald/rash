@@ -1,0 +1,10 @@
+when:
+  - event: push
+  - event: manual
+
+steps:
+  - name: clang
+    image: silkeh/clang
+    commands:
+      - make DEBUG=0
+      - make test DEBUG=0
