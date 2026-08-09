@@ -17,7 +17,7 @@
 #include "execute.h"
 #include "glob.h"
 #include "interpreter/token.h"
-#include "lex.h"
+#include "lib/attrib.h"
 #include "lib/buffer.h"
 #include "lib/cstrlist.h"
 #include "lib/error.h"
@@ -49,6 +49,7 @@ static Token peek(EvalState *s) {
   return s->tokens->data[s->current];
 }
 
+ATTRIB_UNUSED
 static Token peek_prev(EvalState *s) {
   if (s->current == 0) {
     return (Token){.kind = TK_NONE};
@@ -561,7 +562,7 @@ int evaluate(const TokenList *tokens) {
       size_t len = strlen(str);
       ssize_t written = write(fds[1], str, len);
 
-      if (written != len) {
+      if (written != (ssize_t)len) {
         error_f("wrote %zd bytes\n", written);
         rash_assert(0, "write failed");
       }
@@ -817,22 +818,16 @@ int evaluate(const TokenList *tokens) {
       continue;
     }
 
-    if (tokens->type == TK_LOGICAL_OR) {
+    if (match(&s, TK_LOGICAL_OR)) {
       if (last_status == 0) {
-        while ((tokens + 1)->type == TK_END_ARG) {
-          tokens++;
-        }
+        match_argument(&s);
       }
 
       continue;
     }
 
-    if (tokens->type == TK_SEMI) {
+    if (match(&s, TK_SEMI)) {
       continue;
-    }
-
-    if (tokens->type == TK_END) {
-      break;
     }
   }
 
@@ -845,7 +840,7 @@ error:
   for (size_t i = 0; i < wait_for_me.length; i++) {
     pid_t id = waitpid(wait_for_me.data[i], NULL, 0);
     // from my understanding, if waitpid fails, something in rash went wrong
-    rash_assert(id != -1);
+    rash_assert(id != -1, "waitpid failed");
   }
   VECTOR_DESTROY(wait_for_me);
   for (size_t i = 0; i < argv.length; i++) {
