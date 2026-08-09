@@ -178,4 +178,8 @@ Buffer buffer_list_longest_common_prefix(const BufferList *list);
 
 BufferList buffer_split(const Buffer *self, const char *delim);
 
+// convert list to a null (like the pointer) terminated array of c strings.
+// this function consumes list. do not use it after calling this function
+char **buffer_list_to_cstr_array(BufferList *list);
+
 #endif

@@ -15,15 +15,19 @@
 #include "jobs.h"
 #include "lib/error.h"
 #include "lib/search_path.h"
+#include "lib/vector.h"
 
 extern char **environ;
 
 int execute(ExecutionContext context) {
-  if (context.argv == NULL) {
+  if (context.argv.length == 0) {
+    VECTOR_DESTROY(context.argv);
     return EXIT_SUCCESS;
   }
 
-  builtin_t builtin = find_builtin(context.argv[0]);
+  VECTOR_PUSH(context.argv, NULL);
+
+  builtin_t builtin = find_builtin(context.argv.data[0]);
 
   bool is_io_redirected = context.stderr_fd != -1 || context.stdin_fd != -1 ||
                           context.stdout_fd != -1;
@@ -33,7 +37,7 @@ int execute(ExecutionContext context) {
   // rash, and not the child process
   if (!is_io_redirected && builtin != NULL &&
       !(context.flags & EC_BACKGROUND_JOB) && !(context.flags & EC_NO_WAIT)) {
-    return builtin(context.argv);
+    return builtin(context.argv.data);
   }
 
   pid_t pid = fork();
@@ -78,33 +82,33 @@ int execute(ExecutionContext context) {
     if (builtin != NULL) {
       // using _exit instead of exit so we don't trigger the atexit function
       // which kills all child processes.
-      _exit(builtin(context.argv));
+      _exit(builtin(context.argv.data));
     }
 
-    char *exec_path = context.argv[0];
+    char *exec_path = context.argv.data[0];
 
     // search path for executable
-    if (strchr(context.argv[0], '/') == NULL) {
+    if (strchr(context.argv.data[0], '/') == NULL) {
       // this is technically a memory leak since search_path returns a malloc'd
       // string, but we exit unconditionally after this so it doesn't really
       // matter
-      exec_path = search_path(context.argv[0]);
+      exec_path = search_path(context.argv.data[0]);
 
       if (exec_path == NULL) {
-        error_f("%s: command not found\n", context.argv[0]);
+        error_f("%s: command not found\n", context.argv.data[0]);
         // using _exit instead of exit so we don't trigger the atexit function
         // which kills all child processes.
         _exit(EXIT_FAILURE);
       }
     }
 
-    int status = execve(exec_path, context.argv, environ);
+    int status = execve(exec_path, context.argv.data, environ);
 
     if (status == -1) {
       if (errno != ENOENT) {
         error_f("rash: execve: %s\n", strerror(errno));
       } else {
-        error_f("rash: %s: command not found\n", context.argv[0]);
+        error_f("rash: %s: command not found\n", context.argv.data[0]);
       }
     }
 
@@ -200,4 +204,18 @@ int wait_process(pid_t pid) {
   }
 
   return 0;
+}
+
+void execution_context_destroy(ExecutionContext context) {
+  VECTOR_DESTROY(context.argv);
+  
+  if (context.stderr_fd != -1) {
+    close(context.stderr_fd);
+  }
+  if (context.stdin_fd != -1) {
+    close(context.stdin_fd);
+  }
+  if (context.stdout_fd != -1) {
+    close(context.stdout_fd);
+  }
 }

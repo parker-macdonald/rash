@@ -189,6 +189,8 @@ printf("%s", string.data); // hi
   do {                                                                         \
     free((vector).data);                                                       \
     (vector).data = NULL;                                                      \
+    (vector).length = 0;                                                       \
+    (vector)._capacity = 0;                                                    \
   } while (0)
 
 #define VECTOR_CLEAR(vector) (vector).length = 0

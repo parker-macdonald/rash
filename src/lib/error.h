@@ -2,6 +2,7 @@
 #define ERROR_H
 
 #include "lib/attrib.h"
+#include <unistd.h>
 
 void error(const char *str);
 
@@ -21,7 +22,6 @@ void rash_unwind(void);
 
 #define rash_panic()                                                           \
   do {                                                                         \
-    ATTRIB_NORETURN extern void _exit(int status);                             \
     error_f("rash has panicked at %s:%d\n", __FILE__, __LINE__);               \
     print_errno();                                                             \
     _exit(1);                                                                  \

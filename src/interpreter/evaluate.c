@@ -272,6 +272,7 @@ static bool bad_syntax(const TokenList *tokens) {
   return false;
 }
 
+ATTRIB_UNUSED
 static void set_exit_code_var(int code) {
   ShellVar *var = var_create_number((double)(code & 0xff));
 
@@ -367,7 +368,12 @@ static CStrList evaluate_arg(EvalState *s) {
 
       Buffer cmd = buffer_clone(&token.buffer);
 
-      char *argv[] = {argv0, "-c", buffer_cstr(&cmd), NULL};
+      CStrList argv;
+      VECTOR_INIT(argv, 3);
+
+      VECTOR_PUSH(argv, argv0);
+      VECTOR_PUSH(argv, "-c");
+      VECTOR_PUSH(argv, buffer_cstr(&cmd));
 
       int null_fd = open("/dev/null", O_RDWR);
 
@@ -474,22 +480,16 @@ int evaluate(const TokenList *tokens) {
     return EXIT_FAILURE;
   }
 
-  CStrList argv;
-  VECTOR_INIT(argv);
+  VECTOR(ExecutionContext) contexts;
+  VECTOR_INIT(contexts, 1);
 
-  int last_status = -1;
-
-  VECTOR(pid_t) wait_for_me = {0, 0, 0};
-  // this doesn't compile on gcc :(
-  // VECTOR_INIT(wait_for_me, 0);
-
-  ExecutionContext ec = {
-    .argv = NULL,
+  VECTOR_PUSH(contexts, ((ExecutionContext){
+    .argv = {0},
     .stdout_fd = -1,
     .stdin_fd = -1,
     .stderr_fd = -1,
     .flags = 0
-  };
+  }));
 
   EvalState s = {
     .tokens = tokens,
@@ -506,7 +506,10 @@ int evaluate(const TokenList *tokens) {
       }
 
       for (size_t i = 0; i < arguments.length; i++) {
-        VECTOR_PUSH(argv, arguments.data[i]);
+        VECTOR_PUSH(
+          VECTOR_END(contexts).argv,
+          arguments.data[i]
+        );
       }
       continue;
     }
@@ -515,6 +518,7 @@ int evaluate(const TokenList *tokens) {
       CStrList arguments = evaluate_arg(&s);
 
       if (arguments.length == 0) {
+        error_f("rash: expected filename following `<`.\n");
         cstr_list_destroy(&arguments);
         goto error;
       }
@@ -534,7 +538,7 @@ int evaluate(const TokenList *tokens) {
 
       cstr_list_destroy(&arguments);
 
-      ec.stdin_fd = fd;
+      VECTOR_END(contexts).stdin_fd = fd;
 
       continue;
     }
@@ -543,12 +547,13 @@ int evaluate(const TokenList *tokens) {
       CStrList arguments = evaluate_arg(&s);
 
       if (arguments.length == 0) {
+        error_f("rash: expected string following `<<<`.\n");
         cstr_list_destroy(&arguments);
         goto error;
       }
 
       if (arguments.length != 1) {
-        error_f("rash: string following `<<<` expands to multiple arguments but is used as a filename where one argument is required.\n");
+        error_f("rash: string following `<<<` expands to multiple arguments but one argument is required.\n");
         cstr_list_destroy(&arguments);
         goto error;
       }
@@ -563,14 +568,24 @@ int evaluate(const TokenList *tokens) {
       size_t len = strlen(str);
       ssize_t written = write(fds[1], str, len);
 
-      if (written != (ssize_t)len) {
-        error_f("wrote %zd bytes\n", written);
-        rash_assert(0, "write failed");
+      if (written == -1) {
+        error_f("stdin string redirection failed: write failed: %s.\n", strerror(errno));
+        rash_panic();
+      }
+
+      if ((size_t)written != len) {
+        error_f("stdin string redirection failed: only wrote %zd of %zu bytes.\n", written, len);
+        rash_panic();
+      }
+
+      if (close(fds[1]) == -1) {
+        error("stdin string redirection failed: could not close write end of pipe.\n");
+        rash_panic();
       }
 
       cstr_list_destroy(&arguments);
 
-      ec.stdin_fd = fds[0];
+      VECTOR_END(contexts).stdin_fd = fds[0];
 
       continue;
     }
@@ -579,6 +594,7 @@ int evaluate(const TokenList *tokens) {
       CStrList arguments = evaluate_arg(&s);
 
       if (arguments.length == 0) {
+        error_f("rash: expected filename following `>`.\n");
         cstr_list_destroy(&arguments);
         goto error;
       }
@@ -599,7 +615,7 @@ int evaluate(const TokenList *tokens) {
 
       cstr_list_destroy(&arguments);
 
-      ec.stdout_fd = fd;
+      VECTOR_END(contexts).stdout_fd = fd;
 
       continue;
     }
@@ -608,6 +624,7 @@ int evaluate(const TokenList *tokens) {
       CStrList arguments = evaluate_arg(&s);
 
       if (arguments.length == 0) {
+        error_f("rash: expected filename following `>>`.\n");
         cstr_list_destroy(&arguments);
         goto error;
       }
@@ -628,7 +645,7 @@ int evaluate(const TokenList *tokens) {
 
       cstr_list_destroy(&arguments);
 
-      ec.stdout_fd = fd;
+      VECTOR_END(contexts).stdout_fd = fd;
 
       continue;
     }
@@ -637,6 +654,7 @@ int evaluate(const TokenList *tokens) {
       CStrList arguments = evaluate_arg(&s);
 
       if (arguments.length == 0) {
+        error_f("rash: expected filename following `2>`.\n");
         cstr_list_destroy(&arguments);
         goto error;
       }
@@ -657,7 +675,7 @@ int evaluate(const TokenList *tokens) {
 
       cstr_list_destroy(&arguments);
 
-      ec.stderr_fd = fd;
+      VECTOR_END(contexts).stderr_fd = fd;
 
       continue;
     }
@@ -666,6 +684,7 @@ int evaluate(const TokenList *tokens) {
       CStrList arguments = evaluate_arg(&s);
 
       if (arguments.length == 0) {
+        error_f("rash: expected filename following `2>>`.\n");
         cstr_list_destroy(&arguments);
         goto error;
       }
@@ -686,7 +705,7 @@ int evaluate(const TokenList *tokens) {
 
       cstr_list_destroy(&arguments);
 
-      ec.stderr_fd = fd;
+      VECTOR_END(contexts).stderr_fd = fd;
 
       continue;
     }
@@ -695,6 +714,7 @@ int evaluate(const TokenList *tokens) {
       CStrList arguments = evaluate_arg(&s);
 
       if (arguments.length == 0) {
+        error_f("rash: expected filename following `&>`.\n");
         cstr_list_destroy(&arguments);
         goto error;
       }
@@ -721,8 +741,8 @@ int evaluate(const TokenList *tokens) {
 
       cstr_list_destroy(&arguments);
 
-      ec.stdout_fd = fd;
-      ec.stderr_fd = fd2;
+      VECTOR_END(contexts).stdout_fd = fd;
+      VECTOR_END(contexts).stderr_fd = fd2;
 
       continue;
     }
@@ -731,6 +751,7 @@ int evaluate(const TokenList *tokens) {
       CStrList arguments = evaluate_arg(&s);
 
       if (arguments.length == 0) {
+        error_f("rash: expected filename following `&>>`.\n");
         cstr_list_destroy(&arguments);
         goto error;
       }
@@ -757,97 +778,88 @@ int evaluate(const TokenList *tokens) {
 
       cstr_list_destroy(&arguments);
 
-      ec.stdout_fd = fd;
-      ec.stderr_fd = fd2;
+      VECTOR_END(contexts).stdout_fd = fd;
+      VECTOR_END(contexts).stderr_fd = fd2;
 
       continue;
     }
 
     if (match(&s, TK_PIPE)) {
-      VECTOR_PUSH(argv, NULL);
-
       int fds[2];
       if (pipe(fds) == -1) {
         rash_assert(0, "pipe failed");
       }
 
-      ec.stdout_fd = fds[1];
-      ec.argv = argv.data;
-      ec.flags = EC_NO_WAIT;
-      pid_t pid = execute(ec);
-      if (pid == -1) {
-        goto error;
-      }
-      VECTOR_PUSH(wait_for_me, pid);
+      VECTOR_END(contexts).stdout_fd = fds[1];
+      VECTOR_END(contexts).flags = EC_NO_WAIT | EC_DONT_REGISTER_FOREGROUND;
 
-      ec = (ExecutionContext){NULL, -1, fds[0], -1, 0};
+      VECTOR_PUSH(contexts, ((ExecutionContext){
+        .argv = {0},
+        .flags = 0,
+        .stderr_fd = -1,
+        .stdin_fd = fds[0],
+        .stdout_fd = -1
+      }));
 
-      VECTOR_CLEAR(argv);
       continue;
     }
 
     if (match(&s, TK_AMP)) {
-      ec.flags = EC_BACKGROUND_JOB;
+      VECTOR_END(contexts).flags = EC_BACKGROUND_JOB;
+
+      VECTOR_PUSH(contexts, ((ExecutionContext){
+        .argv = {0},
+        .flags = 0,
+        .stderr_fd = -1,
+        .stdin_fd = -1,
+        .stdout_fd = -1
+      }));
+
       continue;
     }
 
-    if (argv.length > 0) {
-      VECTOR_PUSH(argv, NULL);
-      ec.argv = argv.data;
-      last_status = execute(ec);
-      set_exit_code_var(last_status);
-      ec = (ExecutionContext){NULL, -1, -1, -1, 0};
-
-      for (size_t i = 0; i < argv.length; i++) {
-        free(argv.data[i]);
-      }
-      VECTOR_CLEAR(argv);
-
-      for (size_t i = 0; i < wait_for_me.length; i++) {
-        pid_t id = waitpid(wait_for_me.data[i], NULL, 0);
-        // from my understanding, if waitpid fails, something in rash went wrong
-        assert(id != -1);
-      }
-      VECTOR_CLEAR(wait_for_me);
-    }
-
     if (match(&s, TK_LOGICAL_AND)) {
-      if (last_status != 0) {
-        match_argument(&s);
-      }
+      // dont have a todo macro so im using unreachable
+      unreachable();
 
       continue;
     }
 
     if (match(&s, TK_LOGICAL_OR)) {
-      if (last_status == 0) {
-        match_argument(&s);
-      }
+      // dont have a todo macro so im using unreachable
+      unreachable();
 
       continue;
     }
 
     if (match(&s, TK_SEMI)) {
+      VECTOR_PUSH(contexts, ((ExecutionContext){
+        .argv = {0},
+        .flags = 0,
+        .stderr_fd = -1,
+        .stdin_fd = -1,
+        .stdout_fd = -1
+      }));
+
       continue;
     }
   }
 
-  VECTOR_DESTROY(argv);
-  VECTOR_DESTROY(wait_for_me);
+  int status = 0;
+  for (size_t i = 0; i < contexts.length; i++) {
+    status = execute(contexts.data[i]);
+  }
 
-  return last_status;
+  VECTOR_DESTROY(contexts);
+
+  return status;
 
 error:
-  for (size_t i = 0; i < wait_for_me.length; i++) {
-    pid_t id = waitpid(wait_for_me.data[i], NULL, 0);
-    // from my understanding, if waitpid fails, something in rash went wrong
-    rash_assert(id != -1, "waitpid failed");
+  for (size_t i = 0; i < contexts.length; i++) {
+    execution_context_destroy(contexts.data[i]);
   }
-  VECTOR_DESTROY(wait_for_me);
-  for (size_t i = 0; i < argv.length; i++) {
-    free(argv.data[i]);
-  }
-  VECTOR_DESTROY(argv);
+
+  VECTOR_DESTROY(contexts);
 
   return EXIT_FAILURE;
 }

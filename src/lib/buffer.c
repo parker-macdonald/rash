@@ -453,3 +453,18 @@ BufferList buffer_split(const Buffer *self, const char *delim) {
 
   return list;
 }
+
+char **buffer_list_to_cstr_array(BufferList *list) {
+  // plus one for the null terminator
+  char **array = malloc(sizeof(char *) * (list->length + 1));
+
+  for (size_t i = 0; i < list->length; i++) {
+    array[i] = buffer_cstr(list->data + i);
+  }
+
+  array[list->length] = NULL;
+
+  VECTOR_DESTROY(*list);
+
+  return array;
+}
