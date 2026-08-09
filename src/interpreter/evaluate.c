@@ -457,6 +457,7 @@ static CStrList evaluate_arg(EvalState *s) {
       goto error;
     }
 
+    buffer_destroy(&buffer);
     return list;
   }
 
@@ -499,7 +500,7 @@ int evaluate(const TokenList *tokens) {
     if (IS_ARGUMENT_TOKEN(peek(&s).kind)) {
       CStrList arguments = evaluate_arg(&s);
 
-      if (arguments.length) {
+      if (arguments.length == 0) {
         VECTOR_DESTROY(arguments);
         goto error;
       }

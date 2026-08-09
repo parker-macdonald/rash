@@ -495,6 +495,8 @@ TokenList lex(const Buffer *source) {
     }
   }
 
+  current_word_flush(&state);
+
   if (is_last_token_argument(&state)) {
     add_arg_token(&state, TK_ARG_END);
   }

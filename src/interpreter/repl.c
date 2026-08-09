@@ -13,6 +13,10 @@ int repl(const Buffer *(*reader)(void *), void *reader_data) {
   while (1) {
     const Buffer *line = reader(reader_data);
 
+    if (line == NULL) {
+      return 0;
+    }
+
     repl_once(line);
   }
 
@@ -26,12 +30,12 @@ int repl_once(const Buffer *line) {
 
   TokenList tokens = lex(line);
 
-  token_list_destroy(&tokens);
-  // if (tokens.length != 0) {
-  //   status = evaluate(&tokens);
-  // } else {
-  //   status = EXIT_FAILURE;
-  // }
+  if (tokens.length != 0) {
+    status = evaluate(&tokens);
+    token_list_destroy(&tokens);
+  } else {
+    status = EXIT_FAILURE;
+  }
 
   return status;
 }
