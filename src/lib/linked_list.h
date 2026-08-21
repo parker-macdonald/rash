@@ -65,7 +65,7 @@
   struct {                                                                     \
     __typeof((list).head) curr;                                                \
     __typeof((list)) *_list;                                                   \
-  } name = {.curr = (list).head, ._list = &(list)}
+  } name = {.curr = (list).head, ._list = &(list)} /* NOLINT(bugprone-macro-parentheses) name does not need to be in parens*/
 
 #define LL_ITER_CURR(iter) ((iter).curr ? &(iter).curr->value : NULL)
 

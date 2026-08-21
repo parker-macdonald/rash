@@ -22,3 +22,5 @@ Checks: >
 WarningsAsErrors: >
   *,
   -misc-include-cleaner,
+
+ExcludeHeaderFilterRegex: 'src/.*'

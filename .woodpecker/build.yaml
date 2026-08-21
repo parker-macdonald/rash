@@ -1,0 +1,15 @@
+matrix:
+  COMPILER:
+    - gcc:12
+    - gcc:13
+    - gcc:14
+    - gcc:15
+    - gcc:16
+    - silkeh/clang
+
+steps:
+  - name: build
+    image: ${COMPILER}
+    commands:
+      - make CC=cc DEBUG=0
+      - make test CC=cc DEBUG=0
