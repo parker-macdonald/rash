@@ -213,6 +213,10 @@ ShellVar *var_get(const char *key) {
   return var_aquire(var);
 }
 
+bool var_exists(const char *key) {
+  return hash_map_get(&map, key) != NULL;
+}
+
 void var_unset(const char *key) { hash_map_remove(&map, key); }
 
 static void print_callback(const char *key, void *ptr) {

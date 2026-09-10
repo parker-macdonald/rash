@@ -56,6 +56,8 @@ void var_set(const char *key, ShellVar *var);
 
 ShellVar *var_get(const char *key);
 
+bool var_exists(const char *key);
+
 /**
  * @brief unset a shell variable given a key
  * @param key the key of the variable

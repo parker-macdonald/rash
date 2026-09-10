@@ -32,6 +32,11 @@ void line_reader_init(void) {
   reader.cursor_pos = reader.prompt_length;
 
   actions_default(&reader.acts);
+
+  if (!var_exists("PS1")) {
+    ShellVar *ps1 = var_create_string(buffer_from_cstr("\\u@\\h:\\w\\$ "));
+    var_set("PS1", ps1);
+  }
 }
 
 void line_reader_destroy(void) {
