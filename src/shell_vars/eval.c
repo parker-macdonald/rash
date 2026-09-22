@@ -17,6 +17,7 @@ typedef struct {
 
 typedef enum {
   PREC_MIN = 0,
+  PREC_TERNARY,
   PREC_EQ_NEQ,
   PREC_GT_LT_GTE_LTE,
   PREC_ADD_SUB,
@@ -37,7 +38,8 @@ static const OpPrec OP_PREC_LOOKUP[] = {
   [TK_GT]  = PREC_GT_LT_GTE_LTE,
   [TK_LT]  = PREC_GT_LT_GTE_LTE,
   [TK_GTE] = PREC_GT_LT_GTE_LTE,
-  [TK_LTE] = PREC_GT_LT_GTE_LTE
+  [TK_LTE] = PREC_GT_LT_GTE_LTE,
+  [TK_QUESTION] = PREC_TERNARY
 };
 
 static bool is_at_end(EvalState *s) {
@@ -404,6 +406,37 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
 
 static ShellVar *eval_expr_1(EvalState *s, ShellVar *lhs, OpPrec min_prec) { // NOLINT(misc-no-recursion)
   var_aquire(lhs);
+  
+  if (match(s, TK_QUESTION)) {
+    ShellVar *when_true = eval_expr(s);
+
+    if (when_true == NULL) {
+      return NULL;
+    }
+
+    if (!match(s, TK_COLON)) {
+      error("shell expression: expected `:` after expression.\n");
+      var_release(when_true);
+      return NULL;
+    }
+
+    ShellVar *when_false = eval_expr(s);
+
+    if (when_false == NULL) {
+      var_release(when_true);
+      return NULL;
+    }
+
+    bool value = var_to_boolean(lhs);
+    var_release(lhs);
+
+    if (value) {
+      var_release(when_false);
+      return when_true;
+    }
+    var_release(when_true);
+    return when_false;
+  }
 
   TokenKind lookahead = peek(s).kind;
 

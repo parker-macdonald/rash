@@ -24,6 +24,10 @@ typedef enum {
   TK_LTE, // <=
   TK_NOT, // !
 
+  // used for ternary operator
+  TK_QUESTION, // ?
+  TK_COLON, // :
+
   TK_O_PAREN, // (
   TK_C_PAREN, // )
 

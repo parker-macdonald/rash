@@ -33,6 +33,7 @@ ShellVar *var_aquire(ShellVar *var);
 void var_release(ShellVar *var);
 
 Buffer var_to_string(const ShellVar *var);
+bool var_to_boolean(const ShellVar *var);
 
 ShellVar *var_cast_to_string(const ShellVar *var);
 ShellVar *var_cast_to_boolean(const ShellVar *var);

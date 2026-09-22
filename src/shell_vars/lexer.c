@@ -261,6 +261,14 @@ static int scan_token(LexState *s) {
       }
       add_token(s, TK_LT);
       break;
+    
+    case '?':
+      add_token(s, TK_QUESTION);
+      break;
+    
+    case ':':
+      add_token(s, TK_COLON);
+      break;
 
     case '"':
       string(s);

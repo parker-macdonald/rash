@@ -115,27 +115,27 @@ ShellVar *var_cast_to_string(const ShellVar *var) {
   return var_create_string(var_to_string(var));
 }
 
-ShellVar *var_cast_to_boolean(const ShellVar *var) {
-  bool boolean;
-
+bool var_to_boolean(const ShellVar *var) {
   switch (var->kind) {
     case SV_NUMBER:
-      boolean = var->number != 0;
+      return var->number != 0;
       break;
     case SV_STRING:
-      boolean = var->string.length != 0;
+      return var->string.length != 0;
       break;
     case SV_BOOLEAN:
-      boolean = var->boolean;
+      return var->boolean;
       break;
     case SV_NULL:
-      boolean = false;
+      return false;
       break;
     default:
       unreachable();
   }
+}
 
-  return var_create_boolean(boolean);
+ShellVar *var_cast_to_boolean(const ShellVar *var) {
+  return var_create_boolean(var_to_boolean(var));
 }
 
 ShellVar *var_cast_to_number(const ShellVar *var) {
