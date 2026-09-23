@@ -45,6 +45,7 @@ bool is_binary_op(TokenKind kind) {
     case TK_LT:
     case TK_GTE:
     case TK_LTE:
+    case TK_QUESTION:
       return true;
     case TK_NONE:
     case TK_NOT:
@@ -60,7 +61,6 @@ bool is_binary_op(TokenKind kind) {
     case TK_STRING_TYPE:
     case TK_NUMBER_TYPE:
     case TK_COUNT:
-    case TK_QUESTION:
     case TK_COLON:
       return false;
     }

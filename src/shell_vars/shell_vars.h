@@ -72,4 +72,6 @@ bool var_state_var_exists(const VarState *self, const char *key);
  */
 void var_state_var_unset(VarState *self, const char *key);
 
+void var_state_update_cwd_vars(VarState *self, Buffer old_cwd);
+
 #endif

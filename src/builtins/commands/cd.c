@@ -5,7 +5,11 @@
 #include <unistd.h>
 
 #include "builtins/builtin_funcs.h"
+#include "lib/buffer.h"
 #include "lib/error.h"
+#include "lib/sys.h"
+#include "rash.h"
+#include "shell_vars/shell_vars.h"
 
 static const char *const CD_HELP =
     "Usage: cd [DIR]\n"
@@ -29,11 +33,16 @@ int builtin_cd(char **const argv) {
     return EXIT_SUCCESS;
   }
 
+  Buffer old_cwd = getcwd_buffer();
+
   if (chdir(path) == -1) {
     error_f("cd: %s: %s\n", path, strerror(errno));
 
+    buffer_destroy(&old_cwd);
     return EXIT_FAILURE;
   }
+
+  var_state_update_cwd_vars(&rash_instance_get()->var_state, old_cwd);
 
   return EXIT_SUCCESS;
 }

@@ -1,4 +1,12 @@
 #include "shell_vars/shell_vars.h"
+
+#include <math.h>
+#include <pwd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
 #include "lib/buffer.h"
 #include "lib/error.h"
 #include "lib/hash_map.h"
@@ -9,18 +17,11 @@
 #include "shell_vars/lexer.h"
 #include "shell_vars/token.h"
 
-#include <math.h>
-#include <pwd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
 const char *const SHELL_VAR_KIND_NAMES[SV_COUNT] = {
-  [SV_NUMBER] = "number",
-  [SV_STRING] = "string",
-  [SV_BOOLEAN] = "boolean",
-  [SV_NULL] = "null"
+    [SV_NUMBER] = "number",
+    [SV_STRING] = "string",
+    [SV_BOOLEAN] = "boolean",
+    [SV_NULL] = "null"
 };
 
 ShellVar *var_create_string(Buffer string) {
@@ -156,7 +157,7 @@ ShellVar *var_cast_to_number(const ShellVar *var) {
       if (parsed.has_value) {
         number = parsed.value;
         break;
-      } 
+      }
 
       number = NAN;
       break;
@@ -196,7 +197,6 @@ static void var_destructor(void *ptr) {
 void var_state_init(VarState *self) {
   hash_map_init(&self->var_map, var_destructor);
 
-
   ShellVar *pid = var_create_number((double)getpid());
   var_state_var_set(self, "PID", pid);
   var_release(pid);
@@ -221,11 +221,12 @@ void var_state_init(VarState *self) {
   var_state_var_set(self, "UID", uid);
   var_release(uid);
 
-  ShellVar *pwd = var_create_string(getcwd_buffer());
+  Buffer cwd_buf = getcwd_buffer();
+  ShellVar *pwd = var_create_string(buffer_clone(&cwd_buf));
   var_state_var_set(self, "PWD", pwd);
   var_release(pwd);
 
-  ShellVar *old_pwd = var_create_null();
+  ShellVar *old_pwd = var_create_string(cwd_buf);
   var_state_var_set(self, "OLD_PWD", old_pwd);
   var_release(old_pwd);
 
@@ -267,24 +268,42 @@ static void print_callback(const char *key, const void *ptr) {
   printf("{%s}:\t", key);
 
   switch (var->kind) {
-  case SV_NUMBER:
-    printf("%g (type: number)\n", var->number);
-    break;
-  case SV_STRING:
-    printf("\"%.*s\" (type: string)\n", (int)var->string.length,
-           var->string.char_ptr);
-    break;
-  case SV_BOOLEAN:
-    printf("%s (type: boolean)\n", var->boolean ? "true" : "false");
-    break;
-  case SV_NULL:
-    printf("null (type: null)\n");
-    break;
-  default:
-    unreachable();
+    case SV_NUMBER:
+      printf("%g (type: number)\n", var->number);
+      break;
+    case SV_STRING:
+      printf(
+          "\"%.*s\" (type: string)\n",
+          (int)var->string.length,
+          var->string.char_ptr
+      );
+      break;
+    case SV_BOOLEAN:
+      printf("%s (type: boolean)\n", var->boolean ? "true" : "false");
+      break;
+    case SV_NULL:
+      printf("null (type: null)\n");
+      break;
+    default:
+      unreachable();
   }
 }
 
 void var_state_print(const VarState *self) {
   hash_map_iter_const(&self->var_map, print_callback);
+}
+
+void var_state_update_cwd_vars(VarState *self, Buffer old_cwd) {
+  ShellVar *pwd = var_create_string(getcwd_buffer());
+  var_state_var_set(self, "PWD", pwd);
+  var_release(pwd);
+
+  ShellVar *old_pwd = var_create_string(old_cwd);
+  var_state_var_set(self, "OLD_PWD", old_pwd);
+  var_release(old_pwd);
+
+  // ppwd is short for pretty print word directory
+  ShellVar *ppwd = var_create_string(get_pretty_cwd_buffer());
+  var_state_var_set(self, "PPWD", ppwd);
+  var_release(ppwd);
 }

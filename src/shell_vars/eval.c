@@ -407,43 +407,23 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
 
 static ShellVar *eval_expr_1(EvalState *s, ShellVar *lhs, OpPrec min_prec) { // NOLINT(misc-no-recursion)
   var_aquire(lhs);
-  
-  if (match(s, TK_QUESTION)) {
-    ShellVar *when_true = eval_expr(s);
-
-    if (when_true == NULL) {
-      return NULL;
-    }
-
-    if (!match(s, TK_COLON)) {
-      error("shell expression: expected `:` after expression.\n");
-      var_release(when_true);
-      return NULL;
-    }
-
-    ShellVar *when_false = eval_expr(s);
-
-    if (when_false == NULL) {
-      var_release(when_true);
-      return NULL;
-    }
-
-    bool value = var_to_boolean(lhs);
-    var_release(lhs);
-
-    if (value) {
-      var_release(when_false);
-      return when_true;
-    }
-    var_release(when_true);
-    return when_false;
-  }
 
   TokenKind lookahead = peek(s).kind;
 
   while (is_binary_op(lookahead) && OP_PREC_LOOKUP[lookahead] >= min_prec) {
     TokenKind op = lookahead;
     advance(s);
+
+    ShellVar *middle = NULL;
+    if (op == TK_QUESTION) {
+      middle = eval_expr(s);
+
+      if (!match(s, TK_COLON)) {
+        error("shell expression: expected `:` following `?` and expression.\n");
+        var_release(lhs);
+        return NULL;
+      }
+    }
 
     ShellVar *rhs = eval_term(s);
 
@@ -468,15 +448,26 @@ static ShellVar *eval_expr_1(EvalState *s, ShellVar *lhs, OpPrec min_prec) { // 
       lookahead = peek(s).kind;
     }
 
-    ShellVar *tmp = eval_part(lhs, rhs, op);
-    var_release(lhs);
-    var_release(rhs);
+    if (middle != NULL) {
+      bool value = var_to_boolean(lhs);
 
-    if (tmp == NULL) {
-      return NULL;
+      if (value) {
+        lhs = middle;
+      } else {
+        lhs = rhs;
+      }
+    } else {
+      ShellVar *tmp = eval_part(lhs, rhs, op);
+      var_release(lhs);
+      var_release(rhs);
+  
+      if (tmp == NULL) {
+        return NULL;
+      }
+  
+      lhs = tmp;
     }
 
-    lhs = tmp;
   }
 
   return lhs;

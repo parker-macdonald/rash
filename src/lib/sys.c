@@ -51,6 +51,7 @@ Buffer get_pretty_cwd_buffer(void) {
     size_t home_len = strlen(home);
 
     buffer_remove_n(&cwd, 0, home_len);
+    buffer_insert(&cwd, 0, '~');
   }
 
   return cwd;
