@@ -6,14 +6,15 @@
 
 #include "lib/ansi.h"
 #include "lib/utf_8.h"
-#include "line_reader/types.h"
+#include "readers/interactive_reader/types.h"
 
-void draw_entire_state(const LineReader *reader) {
+void draw_entire_state(const InteractiveReader *reader) {
   draw_cursor_begin_line(reader);
   
   printf(
-      ANSI_REMOVE_BELOW_CURSOR "%s%.*s ",
-      reader->prompt,
+      ANSI_REMOVE_BELOW_CURSOR "%.*s%.*s ",
+      (int)reader->prompt.length,
+      reader->prompt.char_ptr,
       (int)reader->active_buffer->length,
       reader->active_buffer->char_ptr
   );
@@ -21,7 +22,7 @@ void draw_entire_state(const LineReader *reader) {
   draw_cursor_at(reader, reader->cursor_pos);
 }
 
-void move_cursor_left(LineReader *reader) {
+void move_cursor_left(InteractiveReader *reader) {
   unsigned short width = get_terminal_width();
 
   if (reader->cursor_pos % width == 0) {
@@ -34,7 +35,7 @@ void move_cursor_left(LineReader *reader) {
   reader->cursor_pos--;
 }
 
-void move_cursor_right(LineReader *reader) {
+void move_cursor_right(InteractiveReader *reader) {
   unsigned short width = get_terminal_width();
 
   if ((reader->cursor_pos + 1) % width == 0) {
@@ -46,7 +47,7 @@ void move_cursor_right(LineReader *reader) {
   reader->cursor_pos++;
 }
 
-void move_cursor_left_n(LineReader *reader, unsigned n) {
+void move_cursor_left_n(InteractiveReader *reader, unsigned n) {
   unsigned short width = get_terminal_width();
 
   unsigned moves_up =
@@ -65,7 +66,7 @@ void move_cursor_left_n(LineReader *reader, unsigned n) {
   reader->cursor_pos -= n;
 }
 
-void move_cursor_right_n(LineReader *reader, unsigned n) {
+void move_cursor_right_n(InteractiveReader *reader, unsigned n) {
   unsigned short width = get_terminal_width();
 
   unsigned moves_down =
@@ -84,7 +85,7 @@ void move_cursor_right_n(LineReader *reader, unsigned n) {
   reader->cursor_pos += n;
 }
 
-void draw_cursor_begin_line(const LineReader *reader) {
+void draw_cursor_begin_line(const InteractiveReader *reader) {
   unsigned short width = get_terminal_width();
 
   unsigned current_line = reader->cursor_pos / width;
@@ -96,7 +97,7 @@ void draw_cursor_begin_line(const LineReader *reader) {
   PUTS("\r");
 }
 
-void draw_cursor_post_line(const LineReader *reader) {
+void draw_cursor_post_line(const InteractiveReader *reader) {
   unsigned short width = get_terminal_width();
   unsigned length = get_line_width(reader);
   unsigned current_line = reader->cursor_pos / width;
@@ -123,11 +124,11 @@ unsigned short get_terminal_width(void) {
   return 80;
 }
 
-unsigned get_line_width(const LineReader *reader) {
+unsigned get_line_width(const InteractiveReader *reader) {
   return reader->prompt_length + utf8_count_codepoint(reader->active_buffer);
 }
 
-void draw_cursor_at(const LineReader *reader, unsigned cursor_pos) {
+void draw_cursor_at(const InteractiveReader *reader, unsigned cursor_pos) {
   (void)reader;
 
   unsigned short width = get_terminal_width();

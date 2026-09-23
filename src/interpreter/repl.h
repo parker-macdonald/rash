@@ -1,9 +1,9 @@
 #ifndef REPL_H
 #define REPL_H
 
-#include "lib/buffer.h"
+#include "readers/generic_reader.h"
 
-int repl(const Buffer *(*reader)(void *), void *reader_data);
+int repl(GenericReader *reader);
 
 int repl_once(const Buffer *line);
 

@@ -4,7 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
+#include "rash.h"
 
 static const char *const JOBS_HELP = "Usage: jobs\n"
                                      "List all the paused and background jobs.";
@@ -15,7 +16,7 @@ int builtin_jobs(char **argv) {
     return EXIT_SUCCESS;
   }
 
-  print_jobs();
+  jobs_print(&rash_instance_get()->jobs);
 
   return EXIT_SUCCESS;
 }

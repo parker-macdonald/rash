@@ -126,6 +126,10 @@ void *hash_map_get(HashMap *map, const char *key) {
   return NULL;
 }
 
+const void *hash_map_get_const(const HashMap *map, const char *key) {
+  return hash_map_get((HashMap *)map, key);
+}
+
 void hash_map_destroy(HashMap *map) {
   for (size_t i = 0; i < map->table_size; i++) {
     LL_ITER_CREATE(iter, map->table[i]);
@@ -157,4 +161,8 @@ void hash_map_iter(HashMap *map, HashMapIterCallback cb) {
       LL_ITER_NEXT(iter);
     }
   }
+}
+
+void hash_map_iter_const(const HashMap *map, ConstHashMapIterCallback cb) {
+  hash_map_iter((HashMap *)map, (HashMapIterCallback)cb);
 }

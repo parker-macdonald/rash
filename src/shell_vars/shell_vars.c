@@ -4,16 +4,19 @@
 #include "lib/hash_map.h"
 #include "lib/parse.h"
 #include "lib/slice.h"
+#include "lib/sys.h"
 #include "shell_vars/eval.h"
 #include "shell_vars/lexer.h"
 #include "shell_vars/token.h"
 
 #include <math.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
-const char *SHELL_VAR_KIND_NAMES[SV_COUNT] = {
+const char *const SHELL_VAR_KIND_NAMES[SV_COUNT] = {
   [SV_NUMBER] = "number",
   [SV_STRING] = "string",
   [SV_BOOLEAN] = "boolean",
@@ -185,26 +188,63 @@ char *var_eval_to_string(const char *expr) {
   return buffer_cstr(&buffer);
 }
 
-// functions below for messing with the internal hashmap of shellvars to
-// identifiers
-
-static HashMap map;
-
 static void var_destructor(void *ptr) {
   ShellVar *var = ptr;
   var_release(var);
 }
 
-void var_init(void) {
-  hash_map_init(&map, var_destructor);
+void var_state_init(VarState *self) {
+  hash_map_init(&self->var_map, var_destructor);
+
+
+  ShellVar *pid = var_create_number((double)getpid());
+  var_state_var_set(self, "PID", pid);
+  var_release(pid);
+
+  ShellVar *last_status = var_create_number(0.0);
+  var_state_var_set(self, "LAST_STATUS", last_status);
+  var_release(last_status);
+
+  ShellVar *login = var_create_string(getlogin_buffer());
+  var_state_var_set(self, "LOGIN", login);
+  var_release(login);
+
+  ShellVar *hostname = var_create_string(gethostname_buffer());
+  var_state_var_set(self, "HOSTNAME", hostname);
+  var_release(hostname);
+
+  ShellVar *euid = var_create_number((double)geteuid());
+  var_state_var_set(self, "EUID", euid);
+  var_release(euid);
+
+  ShellVar *uid = var_create_number((double)getuid());
+  var_state_var_set(self, "UID", uid);
+  var_release(uid);
+
+  ShellVar *pwd = var_create_string(getcwd_buffer());
+  var_state_var_set(self, "PWD", pwd);
+  var_release(pwd);
+
+  ShellVar *old_pwd = var_create_null();
+  var_state_var_set(self, "OLD_PWD", old_pwd);
+  var_release(old_pwd);
+
+  // ppwd is short for pretty print word directory
+  ShellVar *ppwd = var_create_string(get_pretty_cwd_buffer());
+  var_state_var_set(self, "PPWD", ppwd);
+  var_release(ppwd);
 }
 
-void var_set(const char *key, ShellVar *var) {
-  hash_map_set(&map, key, var_aquire(var));
+void var_state_destroy(VarState *self) {
+  hash_map_destroy(&self->var_map);
 }
 
-ShellVar *var_get(const char *key) {
-  ShellVar *var = hash_map_get(&map, key);
+void var_state_var_set(VarState *self, const char *key, ShellVar *var) {
+  hash_map_set(&self->var_map, key, var_aquire(var));
+}
+
+ShellVar *var_state_var_get(VarState *self, const char *key) {
+  ShellVar *var = hash_map_get(&self->var_map, key);
 
   if (var == NULL) {
     return NULL;
@@ -213,14 +253,16 @@ ShellVar *var_get(const char *key) {
   return var_aquire(var);
 }
 
-bool var_exists(const char *key) {
-  return hash_map_get(&map, key) != NULL;
+bool var_state_var_exists(const VarState *self, const char *key) {
+  return hash_map_get_const(&self->var_map, key) != NULL;
 }
 
-void var_unset(const char *key) { hash_map_remove(&map, key); }
+void var_state_var_unset(VarState *self, const char *key) {
+  hash_map_remove(&self->var_map, key);
+}
 
-static void print_callback(const char *key, void *ptr) {
-  ShellVar *var = ptr;
+static void print_callback(const char *key, const void *ptr) {
+  const ShellVar *var = ptr;
 
   printf("{%s}:\t", key);
 
@@ -243,6 +285,6 @@ static void print_callback(const char *key, void *ptr) {
   }
 }
 
-void var_print(void) {
-  hash_map_iter(&map, print_callback);
+void var_state_print(const VarState *self) {
+  hash_map_iter_const(&self->var_map, print_callback);
 }

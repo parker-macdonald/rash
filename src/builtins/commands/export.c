@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 #include "lib/error.h"
 
 static const char *const EXPORT_HELP =

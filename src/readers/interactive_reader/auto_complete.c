@@ -14,10 +14,11 @@
 #include "lib/utf_8.h"
 #include "lib/buffer.h"
 #include "lib/vector.h"
-#include "line_reader/draw.h"
-#include "line_reader/types.h"
-#include "builtins/find_builtin.h"
-#include "line_reader/action_utils.h"
+#include "rash.h"
+#include "readers/interactive_reader/draw.h"
+#include "readers/interactive_reader/types.h"
+#include "builtins/builtins.h"
+#include "readers/interactive_reader/action_utils.h"
 
 static Buffer expand_path(const Buffer *path) {
   if (buffer_starts_with(path, '~')) {
@@ -214,7 +215,7 @@ static void match_exe_file(BufferList *matches, const Buffer *word) {
 }
 
 static void match_command(BufferList *matches, const Buffer *word) {
-  find_matching_builtins(word, matches);
+  find_matching_builtins(&rash_instance_get()->builtins, word, matches);
 
   char *path_env;
 
@@ -316,7 +317,7 @@ static void pretty_print_strings(const BufferList *list) {
   printf("\r\n");
 }
 
-static void reader_insert_bulk(LineReader *reader, const Buffer *to_insert) {
+static void reader_insert_bulk(InteractiveReader *reader, const Buffer *to_insert) {
   copy_hist_buf_if_needed(reader);
 
   buffer_insert(
@@ -334,7 +335,7 @@ static void reader_insert_bulk(LineReader *reader, const Buffer *to_insert) {
   draw_flush();
 }
 
-void auto_complete(LineReader *reader) {
+void auto_complete(InteractiveReader *reader) {
   // cannot auto complete nothing
   if (reader->buffer_offset == 0) {
     return;

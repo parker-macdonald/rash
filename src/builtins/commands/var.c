@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
+#include "rash.h"
 #include "shell_vars/shell_vars.h"
 
 static const char *const VAR_HELP = "Usage: var\n"
@@ -13,7 +14,7 @@ int builtin_var(char **argv) {
     return 0;
   }
 
-  var_print();
+  var_state_print(&rash_instance_get()->var_state);
 
   return 0;
 }

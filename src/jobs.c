@@ -3,27 +3,24 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "interactive.h"
 #include "lib/error.h"
+#include "rash.h"
 
 const char *const JOB_STATUSES[NUM_JOB_STATUSES] = {
     "Exited", "Stopped", "Running"
 };
 
-static Job *root_job = NULL;
-static Job *last_job = NULL;
-
-static pid_t root_pid;
-int tty_fd = -1;
-
 static void kill_all_children(void) {
-  Job *current = root_job;
+  Jobs *state = &rash_instance_get()->jobs;
+
+  Job *current = state->root_job;
 
   while (current != NULL) {
     switch (current->state) {
@@ -42,72 +39,51 @@ static void kill_all_children(void) {
     current = current->p_next;
   }
 
-  clean_jobs();
+  jobs_clean(state);
 }
-
-// static void sigchld_handler(int sig) {
-//   (void)sig;
-
-//   int saved_errno = errno;
-
-//   int status;
-//   pid_t pid = waitpid(-1, &status, WNOHANG | WCONTINUED | WUNTRACED);
-
-//   errno = saved_errno;
-// }
 
 static void sigint_handler(int sig) {
   (void)sig;
 }
 
-void sig_handler_init(void) {
+void jobs_init(Jobs *self, int tty_fd) {
+  self->root_pid = getpid();
+  setpgid(0, self->root_pid);
+
+  self->root_job = NULL;
+  self->last_job = NULL;
+
   struct sigaction sigint_act;
   sigint_act.sa_handler = sigint_handler;
   sigint_act.sa_flags = 0;
-  sigemptyset(&sigint_act.sa_mask);
 
-  sigaction(SIGINT, &sigint_act, NULL);
+  rash_assert(sigemptyset(&sigint_act.sa_mask) == 0, "sigemptyset failed");
+  rash_assert(sigaction(SIGINT, &sigint_act, NULL) == 0, "sigaction failed");
 
-  (void)signal(SIGTSTP, SIG_IGN);
-  (void)signal(SIGTTOU, SIG_IGN);
+  rash_assert(signal(SIGTSTP, SIG_IGN) != SIG_ERR, "signal failed");
+  rash_assert(signal(SIGTTOU, SIG_IGN) != SIG_ERR, "signal failed");
 
-  // sigset_t set;
-  // sigemptyset(&set);
-  // sigaddset(&set, SIGINT);
-  // sigaddset(&set, SIGTSTP);
-  // sigaddset(&set, SIGTTOU);
-
-  // sigprocmask(SIG_BLOCK, &set, NULL);
-
-  int atexit_return = atexit(kill_all_children);
-  assert(atexit_return == 0);
-
-  if (interactive) {
-    tty_fd = open("/dev/tty", O_RDWR, 0666);
-    root_pid = getpid();
-
-    if (tty_fd != -1 && isatty(tty_fd)) {
-      setpgid(0, root_pid);
-      tcsetpgrp(tty_fd, root_pid);
-    } else {
-      tty_fd = -1;
-      error_f("rash: cannot access /dev/tty. Job control is unavailable.\n");
-    }
-  }
-}
-
-void reset_fg_process(void) {
   if (tty_fd != -1) {
-    setpgid(0, root_pid);
-    tcsetpgrp(tty_fd, root_pid);
+    // set ourselves as the foreground process
+    tcsetpgrp(self->tty_fd, self->root_pid);
+  }
+
+  // this function uses the global instance of Jobs, so we call it after everything is properly setup
+  rash_assert(atexit(kill_all_children) == 0, "atexit failed");
+}
+
+void jobs_set_rash_to_foreground(const Jobs *self) {
+  if (self->tty_fd != -1) {
+    setpgid(0, self->root_pid);
+    tcsetpgrp(self->tty_fd, self->root_pid);
   }
 }
 
-void clean_jobs(void) {
-  Job *current;
+void jobs_clean(Jobs *self) {
+  Job *current = self->root_job;
   Job *prev = NULL;
 
-  for (current = root_job; current != NULL;) {
+  while (current != NULL) {
     int status;
     pid_t pid = waitpid(current->pid, &status, WNOHANG | WUNTRACED);
 
@@ -148,11 +124,11 @@ void clean_jobs(void) {
       if (prev != NULL) {
         prev->p_next = current->p_next;
       } else {
-        root_job = current->p_next;
+        self->root_job = current->p_next;
       }
 
       if (current->p_next == NULL) {
-        last_job = prev;
+        self->last_job = prev;
       }
 
       Job *temp = current;
@@ -167,7 +143,7 @@ void clean_jobs(void) {
   }
 }
 
-int register_job(pid_t pid, int state) {
+int jobs_register(Jobs *self, pid_t pid, JobState state) {
   Job *new_job = malloc(sizeof(Job));
 
   new_job->p_next = NULL;
@@ -176,16 +152,16 @@ int register_job(pid_t pid, int state) {
 
   new_job->state = state;
 
-  if (last_job == NULL) {
+  if (self->last_job == NULL) {
     new_job->id = 1;
-    root_job = new_job;
+    self->root_job = new_job;
   } else {
-    new_job->id = last_job->id + 1;
+    new_job->id = self->last_job->id + 1;
 
-    last_job->p_next = new_job;
+    self->last_job->p_next = new_job;
   }
 
-  last_job = new_job;
+  self->last_job = new_job;
 
   printf(
       "[%d] PID: %d, State: %s\n",
@@ -197,18 +173,16 @@ int register_job(pid_t pid, int state) {
   return new_job->id;
 }
 
-Job *get_job(int id) {
-  if (root_job == NULL) {
+Job *jobs_get(Jobs *self, int id) {
+  if (self->root_job == NULL) {
     return NULL;
   }
 
-  Job *current;
-
   if (id == -1) {
-    return last_job;
+    return self->last_job;
   }
 
-  for (current = root_job; current != NULL; current = current->p_next) {
+  for (Job *current = self->root_job; current != NULL; current = current->p_next) {
     if (current->id == id) {
       return current;
     }
@@ -217,50 +191,54 @@ Job *get_job(int id) {
   return NULL;
 }
 
-pid_t get_pid_and_remove(int *id) {
-  if (root_job == NULL) {
+pid_t jobs_get_pid_and_remove(Jobs *self, int id) {
+  if (self->root_job == NULL) {
     return 0;
   }
 
-  Job *current;
-  Job *prev = NULL;
 
-  if (*id == -1) {
-    for (current = root_job;; current = current->p_next) {
+  if (id == -1) {
+    Job *current = self->root_job;
+    Job *prev = NULL;
+    
+    while(1) {
       if (current->p_next == NULL) {
         pid_t pid = current->pid;
-        *id = current->id;
 
-        last_job = prev;
+        self->last_job = prev;
         if (prev != NULL) {
           prev->p_next = NULL;
         } else {
-          root_job = NULL;
+          self->root_job = NULL;
         }
 
         free(current);
 
         return pid;
       }
+
       prev = current;
+      current = current->p_next;
     }
 
-    // this should never be reached
-    assert(0);
+    unreachable();
   }
 
-  for (current = root_job; current != NULL; current = current->p_next) {
-    if (current->id == *id) {
+  Job *current = self->root_job;
+  Job *prev = NULL;
+
+  while (current != NULL) {
+    if (current->id == id) {
       pid_t pid = current->pid;
 
       if (prev != NULL) {
         prev->p_next = current->p_next;
       } else {
-        root_job = current->p_next;
+        self->root_job = current->p_next;
       }
 
       if (current->p_next == NULL) {
-        last_job = prev;
+        self->last_job = prev;
       }
 
       free(current);
@@ -269,13 +247,14 @@ pid_t get_pid_and_remove(int *id) {
     }
 
     prev = current;
+    current = current->p_next;
   }
 
   return 0;
 }
 
-void print_jobs(void) {
-  for (Job *current = root_job; current != NULL; current = current->p_next) {
+void jobs_print(const Jobs *self) {
+  for (Job *current = self->root_job; current != NULL; current = current->p_next) {
     printf(
         "[%d] PID: %d, State: %s\n",
         current->id,
@@ -283,4 +262,8 @@ void print_jobs(void) {
         JOB_STATUSES[current->state]
     );
   }
+}
+
+void jobs_destroy(Jobs *self) {
+  (void)self;
 }

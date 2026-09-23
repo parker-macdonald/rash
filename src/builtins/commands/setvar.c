@@ -2,11 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 #include "builtins/utils.h"
 #include "lib/buffer.h"
 #include "lib/error.h"
 #include "lib/parse.h"
+#include "rash.h"
 #include "shell_vars/shell_vars.h"
 #include "shell_vars/util.h"
 
@@ -16,6 +17,8 @@ static const char *const SETVAR_HELP =
 
 int builtin_setvar(char **argv) {
   int argc = count_argv(argv);
+
+  VarState *state = &rash_instance_get()->var_state;
 
   if (argc == 2 && strcmp(argv[1], "--help") == 0) {
     puts(SETVAR_HELP);
@@ -34,21 +37,21 @@ int builtin_setvar(char **argv) {
 
     if (strcmp(value, "null") == 0) {
       ShellVar *var = var_create_null();
-      var_set(key, var);
+      var_state_var_set(state, key, var);
       var_release(var);
       return EXIT_SUCCESS;
     }
 
     if (strcmp(value, "true") == 0) {
       ShellVar *var = var_create_boolean(true);
-      var_set(key, var);
+      var_state_var_set(state, key, var);
       var_release(var);
       return EXIT_SUCCESS;
     }
 
     if (strcmp(value, "false") == 0) {
       ShellVar *var = var_create_boolean(false);
-      var_set(key, var);
+      var_state_var_set(state, key, var);
       var_release(var);
       return EXIT_SUCCESS;
     }
@@ -57,14 +60,14 @@ int builtin_setvar(char **argv) {
 
     if (num.has_value) {
       ShellVar *var = var_create_number(num.value);
-      var_set(key, var);
+      var_state_var_set(state, key, var);
       var_release(var);
       return EXIT_SUCCESS;
     }
 
 
     ShellVar *var = var_create_string(buffer_from_cstr(value));
-    var_set(key, var);
+    var_state_var_set(state, key, var);
     var_release(var);
     return EXIT_SUCCESS;
   }
@@ -82,7 +85,7 @@ int builtin_setvar(char **argv) {
 
     if (strcmp(type, "string") == 0) {
       ShellVar *var = var_create_string(buffer_from_cstr(value));
-      var_set(key, var);
+      var_state_var_set(state, key, var);
       var_release(var);
       return EXIT_SUCCESS;
     }
@@ -96,7 +99,7 @@ int builtin_setvar(char **argv) {
       }
 
       ShellVar *var = var_create_number(num.value);
-      var_set(key, var);
+      var_state_var_set(state, key, var);
       var_release(var);
       return EXIT_SUCCESS;
     }
@@ -113,7 +116,7 @@ int builtin_setvar(char **argv) {
       }
 
       ShellVar *var = var_create_boolean(boolean);
-      var_set(key, var);
+      var_state_var_set(state, key, var);
       var_release(var);
       return EXIT_SUCCESS;
     }
@@ -125,7 +128,7 @@ int builtin_setvar(char **argv) {
       }
 
       ShellVar *var = var_create_null();
-      var_set(key, var);
+      var_state_var_set(state, key, var);
       var_release(var);
       return EXIT_SUCCESS;
     }

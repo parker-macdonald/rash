@@ -7,10 +7,11 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 #include "interpreter/execute.h"
 #include "jobs.h"
 #include "lib/error.h"
+#include "rash.h"
 
 static const char *const FG_HELP =
     "Usage: fg [JOB_ID]\n"
@@ -40,7 +41,8 @@ int builtin_fg(char **argv) {
     job_id = (int)num;
   }
 
-  pid_t pid = get_pid_and_remove(&job_id);
+  Rash *instance = rash_instance_get();
+  pid_t pid = jobs_get_pid_and_remove(&instance->jobs, job_id);
 
   if (pid == 0) {
     if (job_id == -1) {
@@ -59,9 +61,8 @@ int builtin_fg(char **argv) {
 
   printf("[%d] PID: %d, continued in foreground\n", job_id, pid);
 
-  if (tty_fd != -1) {
-    int status = tcsetpgrp(tty_fd, pid);
-    assert(status == 0);
+  if (instance->jobs.tty_fd != -1) {
+    rash_assert(tcsetpgrp(instance->jobs.tty_fd, pid) == 0, "tcsetpgrp failed");
   }
 
   return wait_process(pid);

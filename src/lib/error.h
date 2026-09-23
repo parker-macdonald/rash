@@ -2,6 +2,7 @@
 #define ERROR_H
 
 #include "lib/attrib.h"
+#include <unistd.h>
 
 void error(const char *str);
 
@@ -15,13 +16,13 @@ ATTRIB_NORETURN
 ATTRIB_PRINTF(1, 2)
 void fatal_f(const char *restrict format, ...);
 
-void rash_unwind(void);
+ATTRIB_NORETURN
+void print_errno_and_die(void);
 
 #define rash_panic()                                                           \
   do {                                                                         \
-    ATTRIB_NORETURN extern void _exit(int status);                             \
     error_f("rash has panicked at %s:%d\n", __FILE__, __LINE__);               \
-    _exit(1);                                                                  \
+    print_errno_and_die();                                                     \
   } while (0)
 
 #define rash_assert(expr, str)                                                 \

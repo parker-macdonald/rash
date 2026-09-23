@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <time.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 #include "interpreter/execute.h"
 #include "lib/error.h"
 

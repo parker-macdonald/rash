@@ -7,9 +7,9 @@
 #include "lib/buffer.h"
 #include "lib/vector.h"
 
-struct LineReader;
+struct InteractiveReader;
 
-typedef int (*Action)(struct LineReader *);
+typedef int (*Action)(struct InteractiveReader *);
 
 typedef struct {
   Action arrow_left;
@@ -54,20 +54,20 @@ typedef struct {
   Action ctrl_x;
   Action ctrl_y;
   Action ctrl_z;
-  int (*insert)(struct LineReader *, uint8_t);
+  int (*insert)(struct InteractiveReader *, uint8_t);
 } ActionSet;
 
 // a history node is a node in the linked list storing command history.
 typedef VECTOR(Buffer) History;
 
-struct LineReader {
+struct InteractiveReader {
   // history is a array where the beginning is the oldest this in history, the
   // end in the newest thing in history, and history_curr is where the user is
   // in history (by pressing up and down).
   History history;
   size_t history_curr;
 
-  ActionSet acts;
+  ActionSet action_set;
 
   Buffer buffer;
 
@@ -78,12 +78,12 @@ struct LineReader {
   // the cursor. remember, this is utf-8 land, not all characters are one byte.
   unsigned cursor_pos;
 
-  char *prompt;
+  Buffer prompt;
   // length of the prompt in characters, remember, in utf-8, not all characters
   // are one byte.
   unsigned prompt_length;
 };
 
-typedef struct LineReader LineReader;
+typedef struct InteractiveReader InteractiveReader;
 
 #endif

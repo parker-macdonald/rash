@@ -5,9 +5,9 @@
 #include <stdlib.h>
 
 #include "lib/vector.h"
-#include "line_reader/types.h"
+#include "readers/interactive_reader/types.h"
 
-void history_clear(LineReader *reader) {
+void history_clear(InteractiveReader *reader) {
   VECTOR_DESTROY(reader->history);
 
   reader->history._capacity = 0;
@@ -17,7 +17,7 @@ void history_clear(LineReader *reader) {
   reader->history_curr = 0;
 }
 
-void history_print(LineReader *reader, int count) {
+void history_print(const InteractiveReader *reader, int count) {
   assert(count >= -1);
 
   if (count == 0) {
@@ -42,11 +42,11 @@ void history_print(LineReader *reader, int count) {
   }
 }
 
-void history_add(LineReader *reader) {
+void history_add(InteractiveReader *reader) {
   VECTOR_PUSH(reader->history, reader->buffer);
 }
 
-Buffer *history_curr(LineReader *reader) {
+Buffer *history_curr(const InteractiveReader *reader) {
   assert(reader->history_curr < reader->history.length);
 
   return &reader->history.data[reader->history_curr];

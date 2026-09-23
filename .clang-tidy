@@ -19,6 +19,7 @@ Checks: >
   -readability-function-size,
   -readability-braces-around-statements,
   -readability-implicit-bool-conversion,
+  cppcoreguidelines-avoid-non-const-global-variables
 WarningsAsErrors: >
   *,
   -misc-include-cleaner,

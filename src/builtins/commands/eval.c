@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 #include "interpreter/repl.h"
 #include "lib/buffer.h"
 

@@ -1,7 +1,7 @@
 #include "token.h"
 #include "lib/error.h"
 
-const char *TOKEN_KIND_NAMES[TK_COUNT] = {
+const char *const TOKEN_KIND_NAMES[TK_COUNT] = {
   [TK_NONE] = "None",
   [TK_ADD] = "`+`",
   [TK_SUB] = "`-`",

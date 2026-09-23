@@ -2,6 +2,7 @@
 #define SHELL_VARS_H
 
 #include "lib/buffer.h"
+#include "lib/hash_map.h"
 #include <stdbool.h>
 
 typedef enum {
@@ -12,7 +13,7 @@ typedef enum {
   SV_COUNT
 } ShellVarKind;
 
-extern const char *SHELL_VAR_KIND_NAMES[SV_COUNT];
+extern const char *const SHELL_VAR_KIND_NAMES[SV_COUNT];
 
 typedef struct {
   ShellVarKind kind;
@@ -46,23 +47,29 @@ char *var_eval_to_string(const char *expr);
 // functions below for messing with the internal hashmap of shellvars to
 // identifiers
 
-void var_init(void);
+typedef struct {
+  HashMap var_map;
+} VarState;
+
+void var_state_init(VarState *self);
+
+void var_state_destroy(VarState *self);
 
 /**
  * @brief prints all registered shell variables in a list.
  */
-void var_print(void);
+void var_state_print(const VarState *self);
 
-void var_set(const char *key, ShellVar *var);
+void var_state_var_set(VarState *self, const char *key, ShellVar *var);
 
-ShellVar *var_get(const char *key);
+ShellVar *var_state_var_get(VarState *self, const char *key);
 
-bool var_exists(const char *key);
+bool var_state_var_exists(const VarState *self, const char *key);
 
 /**
  * @brief unset a shell variable given a key
  * @param key the key of the variable
  */
-void var_unset(const char *key);
+void var_state_var_unset(VarState *self, const char *key);
 
 #endif

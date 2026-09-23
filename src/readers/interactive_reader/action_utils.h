@@ -8,9 +8,9 @@
 
 // update the readers state (cursor pos, buffer offset, and active buffer
 // pointer) with the new buffer (does not draw anything)
-void update_active_buffer(LineReader *reader, Buffer *buffer);
+void update_active_buffer(InteractiveReader *reader, Buffer *buffer);
 
-void copy_hist_buf_if_needed(LineReader *reader);
+void copy_hist_buf_if_needed(InteractiveReader *reader);
 
 size_t read_n_bytes(uint8_t *buf, size_t count);
 

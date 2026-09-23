@@ -9,9 +9,9 @@
 #include "lib/buffer.h"
 #include "lib/error.h"
 #include "lib/utf_8.h"
-#include "line_reader/draw.h"
-#include "line_reader/history.h"
-#include "line_reader/types.h"
+#include "readers/interactive_reader/draw.h"
+#include "readers/interactive_reader/history.h"
+#include "readers/interactive_reader/types.h"
 
 size_t read_n_bytes(uint8_t *buf, size_t count) {
   ssize_t nread = read(STDIN_FILENO, buf, count);
@@ -35,7 +35,7 @@ uint8_t read_byte(void) {
   return byte;
 }
 
-void copy_hist_buf_if_needed(LineReader *reader) {
+void copy_hist_buf_if_needed(InteractiveReader *reader) {
   if (reader->history_curr != reader->history.length) {
     buffer_copy(&reader->buffer, history_curr(reader));
     reader->active_buffer = &reader->buffer;
@@ -43,7 +43,7 @@ void copy_hist_buf_if_needed(LineReader *reader) {
   }
 }
 
-void update_active_buffer(LineReader *reader, Buffer *buffer) {
+void update_active_buffer(InteractiveReader *reader, Buffer *buffer) {
   reader->active_buffer = buffer;
   reader->buffer_offset = buffer->length;
 

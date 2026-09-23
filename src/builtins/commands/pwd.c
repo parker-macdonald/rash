@@ -5,7 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 #include "lib/error.h"
 
 static const char *const PWD_HELP = "Usage: pwd\n"

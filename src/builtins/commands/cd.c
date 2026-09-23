@@ -4,7 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 #include "lib/error.h"
 
 static const char *const CD_HELP =

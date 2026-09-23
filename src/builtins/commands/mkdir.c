@@ -6,7 +6,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 #include "lib/buffer.h"
 #include "lib/error.h"
 

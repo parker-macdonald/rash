@@ -1,52 +1,19 @@
-#ifndef BUILTINS_H
-#define BUILTINS_H
+#ifndef BUILTINS_BUILTINS_H
+#define BUILTINS_BUILTINS_H
 
-int builtin_cd(char **argv);
+#include "builtins/trie.h"
+#include "lib/buffer.h"
 
-int builtin_help(char **argv);
+typedef struct {
+  TrieNode *root;
+} Builtins;
 
-int builtin_exit(char **argv);
+void builtins_init(Builtins *self);
 
-int builtin_export(char **argv);
+void builtins_destroy(Builtins *self);
 
-int builtin_history(char **argv);
+BuiltinFunc find_builtin(const Builtins *self, const char *str);
 
-int builtin_true(char **argv);
-
-int builtin_false(char **argv);
-
-int builtin_pwd(char **argv);
-
-int builtin_fg(char **argv);
-
-int builtin_bg(char **argv);
-
-int builtin_jobs(char **argv);
-
-int builtin_version(char **argv);
-
-int builtin_setvar(char **argv);
-
-int builtin_unsetvar(char **argv);
-
-int builtin_source(char **argv);
-
-int builtin_which(char **argv);
-
-int builtin_var(char **argv);
-
-int builtin_env(char **argv);
-
-int builtin_setenv(char **argv);
-
-int builtin_unsetenv(char **argv);
-
-int builtin_exec(char **argv);
-
-int builtin_eval(char **argv);
-
-int builtin_time(char **argv);
-
-int builtin_mkdir(char **argv);
+void find_matching_builtins(const Builtins *self, const Buffer *prefix, BufferList *list);
 
 #endif

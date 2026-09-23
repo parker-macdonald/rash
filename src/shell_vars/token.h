@@ -45,7 +45,7 @@ typedef enum {
   TK_COUNT
 } TokenKind;
 
-extern const char *TOKEN_KIND_NAMES[TK_COUNT];
+extern const char *const TOKEN_KIND_NAMES[TK_COUNT];
 
 typedef struct {
   TokenKind kind;

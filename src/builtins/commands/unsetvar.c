@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 #include "lib/error.h"
+#include "rash.h"
 #include "shell_vars/shell_vars.h"
 #include "shell_vars/util.h"
 
@@ -26,7 +27,7 @@ int builtin_unsetvar(char **argv) {
     return EXIT_FAILURE;
   }
 
-  var_unset(argv[1]);
+  var_state_var_unset(&rash_instance_get()->var_state, argv[1]);
 
   return EXIT_SUCCESS;
 }

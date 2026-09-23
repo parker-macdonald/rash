@@ -7,38 +7,33 @@
 #include "jobs.h"
 #include "lex.h"
 #include "lib/buffer.h"
+#include "rash.h"
+#include "readers/generic_reader.h"
 
-int repl(const Buffer *(*reader)(void *), void *reader_data) {
+int repl(GenericReader *reader) {
+  Rash *instance = rash_instance_get();
+
   while (1) {
-    const Buffer *line = reader(reader_data);
+    const Buffer *line = generic_reader_read(reader);
 
-    clean_jobs();
+    jobs_clean(&instance->jobs);
 
     if (line == NULL) {
       break;
     }
 
-    // need to refactor lex to use a buffer instead of a null terminated string
-    Buffer null_terminated_line = buffer_clone(line);
-    buffer_append(&null_terminated_line, '\0');
-
-    Token *tokens = lex(null_terminated_line.u8_ptr);
-
-    buffer_destroy(&null_terminated_line);
-
-    if (tokens != NULL) {
-      evaluate(tokens);
-      free_tokens(&tokens);
-    }
+    repl_once(line);
   }
 
   return 0;
 }
 
 int repl_once(const Buffer *line) {
+  Rash *instance = rash_instance_get();
+
   int status = EXIT_SUCCESS;
 
-  clean_jobs();
+  jobs_clean(&instance->jobs);
 
   // need to refactor lex to use a buffer instead of a null terminated string
   Buffer null_terminated_line = buffer_clone(line);

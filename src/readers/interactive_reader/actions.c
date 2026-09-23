@@ -4,9 +4,9 @@
 #include <string.h>
 
 #include "lib/ansi.h"
-#include "line_reader/action_utils.h"
-#include "line_reader/actions_all.h"
-#include "line_reader/types.h"
+#include "readers/interactive_reader/action_utils.h"
+#include "readers/interactive_reader/actions_all.h"
+#include "readers/interactive_reader/types.h"
 
 #define CTRL_A 1
 #define CTRL_B 2
@@ -35,11 +35,11 @@
 #define CTRL_Y 25
 #define CTRL_Z 26
 
-int preform_action(LineReader *reader) {
+int preform_action(InteractiveReader *reader) {
   uint8_t byte = read_byte();
 
   if (byte == '\n' || byte == '\r') {
-    return reader->acts.new_line(reader);
+    return reader->action_set.new_line(reader);
   }
 
   if (byte == ANSI_ESCAPE) {
@@ -48,169 +48,169 @@ int preform_action(LineReader *reader) {
     read_n_bytes((uint8_t *)seq, 15);
 
     if (strcmp(seq, "d") == 0) {
-      return reader->acts.ctrl_delete(reader);
+      return reader->action_set.ctrl_delete(reader);
     }
 
     if (strcmp(seq, "[A") == 0) {
-      return reader->acts.arrow_up(reader);
+      return reader->action_set.arrow_up(reader);
     }
 
     if (strcmp(seq, "[B") == 0) {
-      return reader->acts.arrow_down(reader);
+      return reader->action_set.arrow_down(reader);
     }
 
     if (strcmp(seq, "[C") == 0) {
-      return reader->acts.arrow_right(reader);
+      return reader->action_set.arrow_right(reader);
     }
 
     if (strcmp(seq, "[D") == 0) {
-      return reader->acts.arrow_left(reader);
+      return reader->action_set.arrow_left(reader);
     }
 
     if (strcmp(seq, "[H") == 0) {
-      return reader->acts.home(reader);
+      return reader->action_set.home(reader);
     }
 
     if (strcmp(seq, "[F") == 0) {
-      return reader->acts.end(reader);
+      return reader->action_set.end(reader);
     }
 
     if (strcmp(seq, "[Z") == 0) {
-      return reader->acts.shift_tab(reader);
+      return reader->action_set.shift_tab(reader);
     }
 
     if (strcmp(seq, "[1;5C") == 0) {
-      return reader->acts.ctrl_right_arrow(reader);
+      return reader->action_set.ctrl_right_arrow(reader);
     }
 
     if (strcmp(seq, "[1;5D") == 0) {
-      return reader->acts.ctrl_left_arrow(reader);
+      return reader->action_set.ctrl_left_arrow(reader);
     }
 
     if (strcmp(seq, "[3~") == 0) {
-      return reader->acts.delete(reader);
+      return reader->action_set.delete(reader);
     }
 
     if (strcmp(seq, "[5~") == 0) {
-      return reader->acts.page_up(reader);
+      return reader->action_set.page_up(reader);
     }
 
     if (strcmp(seq, "[6~") == 0) {
-      return reader->acts.page_down(reader);
+      return reader->action_set.page_down(reader);
     }
   }
 
   if (byte == ASCII_DEL) {
-    return reader->acts.backspace(reader);
+    return reader->action_set.backspace(reader);
   }
 
   // tab
   if (byte == '\t') {
-    return reader->acts.tab(reader);
+    return reader->action_set.tab(reader);
   }
 
   if (byte == CTRL_A) {
-    return reader->acts.ctrl_a(reader);
+    return reader->action_set.ctrl_a(reader);
   }
 
   if (byte == CTRL_B) {
-    return reader->acts.ctrl_b(reader);
+    return reader->action_set.ctrl_b(reader);
   }
 
   if (byte == CTRL_C) {
-    return reader->acts.ctrl_c(reader);
+    return reader->action_set.ctrl_c(reader);
   }
 
   if (byte == CTRL_D) {
-    return reader->acts.ctrl_d(reader);
+    return reader->action_set.ctrl_d(reader);
   }
 
   if (byte == CTRL_E) {
-    return reader->acts.ctrl_e(reader);
+    return reader->action_set.ctrl_e(reader);
   }
 
   if (byte == CTRL_F) {
-    return reader->acts.ctrl_f(reader);
+    return reader->action_set.ctrl_f(reader);
   }
 
   if (byte == CTRL_G) {
-    return reader->acts.ctrl_g(reader);
+    return reader->action_set.ctrl_g(reader);
   }
 
   if (byte == CTRL_H) {
-    return reader->acts.ctrl_h(reader);
+    return reader->action_set.ctrl_h(reader);
   }
 
   if (byte == CTRL_I) {
-    return reader->acts.ctrl_i(reader);
+    return reader->action_set.ctrl_i(reader);
   }
 
   if (byte == CTRL_J) {
-    return reader->acts.ctrl_j(reader);
+    return reader->action_set.ctrl_j(reader);
   }
 
   if (byte == CTRL_K) {
-    return reader->acts.ctrl_k(reader);
+    return reader->action_set.ctrl_k(reader);
   }
 
   if (byte == CTRL_L) {
-    return reader->acts.ctrl_l(reader);
+    return reader->action_set.ctrl_l(reader);
   }
 
   if (byte == CTRL_M) {
-    return reader->acts.ctrl_m(reader);
+    return reader->action_set.ctrl_m(reader);
   }
 
   if (byte == CTRL_N) {
-    return reader->acts.ctrl_n(reader);
+    return reader->action_set.ctrl_n(reader);
   }
 
   if (byte == CTRL_O) {
-    return reader->acts.ctrl_o(reader);
+    return reader->action_set.ctrl_o(reader);
   }
 
   if (byte == CTRL_P) {
-    return reader->acts.ctrl_p(reader);
+    return reader->action_set.ctrl_p(reader);
   }
 
   if (byte == CTRL_Q) {
-    return reader->acts.ctrl_q(reader);
+    return reader->action_set.ctrl_q(reader);
   }
 
   if (byte == CTRL_R) {
-    return reader->acts.ctrl_r(reader);
+    return reader->action_set.ctrl_r(reader);
   }
 
   if (byte == CTRL_S) {
-    return reader->acts.ctrl_s(reader);
+    return reader->action_set.ctrl_s(reader);
   }
 
   if (byte == CTRL_T) {
-    return reader->acts.ctrl_t(reader);
+    return reader->action_set.ctrl_t(reader);
   }
 
   if (byte == CTRL_U) {
-    return reader->acts.ctrl_u(reader);
+    return reader->action_set.ctrl_u(reader);
   }
 
   if (byte == CTRL_V) {
-    return reader->acts.ctrl_v(reader);
+    return reader->action_set.ctrl_v(reader);
   }
 
   if (byte == CTRL_W) {
-    return reader->acts.ctrl_w(reader);
+    return reader->action_set.ctrl_w(reader);
   }
 
   if (byte == CTRL_X) {
-    return reader->acts.ctrl_x(reader);
+    return reader->action_set.ctrl_x(reader);
   }
 
   if (byte == CTRL_Y) {
-    return reader->acts.ctrl_y(reader);
+    return reader->action_set.ctrl_y(reader);
   }
 
   if (byte == CTRL_Z) {
-    return reader->acts.ctrl_z(reader);
+    return reader->action_set.ctrl_z(reader);
   }
 
   // check if byte is an ascii control character
@@ -218,7 +218,7 @@ int preform_action(LineReader *reader) {
     return 0;
   }
 
-  reader->acts.insert(reader, byte);
+  reader->action_set.insert(reader, byte);
 
   return 0;
 }
