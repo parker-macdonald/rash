@@ -7,7 +7,7 @@
 #include "builtins/builtins.h"
 #include "lib/error.h"
 #include "lib/search_path.h"
-#include "rash.h"
+#include "global.h"
 
 extern char **environ;
 
@@ -27,9 +27,7 @@ int builtin_exec(char **const argv) {
     return EXIT_SUCCESS;
   }
 
-  Rash *instance = rash_instance_get();
-
-  BuiltinFunc builtin = find_builtin(&instance->builtins, argv[1]);
+  BuiltinFunc builtin = find_builtin(&instance.builtins, argv[1]);
 
   if (builtin != NULL) {
     exit(builtin(&argv[1]));
@@ -42,7 +40,7 @@ int builtin_exec(char **const argv) {
     if (argv0 == NULL) {
       error_f("%s: command not found\n", argv[1]);
 
-      if (instance->interactive) {
+      if (instance.interactive) {
         return EXIT_FAILURE;
       }
       exit(EXIT_FAILURE);
@@ -58,10 +56,12 @@ int builtin_exec(char **const argv) {
     perror("rash");
   }
 
-  if (instance) {
+  // dont quit the shell if we're in interactive mode
+  if (instance.interactive) {
     return EXIT_FAILURE;
   }
 
+  // do quit the shell if we are not in interactive mode
   exit(EXIT_FAILURE);
 
   return 0;

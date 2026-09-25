@@ -28,92 +28,127 @@ static const char *const HELP_STRING =
     "  rash -c 'echo hello'\n"
     "rash will run 'echo hello', then exit.\n";
 
-Rash rash_instance_init(int argc, char **argv) {
+RashInstanceInitResult rash_instance_from_file(Rash *out, const char *filename, char *argv0) {
+  if (file_reader_create(&out->reader, filename)) {
+    error_f("rash: %s: %s\n", filename, strerror(errno));
+    return UNEXPECTED_FAILURE;
+  }
+
+  out->argv0 = argv0;
+  out->tty_fd = -1;
+  out->interactive = false;
+
+  builtins_init(&out->builtins);
+  var_state_init(&out->var_state);
+  jobs_init(&out->jobs, -1);
+
+  set_shlvl();
+
+  return INIT_SUCCESS;
+}
+
+RashInstanceInitResult rash_instance_interactive(Rash *out, char *argv0) {
+  int tty_fd = open("/dev/tty", O_RDWR, 0666);
+
+  if (tty_fd == -1) {
+    error_f("rash: cannot access /dev/tty (%s). Assuming this session is non-interactive.\n", strerror(errno));
+    return rash_instance_from_file(out, "/dev/stdin", argv0);
+  }
+
+  if (!isatty(tty_fd)) {
+    (void)close(tty_fd);
+
+    error("rash: /dev/tty is not a terminal. Assuming this session is non-interactive.\n");
+
+    return rash_instance_from_file(out, "/dev/stdin", argv0);
+  }
+
+  out->argv0 = argv0;
+
+  interactive_reader_init(&out->interactive_reader);
+  generic_reader_from_interactive(&out->reader, &out->interactive_reader);
+  out->interactive = true;
+  out->tty_fd = tty_fd;
+  out->interactive_prompt = buffer_from_cstr("LOGIN + \"@\" + HOSTNAME + \" \" + PWD + \" \" + (LAST_STATUS == 0 ? \":)\" : \":(\") + \" $ \"");
+  
+  builtins_init(&out->builtins);
+  var_state_init(&out->var_state);
+  jobs_init(&out->jobs, tty_fd);
+
+  set_shlvl();
+
+  load_rashrc();
+
+  return INIT_SUCCESS;
+}
+
+RashInstanceInitResult rash_instance_one_shot(Rash *out, int argc, char **argv) {
+  Buffer command = buffer_create(16);
+
+  for (size_t i = 2; i < (size_t)argc; i++) {
+    for (size_t j = 0; argv[i][j] != '\0'; j++) {
+      if (!iscntrl((int)argv[i][j])) {
+        buffer_append(&command, argv[i][j]);
+      }
+    }
+
+    buffer_append(&command, ' ');
+  }
+
+  one_shot_reader_create(&out->reader, command);
+
+  out->argv0 = argv[0];
+  out->tty_fd = -1;
+  out->interactive = false;
+
+  builtins_init(&out->builtins);
+  var_state_init(&out->var_state);
+  jobs_init(&out->jobs, -1);
+
+  set_shlvl();
+
+  return INIT_SUCCESS;
+
+}
+
+RashInstanceInitResult rash_instance_init(Rash *out, int argc, char **argv) {
   // this can happen (on some systems but not linux) if argv is not populated in a call to execve
   if (argc == 0) {
     error_f(HELP_STRING, argv[0]);
-    exit(1);
+    return UNEXPECTED_FAILURE;
   }
 
   if (argc == 2 && strcmp(argv[1], "--version") == 0) {
     puts(VERSION_STRING);
-    exit(0);
+    return EXPECTED_FAILURE;
   }
 
   if (argc == 2 && strcmp(argv[1], "--help") == 0) {
     printf(HELP_STRING, argv[0]);
-    exit(0);
+    return EXPECTED_FAILURE;
   }
-
-  Rash rash;
-  rash.argv0 = argv[0];
-  rash.interactive = false;
-  rash.tty_fd = -1;
-  builtins_init(&rash.builtins);
-  var_state_init(&rash.var_state);
-
-  set_shlvl();
 
   // no arguments means interactive mode
   if (argc == 1) {
-    int tty_fd = open("/dev/tty", O_RDWR, 0666);
-
-    if (tty_fd == -1) {
-      error_f("rash: cannot access /dev/tty (%s). Job control is unavailable.\n", strerror(errno));
-
-      file_reader_create(&rash.reader, "/dev/stdin");
-      jobs_init(&rash.jobs, -1);
-
-      return rash;
-    }
-
-    interactive_reader_init(&rash.interactive_reader);
-    generic_reader_from_interactive(&rash.reader, &rash.interactive_reader);
-    jobs_init(&rash.jobs, tty_fd);
-    rash.interactive = true;
-    rash.tty_fd = tty_fd;
-    rash.interactive_prompt = buffer_from_cstr("LOGIN + \"@\" + HOSTNAME + \" \" + PWD + \" \" + (LAST_STATUS == 0 ? \":)\" : \":(\") + \" $ \"");
-
-    return rash;
+    return rash_instance_interactive(out, argv[0]);
   }
-
-  jobs_init(&rash.jobs, -1);
 
   if (argc == 2) {
-    if (file_reader_create(&rash.reader, argv[1])) {
-      error_f("rash: %s: %s\n", argv[1], strerror(errno));
-      exit(1);
-    }
-
-    return rash;
+    return rash_instance_from_file(out, argv[1], argv[0]);
   }
 
-  if (argc == 3) {
+  if (argc >= 3) {
     // one-shot mode
     if (strcmp(argv[1], "-c") != 0) {
       error_f(HELP_STRING, argv[0]);
-      exit(1);
+      return UNEXPECTED_FAILURE;
     }
 
-    Buffer command = buffer_create(16);
-
-    for (size_t i = 2; i < (size_t)argc; i++) {
-      for (size_t j = 0; argv[i][j] != '\0'; i++) {
-        if (!iscntrl((int)argv[i][j])) {
-          buffer_append(&command, argv[i][j]);
-        }
-      }
-
-      buffer_append(&command, ' ');
-    }
-
-    one_shot_reader_create(&rash.reader, command);
-
-    return rash;
+    return rash_instance_one_shot(out, argc, argv);
   }
 
   error_f(HELP_STRING, argv[0]);
-  exit(1);
+  return UNEXPECTED_FAILURE;
 }
 
 void rash_instance_delete(Rash *rash) {
@@ -121,14 +156,4 @@ void rash_instance_delete(Rash *rash) {
   jobs_destroy(&rash->jobs);
   var_state_destroy(&rash->var_state);
   generic_reader_destroy(&rash->reader);
-}
-
-static Rash *instance;
-
-Rash *rash_instance_get(void) {
-  return instance;
-}
-
-void rash_register_global_instance(Rash *rash) {
-  instance = rash;
 }

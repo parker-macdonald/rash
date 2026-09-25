@@ -5,7 +5,7 @@
 
 #include "lib/buffer.h"
 #include "lib/utf_8.h"
-#include "rash.h"
+#include "global.h"
 #include "readers/interactive_reader/actions.h"
 #include "readers/interactive_reader/history.h"
 #include "readers/interactive_reader/raw_mode.h"
@@ -28,7 +28,7 @@ void interactive_reader_destroy(InteractiveReader *self) {
 static void reader_begin(InteractiveReader *self) {
   enable_raw_mode();
 
-  char *prompt_cstr = var_eval_to_string(buffer_cstr(&rash_instance_get()->interactive_prompt));
+  char *prompt_cstr = var_eval_to_string(buffer_cstr(&instance.interactive_prompt));
 
   if (prompt_cstr == NULL) {
     self->prompt = buffer_from_cstr("$ ");

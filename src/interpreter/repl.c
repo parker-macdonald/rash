@@ -7,16 +7,14 @@
 #include "jobs.h"
 #include "lex.h"
 #include "lib/buffer.h"
-#include "rash.h"
+#include "global.h"
 #include "readers/generic_reader.h"
 
 int repl(GenericReader *reader) {
-  Rash *instance = rash_instance_get();
-
   while (1) {
     const Buffer *line = generic_reader_read(reader);
 
-    jobs_clean(&instance->jobs);
+    jobs_clean(&instance.jobs);
 
     if (line == NULL) {
       break;
@@ -29,11 +27,9 @@ int repl(GenericReader *reader) {
 }
 
 int repl_once(const Buffer *line) {
-  Rash *instance = rash_instance_get();
-
   int status = EXIT_SUCCESS;
 
-  jobs_clean(&instance->jobs);
+  jobs_clean(&instance.jobs);
 
   // need to refactor lex to use a buffer instead of a null terminated string
   Buffer null_terminated_line = buffer_clone(line);

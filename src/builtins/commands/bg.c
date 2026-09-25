@@ -8,7 +8,7 @@
 #include "builtins/builtin_funcs.h"
 #include "jobs.h"
 #include "lib/error.h"
-#include "rash.h"
+#include "global.h"
 
 static const char *const BG_HELP =
     "Usage: bg [JOB_ID]\n"
@@ -38,7 +38,7 @@ int builtin_bg(char **argv) {
     job_id = (int)num;
   }
 
-  Job *job = jobs_get(&rash_instance_get()->jobs, job_id);
+  Job *job = jobs_get(&instance.jobs, job_id);
 
   if (job == NULL) {
     if (job_id == -1) {

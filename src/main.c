@@ -1,19 +1,23 @@
 #include "interpreter/repl.h"
 #include "rash.h"
-#include "rashrc.h"
+#include "global.h"
+
+Rash instance;
 
 int main(int argc, char **argv) {
-  Rash rash = rash_instance_init(argc, argv);
+  RashInstanceInitResult result = rash_instance_init(&instance, argc, argv);
 
-  rash_register_global_instance(&rash);
-
-  if (rash.interactive) {
-    load_rashrc();
+  if (result == UNEXPECTED_FAILURE) {
+    return 1;
   }
 
-  repl(&rash.reader);
+  if (result == EXPECTED_FAILURE) {
+    return 0;
+  }
 
-  rash_instance_delete(&rash);
+  repl(&instance.reader);
+
+  rash_instance_delete(&instance);
 
   return 1;
 }

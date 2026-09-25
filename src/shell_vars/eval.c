@@ -2,7 +2,7 @@
 
 #include "lib/buffer.h"
 #include "lib/error.h"
-#include "rash.h"
+#include "global.h"
 #include "shell_vars.h"
 #include "shell_vars/token.h"
 
@@ -96,7 +96,7 @@ static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
 
   if (check(s, TK_IDENTIFIER)) {
     Token tk = advance(s);
-    ShellVar *var = var_state_var_get(&rash_instance_get()->var_state, buffer_cstr(&tk.identifier));
+    ShellVar *var = var_state_var_get(&instance.var_state, buffer_cstr(&tk.identifier));
 
     if (var == NULL) {
       error_f("shell expression: var `%.*s` is not set.\n", (int)tk.identifier.length, tk.identifier.char_ptr);

@@ -15,7 +15,7 @@
 #include "jobs.h"
 #include "lib/error.h"
 #include "lib/search_path.h"
-#include "rash.h"
+#include "global.h"
 
 extern char **environ;
 
@@ -24,9 +24,7 @@ int execute(ExecutionContext context) {
     return EXIT_SUCCESS;
   }
 
-  Rash *instance = rash_instance_get();
-
-  BuiltinFunc builtin = find_builtin(&instance->builtins, context.argv[0]);
+  BuiltinFunc builtin = find_builtin(&instance.builtins, context.argv[0]);
 
   bool is_io_redirected = context.stderr_fd != -1 || context.stdin_fd != -1 ||
                           context.stdout_fd != -1;
@@ -43,14 +41,14 @@ int execute(ExecutionContext context) {
 
   // child
   if (pid == 0) {
-    if (instance->tty_fd != -1 && !((context.flags & EC_BACKGROUND_JOB) ||
+    if (instance.tty_fd != -1 && !((context.flags & EC_BACKGROUND_JOB) ||
                           (context.flags & EC_DONT_REGISTER_FOREGROUND))) {
       pid_t new_pid = getpid();
 
       int status = setpgid(new_pid, new_pid);
       assert(status == 0);
 
-      status = tcsetpgrp(instance->tty_fd, new_pid);
+      status = tcsetpgrp(instance.tty_fd, new_pid);
       assert(status == 0);
 
       (void)signal(SIGTTOU, SIG_IGN);
@@ -152,7 +150,7 @@ int execute(ExecutionContext context) {
     }
 
     if (context.flags & EC_BACKGROUND_JOB) {
-      jobs_register(&instance->jobs, pid, JOB_RUNNING);
+      jobs_register(&instance.jobs, pid, JOB_RUNNING);
 
       return EXIT_SUCCESS;
     }
@@ -163,10 +161,9 @@ int execute(ExecutionContext context) {
 
 int wait_process(pid_t pid) {
   int status = 0;
-  Rash *instance = rash_instance_get();
 
   int wait_status = waitpid(pid, &status, WUNTRACED);
-  jobs_set_rash_to_foreground(&instance->jobs);
+  jobs_set_rash_to_foreground(&instance.jobs);
 
   if (wait_status == -1) {
     perror("rash: waitpid");
@@ -200,7 +197,7 @@ int wait_process(pid_t pid) {
 
     printf("loool\n");
 
-    jobs_register(&instance->jobs, pid, JOB_STOPPED);
+    jobs_register(&instance.jobs, pid, JOB_STOPPED);
   }
 
   return 0;

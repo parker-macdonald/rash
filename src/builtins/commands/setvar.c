@@ -7,7 +7,7 @@
 #include "lib/buffer.h"
 #include "lib/error.h"
 #include "lib/parse.h"
-#include "rash.h"
+#include "global.h"
 #include "shell_vars/shell_vars.h"
 #include "shell_vars/util.h"
 
@@ -18,7 +18,7 @@ static const char *const SETVAR_HELP =
 int builtin_setvar(char **argv) {
   int argc = count_argv(argv);
 
-  VarState *state = &rash_instance_get()->var_state;
+  VarState *state = &instance.var_state;
 
   if (argc == 2 && strcmp(argv[1], "--help") == 0) {
     puts(SETVAR_HELP);

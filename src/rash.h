@@ -24,12 +24,17 @@ typedef struct {
   VarState var_state;
 } Rash;
 
-Rash rash_instance_init(int argc, char **argv);
+typedef enum {
+  // expected failures, like the user types `rash --help`, no instance will be created in that case
+  EXPECTED_FAILURE,
+  // unexpected failures, some subsystem failed to initialize or invalid parameters were provided
+  UNEXPECTED_FAILURE,
+  // everything went ok!
+  INIT_SUCCESS
+} RashInstanceInitResult;
 
-void rash_register_global_instance(Rash *rash);
+RashInstanceInitResult rash_instance_init(Rash *out, int argc, char **argv);
 
-Rash *rash_instance_get(void);
-
-void rash_instance_delete(Rash *rash);
+void rash_instance_delete(Rash *self);
 
 #endif

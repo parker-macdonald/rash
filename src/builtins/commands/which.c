@@ -8,7 +8,7 @@
 #include "builtins/builtins.h"
 #include "lib/error.h"
 #include "lib/search_path.h"
-#include "rash.h"
+#include "global.h"
 
 static const char *const WHICH_HELP =
     "Usage: which FILE...\n"
@@ -35,7 +35,7 @@ int builtin_which(char **argv) {
       }
     }
 
-    if (find_builtin(&rash_instance_get()->builtins, argv[i]) != NULL) {
+    if (find_builtin(&instance.builtins, argv[i]) != NULL) {
       printf("%s: shell builtin\n", argv[i]);
       continue;
     }

@@ -8,7 +8,7 @@
 #include "lib/buffer.h"
 #include "lib/error.h"
 #include "lib/sys.h"
-#include "rash.h"
+#include "global.h"
 #include "shell_vars/shell_vars.h"
 
 static const char *const CD_HELP =
@@ -42,7 +42,7 @@ int builtin_cd(char **const argv) {
     return EXIT_FAILURE;
   }
 
-  var_state_update_cwd_vars(&rash_instance_get()->var_state, old_cwd);
+  var_state_update_cwd_vars(&instance.var_state, old_cwd);
 
   return EXIT_SUCCESS;
 }

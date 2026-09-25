@@ -20,7 +20,7 @@
 #include "lib/cstrlist.h"
 #include "lib/error.h"
 #include "lib/vector.h"
-#include "rash.h"
+#include "global.h"
 #include "shell_vars/shell_vars.h"
 
 #define READ_ARG                                                               \
@@ -207,7 +207,7 @@ static bool bad_syntax(const Token *const tokens) {
 static void set_exit_code_var(int code) {
   ShellVar *var = var_create_number((double)(code & 0xff));
 
-  var_state_var_set(&rash_instance_get()->var_state, "LAST_STATUS", var);
+  var_state_var_set(&instance.var_state, "LAST_STATUS", var);
 
   var_release(var);
 }
@@ -271,7 +271,7 @@ static char *evaluate_arg(const Token **tokens, bool *needs_globbing) {
     }
 
     if ((*tokens)->type == TK_SUBSHELL) {
-      char *argv[4] = {rash_instance_get()->argv0, "-c", (*tokens)->data, NULL};
+      char *argv[4] = {instance.argv0, "-c", (*tokens)->data, NULL};
 
       int null_fd = open("/dev/null", O_RDWR);
 

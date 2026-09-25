@@ -14,7 +14,7 @@
 #include "lib/utf_8.h"
 #include "lib/buffer.h"
 #include "lib/vector.h"
-#include "rash.h"
+#include "global.h"
 #include "readers/interactive_reader/draw.h"
 #include "readers/interactive_reader/types.h"
 #include "builtins/builtins.h"
@@ -215,7 +215,7 @@ static void match_exe_file(BufferList *matches, const Buffer *word) {
 }
 
 static void match_command(BufferList *matches, const Buffer *word) {
-  find_matching_builtins(&rash_instance_get()->builtins, word, matches);
+  find_matching_builtins(&instance.builtins, word, matches);
 
   char *path_env;
 

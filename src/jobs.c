@@ -11,14 +11,14 @@
 #include <unistd.h>
 
 #include "lib/error.h"
-#include "rash.h"
+#include "global.h"
 
 const char *const JOB_STATUSES[NUM_JOB_STATUSES] = {
     "Exited", "Stopped", "Running"
 };
 
 static void kill_all_children(void) {
-  Jobs *state = &rash_instance_get()->jobs;
+  Jobs *state = &instance.jobs;
 
   Job *current = state->root_job;
 
