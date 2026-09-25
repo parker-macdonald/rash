@@ -19,5 +19,5 @@ int main(int argc, char **argv) {
 
   rash_instance_delete(&instance);
 
-  return 1;
+  return 0;
 }
