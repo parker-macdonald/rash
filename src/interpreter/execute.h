@@ -39,4 +39,7 @@ int execute(ExecutionContext context);
  */
 int wait_process(pid_t pid);
 
+// close all the associated file descriptors in an execution context
+void execution_context_destroy(ExecutionContext context);
+
 #endif

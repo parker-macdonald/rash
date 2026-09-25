@@ -202,3 +202,15 @@ int wait_process(pid_t pid) {
 
   return 0;
 }
+
+void execution_context_destroy(ExecutionContext context) {
+  if (context.stderr_fd != -1) {
+    close(context.stderr_fd);
+  }
+  if (context.stdin_fd != -1) {
+    close(context.stdin_fd);
+  }
+  if (context.stdout_fd != -1) {
+    close(context.stdout_fd);
+  }
+}

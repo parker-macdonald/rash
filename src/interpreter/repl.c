@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "evaluate.h"
+#include "interpreter/token.h"
 #include "jobs.h"
 #include "lex.h"
 #include "lib/buffer.h"
@@ -31,20 +32,15 @@ int repl_once(const Buffer *line) {
 
   jobs_clean(&instance.jobs);
 
-  // need to refactor lex to use a buffer instead of a null terminated string
-  Buffer null_terminated_line = buffer_clone(line);
-  buffer_append(&null_terminated_line, '\0');
+  TokenList tokens = lex(line);
 
-  Token *tokens = lex(null_terminated_line.u8_ptr);
-
-  buffer_destroy(&null_terminated_line);
-
-  if (tokens != NULL) {
-    status = evaluate(tokens);
-    free_tokens(&tokens);
+  if (tokens.length != 0) {
+    status = evaluate(&tokens);
   } else {
     status = EXIT_FAILURE;
   }
+  
+  token_list_destroy(&tokens);
 
   return status;
 }

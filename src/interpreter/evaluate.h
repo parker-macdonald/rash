@@ -1,8 +1,8 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "lex.h"
+#include "token.h"
 
-int evaluate(const Token *tokens);
+int evaluate(const TokenList *tokens);
 
 #endif
