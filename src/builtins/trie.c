@@ -69,6 +69,7 @@ void trie_init(TrieNode *root) {
   trie_insert(root, "eval", &builtin_eval);
   trie_insert(root, "time", &builtin_time);
   trie_insert(root, "mkdir", &builtin_mkdir);
+  trie_insert(root, "config", &builtin_config);
 }
 
 const TrieNode *find_node(const TrieNode *root, const char *str, size_t str_len) {

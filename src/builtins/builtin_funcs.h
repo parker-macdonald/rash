@@ -49,4 +49,6 @@ int builtin_time(char **argv);
 
 int builtin_mkdir(char **argv);
 
+int builtin_config(char **argv);
+
 #endif
