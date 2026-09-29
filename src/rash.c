@@ -55,10 +55,10 @@ static RashInstanceInitResult rash_instance_interactive(Rash *out, char *argv0) 
     return rash_instance_from_file(out, "/dev/stdin", argv0);
   }
 
-  if (!isatty(tty_fd)) {
+  if (!isatty(STDIN_FILENO)) {
     (void)close(tty_fd);
 
-    error("rash: /dev/tty is not a terminal. Assuming this session is non-interactive.\n");
+    error("rash: stdin is not a terminal. Assuming this session is non-interactive.\n");
 
     return rash_instance_from_file(out, "/dev/stdin", argv0);
   }
