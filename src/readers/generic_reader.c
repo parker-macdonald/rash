@@ -1,5 +1,6 @@
 #include "generic_reader.h"
 #include "readers/interactive_reader/interactive_reader.h"
+#include "readers/interactive_reader/types.h"
 
 const Buffer *generic_reader_read(GenericReader *self) {
   return self->read_line(self->reader_data);

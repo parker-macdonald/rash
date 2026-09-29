@@ -35,6 +35,6 @@ typedef enum {
 
 RashInstanceInitResult rash_instance_init(Rash *out, int argc, char **argv);
 
-void rash_instance_delete(Rash *self);
+void rash_instance_delete(Rash *rash);
 
 #endif

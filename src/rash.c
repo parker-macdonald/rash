@@ -28,7 +28,7 @@ static const char *const HELP_STRING =
     "  rash -c 'echo hello'\n"
     "rash will run 'echo hello', then exit.\n";
 
-RashInstanceInitResult rash_instance_from_file(Rash *out, const char *filename, char *argv0) {
+static RashInstanceInitResult rash_instance_from_file(Rash *out, const char *filename, char *argv0) {
   if (file_reader_create(&out->reader, filename)) {
     error_f("rash: %s: %s\n", filename, strerror(errno));
     return UNEXPECTED_FAILURE;
@@ -47,7 +47,7 @@ RashInstanceInitResult rash_instance_from_file(Rash *out, const char *filename, 
   return INIT_SUCCESS;
 }
 
-RashInstanceInitResult rash_instance_interactive(Rash *out, char *argv0) {
+static RashInstanceInitResult rash_instance_interactive(Rash *out, char *argv0) {
   int tty_fd = open("/dev/tty", O_RDWR, 0666);
 
   if (tty_fd == -1) {
@@ -82,7 +82,7 @@ RashInstanceInitResult rash_instance_interactive(Rash *out, char *argv0) {
   return INIT_SUCCESS;
 }
 
-RashInstanceInitResult rash_instance_one_shot(Rash *out, int argc, char **argv) {
+static RashInstanceInitResult rash_instance_one_shot(Rash *out, int argc, char **argv) {
   Buffer command = buffer_create(16);
 
   for (size_t i = 2; i < (size_t)argc; i++) {

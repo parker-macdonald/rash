@@ -37,7 +37,9 @@ Buffer getcwd_buffer(void) {
     cwd = getcwd(buffer.char_ptr, buffer._capacity);
   }
 
-  buffer.length = strlen(buffer.char_ptr);
+  if (buffer.char_ptr != NULL) {
+    buffer.length = strlen(buffer.char_ptr);
+  }
 
   return buffer;
 }
