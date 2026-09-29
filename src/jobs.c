@@ -42,10 +42,6 @@ static void kill_all_children(void) {
   jobs_clean(state);
 }
 
-static void sigint_handler(int sig) {
-  (void)sig;
-}
-
 void jobs_init(Jobs *self, int tty_fd) {
   self->root_pid = getpid();
   setpgid(0, self->root_pid);
@@ -53,15 +49,9 @@ void jobs_init(Jobs *self, int tty_fd) {
   self->root_job = NULL;
   self->last_job = NULL;
 
-  struct sigaction sigint_act;
-  sigint_act.sa_handler = sigint_handler;
-  sigint_act.sa_flags = 0;
-
-  rash_assert(sigemptyset(&sigint_act.sa_mask) == 0, "sigemptyset failed");
-  rash_assert(sigaction(SIGINT, &sigint_act, NULL) == 0, "sigaction failed");
-
   rash_assert(signal(SIGTSTP, SIG_IGN) != SIG_ERR, "signal failed");
   rash_assert(signal(SIGTTOU, SIG_IGN) != SIG_ERR, "signal failed");
+  rash_assert(signal(SIGINT, SIG_IGN) != SIG_ERR, "signal failed");
 
   if (tty_fd != -1) {
     // set ourselves as the foreground process

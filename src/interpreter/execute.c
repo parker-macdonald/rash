@@ -41,19 +41,23 @@ int execute(ExecutionContext context) {
 
   // child
   if (pid == 0) {
-    if (instance.tty_fd != -1 && !((context.flags & EC_BACKGROUND_JOB) ||
-                          (context.flags & EC_DONT_REGISTER_FOREGROUND))) {
+    if (
+      instance.tty_fd != -1 &&
+      !(
+        (context.flags & EC_BACKGROUND_JOB) ||
+        (context.flags & EC_DONT_REGISTER_FOREGROUND)
+      )
+    ) {
       pid_t new_pid = getpid();
 
-      int status = setpgid(new_pid, new_pid);
-      assert(status == 0);
+      rash_assert(setpgid(new_pid, new_pid) == 0, "setpgid failed");
 
-      status = tcsetpgrp(instance.tty_fd, new_pid);
-      assert(status == 0);
-
-      (void)signal(SIGTTOU, SIG_IGN);
-      (void)signal(SIGTSTP, SIG_DFL);
+      rash_assert(tcsetpgrp(instance.tty_fd, new_pid) == 0, "tcsetpgrp failed");
     }
+
+    rash_assert(signal(SIGTTOU, SIG_DFL) != SIG_ERR, "signal failed");
+    rash_assert(signal(SIGTSTP, SIG_DFL) != SIG_ERR, "signal failed");
+    rash_assert(signal(SIGINT, SIG_DFL) != SIG_ERR, "signal failed");
 
     if (context.stdout_fd != -1) {
       int res = dup2(context.stdout_fd, STDOUT_FILENO);
