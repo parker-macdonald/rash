@@ -138,6 +138,23 @@ bool var_to_boolean(const ShellVar *var) {
   }
 }
 
+const char *var_kind_to_string(ShellVarKind kind) {
+  switch (kind) {
+    case SV_NUMBER:
+      return "number";
+    case SV_STRING:
+      return "string";
+    case SV_BOOLEAN:
+      return "boolean";
+    case SV_NULL:
+      return "null";
+    default:
+      unreachable();
+  }
+
+  return NULL;
+}
+
 ShellVar *var_cast_to_boolean(const ShellVar *var) {
   return var_create_boolean(var_to_boolean(var));
 }
@@ -265,28 +282,11 @@ void var_state_var_unset(VarState *self, const char *key) {
 static void print_callback(const char *key, const void *ptr) {
   const ShellVar *var = ptr;
 
-  printf("{%s}:\t", key);
+  const char *var_kind = var_kind_to_string(var->kind);
+  Buffer var_string = var_to_string(var);
 
-  switch (var->kind) {
-    case SV_NUMBER:
-      printf("%g (type: number)\n", var->number);
-      break;
-    case SV_STRING:
-      printf(
-          "\"%.*s\" (type: string)\n",
-          (int)var->string.length,
-          var->string.char_ptr
-      );
-      break;
-    case SV_BOOLEAN:
-      printf("%s (type: boolean)\n", var->boolean ? "true" : "false");
-      break;
-    case SV_NULL:
-      printf("null (type: null)\n");
-      break;
-    default:
-      unreachable();
-  }
+  printf("{%s}:\t%.*s (type: %s)\n", key, (int)var_string.length, var_string.char_ptr, var_kind);
+  buffer_destroy(&var_string);
 }
 
 void var_state_print(const VarState *self) {

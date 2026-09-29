@@ -36,6 +36,8 @@ void var_release(ShellVar *var);
 Buffer var_to_string(const ShellVar *var);
 bool var_to_boolean(const ShellVar *var);
 
+const char *var_kind_to_string(ShellVarKind kind);
+
 ShellVar *var_cast_to_string(const ShellVar *var);
 ShellVar *var_cast_to_boolean(const ShellVar *var);
 ShellVar *var_cast_to_number(const ShellVar *var);
