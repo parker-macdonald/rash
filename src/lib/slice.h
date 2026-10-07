@@ -13,10 +13,12 @@ typedef struct {
   };
 } Slice;
 
-#define slice_lit_from_ptr(ptr_, length_) ((Slice){.void_ptr = (ptr_), .length = (length_)})
-#define slice_lit_from_cstr(cstr_) slice_lit_from_ptr((cstr_), strlen((cstr_)))
-#define slice_lit_from_literal(cstr_) slice_lit_from_ptr((cstr_), sizeof(cstr_) - 1)
-#define slice_lit_from_buffer(buffer_) slice_lit_from_ptr((buffer_)->void_ptr, (buffer_)->length)
+#define slice_from_ptr(ptr_, length_) ((Slice){.void_ptr = (ptr_), .length = (length_)})
+#define slice_from_literal(cstr_) slice_from_ptr((cstr_), sizeof(cstr_) - 1)
+#define slice_from_buffer(buffer_) slice_from_ptr((buffer_)->void_ptr, (buffer_)->length)
+
+// this is not a macro cause it calls strlen
+Slice slice_from_cstr(const char *cstr);
 
 void slice_trim_left(Slice *self);
 

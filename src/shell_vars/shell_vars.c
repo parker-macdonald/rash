@@ -4,7 +4,6 @@
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
 #include "lib/buffer.h"
@@ -85,7 +84,8 @@ void var_release(ShellVar *var) {
 }
 
 ShellVar *var_eval(const char *expr) {
-  TokenList list = lex_shell_expr(&slice_lit_from_cstr(expr));
+  Slice source = slice_from_cstr(expr);
+  TokenList list = lex_shell_expr(&source);
 
   if (list.length == 0) {
     return NULL;
