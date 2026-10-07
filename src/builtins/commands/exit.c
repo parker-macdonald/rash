@@ -13,7 +13,7 @@ static const char *const EXIT_HELP =
     "Quit rash with the specified status code.\n"
     "If no status code is specified, 0 is used.";
 
-int builtin_exit(char **const argv) {
+int builtin_exit(char *const *argv) {
   if (argv[1] == NULL) {
     exit(0);
   }

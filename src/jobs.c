@@ -1,7 +1,6 @@
 #include "jobs.h"
 
 #include <assert.h>
-#include <fcntl.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -12,6 +11,7 @@
 
 #include "lib/error.h"
 #include "global.h"
+#include "lib/sys.h"
 
 const char *const JOB_STATUSES[NUM_JOB_STATUSES] = {
     "Exited", "Stopped", "Running"
@@ -49,9 +49,9 @@ void jobs_init(Jobs *self, int tty_fd) {
   self->root_job = NULL;
   self->last_job = NULL;
 
-  rash_assert(signal(SIGTSTP, SIG_IGN) != SIG_ERR, "signal failed");
-  rash_assert(signal(SIGTTOU, SIG_IGN) != SIG_ERR, "signal failed");
-  rash_assert(signal(SIGINT, SIG_IGN) != SIG_ERR, "signal failed");
+  signal_assert(SIGTSTP, SIG_IGN);
+  signal_assert(SIGTTOU, SIG_IGN);
+  signal_assert(SIGINT, SIG_IGN);
 
   if (tty_fd != -1) {
     // set ourselves as the foreground process

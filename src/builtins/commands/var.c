@@ -8,7 +8,7 @@
 static const char *const VAR_HELP = "Usage: var\n"
                                     "Prints all declared shell variables.";
 
-int builtin_var(char **argv) {
+int builtin_var(char *const *argv) {
   if (argv[1] != NULL && strcmp(argv[1], "--help") == 0) {
     puts(VAR_HELP);
     return 0;

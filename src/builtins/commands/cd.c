@@ -17,7 +17,7 @@ static const char *const CD_HELP =
     "If no directory is specified, the value of the HOME enviroment variable\n"
     "is used instead.";
 
-int builtin_cd(char **const argv) {
+int builtin_cd(char *const *argv) {
   const char *path = argv[1];
   if (argv[1] == NULL) {
     const char *home = getenv("HOME");

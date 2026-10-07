@@ -2,25 +2,12 @@
 
 #include <errno.h>
 #include <pwd.h>
-#include <signal.h>
 #include <string.h>
 #include <sys/utsname.h>
 #include <unistd.h>
 
 #include "lib/buffer.h"
 #include "lib/error.h"
-
-void rash_kill(pid_t pid, int sig) {
-  if (kill(pid, sig) == -1) {
-    rash_panic();
-  }
-}
-
-void rash_close(int fd) {
-  if (close(fd) == -1) {
-    rash_panic();
-  }
-}
 
 Buffer getcwd_buffer(void) {
   Buffer buffer = buffer_create(16);

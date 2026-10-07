@@ -8,7 +8,7 @@
 static const char *const UNSETENV_HELP = "Usage: unsetenv KEY\n"
                                          "Remove the environment variable KEY.";
 
-int builtin_unsetenv(char **argv) {
+int builtin_unsetenv(char *const *argv) {
   if (argv[1] == NULL) {
     error_f("%s\n", UNSETENV_HELP);
     return EXIT_FAILURE;

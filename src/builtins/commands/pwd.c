@@ -11,7 +11,7 @@
 static const char *const PWD_HELP = "Usage: pwd\n"
                                     "Prints the current working directory.";
 
-int builtin_pwd(char **argv) {
+int builtin_pwd(char *const *argv) {
   if (argv[1] != NULL && strcmp(argv[1], "--help") == 0) {
     puts(PWD_HELP);
     return EXIT_SUCCESS;

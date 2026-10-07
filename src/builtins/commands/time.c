@@ -15,7 +15,7 @@ static const char *const TIME_HELP =
     "Run the specified command with the specified args and see how long it\n"
     "takes to execute.";
 
-int builtin_time(char **argv) {
+int builtin_time(char *const *argv) {
   if (argv[1] == NULL) {
     puts(TIME_HELP);
     return EXIT_FAILURE;

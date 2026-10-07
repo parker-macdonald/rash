@@ -30,7 +30,7 @@ static const char *const HELP_STRING =
     "  which: search the PATH environment variable for an executable.\n"
     "For more help with builtin commands type the command followed by --help";
 
-int builtin_help(char **const argv) {
+int builtin_help(char *const *argv) {
   (void)argv;
 
   puts(HELP_STRING);

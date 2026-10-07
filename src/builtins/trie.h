@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-typedef int (*BuiltinFunc)(char **);
+typedef int (*BuiltinFunc)(char *const *argv);
 
 #define ALPHABET_SIZE 26
 

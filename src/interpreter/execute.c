@@ -16,6 +16,7 @@
 #include "lib/error.h"
 #include "lib/search_path.h"
 #include "global.h"
+#include "lib/sys.h"
 
 extern char **environ;
 
@@ -32,8 +33,11 @@ int execute(ExecutionContext context) {
   // no need to fork if the command is builtin and i/o isn't redirected. this
   // also is needed so that commands like export and cd change the state of
   // rash, and not the child process
-  if (!is_io_redirected && builtin != NULL &&
-      !(context.flags & EC_BACKGROUND_JOB) && !(context.flags & EC_NO_WAIT)) {
+  if (
+    !is_io_redirected && builtin != NULL &&
+    !(context.flags & EC_BACKGROUND_JOB) &&
+    !(context.flags & EC_NO_WAIT)
+  ) {
     return builtin(context.argv);
   }
 
@@ -55,29 +59,23 @@ int execute(ExecutionContext context) {
       rash_assert(tcsetpgrp(instance.tty_fd, new_pid) == 0, "tcsetpgrp failed");
     }
 
-    rash_assert(signal(SIGTTOU, SIG_DFL) != SIG_ERR, "signal failed");
-    rash_assert(signal(SIGTSTP, SIG_DFL) != SIG_ERR, "signal failed");
-    rash_assert(signal(SIGINT, SIG_DFL) != SIG_ERR, "signal failed");
+    signal_assert(SIGTTOU, SIG_DFL);
+    signal_assert(SIGTSTP, SIG_DFL);
+    signal_assert(SIGINT, SIG_DFL);
 
     if (context.stdout_fd != -1) {
-      int res = dup2(context.stdout_fd, STDOUT_FILENO);
-      close(context.stdout_fd);
-
-      assert(res != -1);
+      dup2_assert(context.stdout_fd, STDOUT_FILENO);
+      close_assert(context.stdout_fd);
     }
 
     if (context.stderr_fd != -1) {
-      int res = dup2(context.stderr_fd, STDERR_FILENO);
-      close(context.stderr_fd);
-
-      assert(res != -1);
+      dup2_assert(context.stderr_fd, STDERR_FILENO);
+      close_assert(context.stderr_fd);
     }
 
     if (context.stdin_fd != -1) {
-      int res = dup2(context.stdin_fd, STDIN_FILENO);
-      close(context.stdin_fd);
-
-      assert(res != -1);
+      dup2_assert(context.stdin_fd, STDIN_FILENO);
+      close_assert(context.stdin_fd);
     }
 
     if (builtin != NULL) {
@@ -86,7 +84,7 @@ int execute(ExecutionContext context) {
       _exit(builtin(context.argv));
     }
 
-    char *exec_path = context.argv[0];
+    const char *exec_path = context.argv[0];
 
     // search path for executable
     if (strchr(context.argv[0], '/') == NULL) {
@@ -103,61 +101,51 @@ int execute(ExecutionContext context) {
       }
     }
 
-    int status = execve(exec_path, context.argv, environ);
+    execve(exec_path, context.argv, environ);
 
-    if (status == -1) {
-      if (errno != ENOENT) {
-        error_f("rash: execve: %s\n", strerror(errno));
-      } else {
-        error_f("rash: %s: command not found\n", context.argv[0]);
-      }
+    // execve failed if we get here
+    if (errno != ENOENT) {
+      error_f("rash: execve: %s\n", strerror(errno));
+    } else {
+      error_f("rash: %s: command not found\n", context.argv[0]);
     }
 
     // using _exit instead of exit so we don't trigger the atexit function
     // which kills all child processes.
     _exit(EXIT_FAILURE);
   }
+  // in the parent now
+
+  if (context.stderr_fd != -1) {
+    close_assert(context.stderr_fd);
+  }
+  if (context.stdin_fd != -1) {
+    close_assert(context.stdin_fd);
+  }
+  if (context.stdout_fd != -1) {
+    close_assert(context.stdout_fd);
+  }
+
   // error forking
-  else if (pid == -1) {
+  if (pid == -1) {
     perror("fork");
 
-    if (context.stderr_fd != -1) {
-      close(context.stderr_fd);
-    }
-    if (context.stdin_fd != -1) {
-      close(context.stdin_fd);
-    }
-    if (context.stdout_fd != -1) {
-      close(context.stdout_fd);
-    }
-
+    // we should return a -1 to show there's no pid
     if (context.flags & EC_NO_WAIT) {
       return -1;
     }
 
     return EXIT_FAILURE;
   }
-  // parent process
-  else {
-    if (context.stderr_fd != -1) {
-      close(context.stderr_fd);
-    }
-    if (context.stdin_fd != -1) {
-      close(context.stdin_fd);
-    }
-    if (context.stdout_fd != -1) {
-      close(context.stdout_fd);
-    }
 
-    if (context.flags & EC_NO_WAIT) {
-      return pid;
-    }
+  if (context.flags & EC_NO_WAIT) {
+    return pid;
+  }
 
-    if (context.flags & EC_BACKGROUND_JOB) {
-      jobs_register(&instance.jobs, pid, JOB_RUNNING);
+  if (context.flags & EC_BACKGROUND_JOB) {
+    jobs_register(&instance.jobs, pid, JOB_RUNNING);
 
-      return EXIT_SUCCESS;
-    }
+    return EXIT_SUCCESS;
   }
 
   return wait_process(pid);
@@ -199,10 +187,20 @@ int wait_process(pid_t pid) {
   if (WIFSTOPPED(status)) {
     putchar('\n');
 
-    printf("loool\n");
-
     jobs_register(&instance.jobs, pid, JOB_STOPPED);
   }
 
   return 0;
+}
+
+void execution_context_destroy(ExecutionContext *ec) {
+	if (ec->stderr_fd != -1) {
+		close_assert(ec->stderr_fd);
+	}
+	if (ec->stdin_fd != -1) {
+		close_assert(ec->stdin_fd);
+	}
+	if (ec->stdout_fd != -1) {
+		close_assert(ec->stdout_fd);
+	}
 }

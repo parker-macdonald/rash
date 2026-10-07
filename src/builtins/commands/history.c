@@ -17,7 +17,7 @@ static const char *const HISTORY_HELP =
     "nothing\n"
     "is displayed.";
 
-int builtin_history(char **const argv) {
+int builtin_history(char *const *argv) {
   int count = -1;
 
   if (!instance.interactive) {

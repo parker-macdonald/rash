@@ -10,7 +10,7 @@ static const char *const SETENV_HELP =
     "Set the environment variable KEY equal to VALUE.\n"
     "If value isn't specified, the shell variable has no value.";
 
-int builtin_setenv(char **argv) {
+int builtin_setenv(char *const *argv) {
   if (argv[1] == NULL) {
     error_f("%s\n", SETENV_HELP);
     return EXIT_FAILURE;

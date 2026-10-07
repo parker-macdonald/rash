@@ -16,7 +16,7 @@ static const char *const WHICH_HELP =
     "shell builtin, a path to an executable, or an executable in the users \n"
     "PATH enviroment variable.";
 
-int builtin_which(char **argv) {
+int builtin_which(char *const *argv) {
   if (argv[1] == NULL) {
     error_f("%s\n", WHICH_HELP);
     return EXIT_FAILURE;

@@ -11,7 +11,7 @@ static const char *const EVAL_HELP =
     "Usage: eval [arg ...]\n"
     "Join all arguments together with spaces and run them as a shell command.";
 
-int builtin_eval(char **argv) {
+int builtin_eval(char *const *argv) {
   if (argv[1] == NULL || strcmp(argv[1], "--help") == 0) {
     puts(EVAL_HELP);
     return 0;

@@ -15,7 +15,7 @@ static const char *const SETVAR_HELP =
     "Usage: setvar KEY [-t TYPE] VALUE\n"
     "Set the shell variable KEY equal to VALUE.";
 
-int builtin_setvar(char **argv) {
+int builtin_setvar(char *const *argv) {
   int argc = count_argv(argv);
 
   VarState *state = &instance.var_state;

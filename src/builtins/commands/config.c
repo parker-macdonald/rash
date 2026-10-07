@@ -14,7 +14,7 @@ static const char *const CONFIG_HELP =
 "For example:\n"
 "`config set interactive.prompt 'LOGIN + \"@\" + HOST + \":\" + PPWD + (EUID == 0 ? \"#\" : \"$\") + \" \"`";
 
-int builtin_config(char **const argv) {
+int builtin_config(char *const *argv) {
   if (argv[1] == NULL) {
     puts(CONFIG_HELP);
     return EXIT_FAILURE;

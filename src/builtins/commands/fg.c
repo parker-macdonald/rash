@@ -18,7 +18,7 @@ static const char *const FG_HELP =
     "Run a paused job in the foreground based on the job id.\n"
     "If no job id is specified, the most recent job is used instead.";
 
-int builtin_fg(char **argv) {
+int builtin_fg(char *const *argv) {
   int job_id;
 
   if (argv[1] == NULL) {

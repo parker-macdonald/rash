@@ -92,7 +92,7 @@ error:
   return -1;
 }
 
-int builtin_mkdir(char **argv) {
+int builtin_mkdir(char *const *argv) {
   argv++;
 
   if (*argv == NULL) {

@@ -10,7 +10,7 @@
 static const char *const JOBS_HELP = "Usage: jobs\n"
                                      "List all the paused and background jobs.";
 
-int builtin_jobs(char **argv) {
+int builtin_jobs(char *const *argv) {
   if (argv[1] != NULL && strcmp(argv[1], "--help") == 0) {
     puts(JOBS_HELP);
     return EXIT_SUCCESS;

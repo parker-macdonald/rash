@@ -1,6 +1,7 @@
 #ifndef EXECUTE_H
 #define EXECUTE_H
 
+// for pid_t
 #include <sys/types.h>
 
 // this flag tells execute not to wait for the program to finish and add it to
@@ -18,7 +19,7 @@
 
 typedef struct {
   // arguments for command
-  char **argv;
+  char * const *argv;
   // fd to redirect stdout, or -1
   int stdout_fd;
   // fd to redirect stdin, or -1
@@ -38,5 +39,7 @@ int execute(ExecutionContext context);
  * @return the exit status of the program or -1 if waitpid encounters an error.
  */
 int wait_process(pid_t pid);
+
+void execution_context_destroy(ExecutionContext *ec);
 
 #endif

@@ -11,7 +11,7 @@
 static const char *const UNSETVAR_HELP = "Usage: unsetvar KEY\n"
                                          "Remove the shell variable KEY.";
 
-int builtin_unsetvar(char **argv) {
+int builtin_unsetvar(char *const *argv) {
   if (argv[1] == NULL) {
     error_f("%s\n", UNSETVAR_HELP);
     return EXIT_FAILURE;

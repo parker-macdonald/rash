@@ -14,7 +14,7 @@ static const char *const SOURCE_HELP =
     "Read and execute the contents of FILENAME, this will modify the current\n"
     "state of the shell (shell variables, jobs, etc.).";
 
-int builtin_source(char **argv) {
+int builtin_source(char *const *argv) {
   static int recursion_count = 0;
 
   if (argv[1] == NULL) {
