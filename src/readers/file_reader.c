@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "lib/buffer.h"
 #include "readers/generic_reader.h"

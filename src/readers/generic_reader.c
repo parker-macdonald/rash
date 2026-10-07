@@ -1,4 +1,6 @@
 #include "generic_reader.h"
+
+#include "lib/buffer.h"
 #include "readers/interactive_reader/interactive_reader.h"
 #include "readers/interactive_reader/types.h"
 

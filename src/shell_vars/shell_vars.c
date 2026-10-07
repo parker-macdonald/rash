@@ -1,7 +1,6 @@
 #include "shell_vars/shell_vars.h"
 
 #include <math.h>
-#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
