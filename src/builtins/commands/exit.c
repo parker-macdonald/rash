@@ -1,12 +1,10 @@
-#include <errno.h>
-#include <limits.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "builtins/builtin_funcs.h"
 #include "lib/error.h"
+#include "lib/parse.h"
 
 static const char *const EXIT_HELP =
     "Usage: exit [STATUS]\n"
@@ -23,16 +21,14 @@ int builtin_exit(char *const *argv) {
     return EXIT_SUCCESS;
   }
 
-  char *endptr;
-  errno = 0;
-  long status = strtol(argv[1], &endptr, 10);
+  OptionInt num = parse_int(argv[1]);
 
-  if (errno != 0 || *endptr != '\0' || status < INT_MIN || status > INT_MAX) {
+  if (!num.has_value) {
     error_f("exit: %s: number expected\n", argv[1]);
     exit(1);
   }
 
-  exit((int)status);
+  exit(num.value);
 
   return 0;
 }

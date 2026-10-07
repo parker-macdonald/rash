@@ -1,5 +1,3 @@
-#include <errno.h>
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,6 +5,7 @@
 #include "builtins/builtin_funcs.h"
 #include "lib/error.h"
 #include "global.h"
+#include "lib/parse.h"
 #include "readers/interactive_reader/interactive_reader.h"
 
 static const char *const HISTORY_HELP =
@@ -36,15 +35,13 @@ int builtin_history(char *const *argv) {
       return EXIT_SUCCESS;
     }
 
-    char *endptr;
-    errno = 0;
-    const long num = strtol(argv[1], &endptr, 10);
-    if (errno != 0 || *endptr != '\0' || num < 0 || num > INT_MAX) {
+    OptionInt num = parse_int(argv[1]);
+    if (!num.has_value || num.value < 0) {
       error_f("history: %s: positive number expected\n", argv[1]);
       return EXIT_FAILURE;
     }
 
-    count = (int)num;
+    count = num.value;
   }
 
   interactive_reader_hist_print(&instance.interactive_reader, count);

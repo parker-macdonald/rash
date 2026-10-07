@@ -1,6 +1,3 @@
-#include <assert.h>
-#include <errno.h>
-#include <limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +9,7 @@
 #include "jobs.h"
 #include "lib/error.h"
 #include "global.h"
+#include "lib/parse.h"
 
 static const char *const FG_HELP =
     "Usage: fg [JOB_ID]\n"
@@ -29,16 +27,14 @@ int builtin_fg(char *const *argv) {
       return EXIT_FAILURE;
     }
 
-    char *endptr;
-    errno = 0;
-    long num = strtol(argv[1], &endptr, 10);
+    OptionInt num = parse_int(argv[1]);
 
-    if (errno != 0 || *endptr != '\0' || num < 1 || num > INT_MAX) {
+    if (!num.has_value || num.value < 1) {
       error_f("fg: %s: number 1 or greater expected\n", argv[1]);
       return EXIT_FAILURE;
     }
 
-    job_id = (int)num;
+    job_id = num.value;
   }
 
   pid_t pid = jobs_get_pid_and_remove(&instance.jobs, job_id);
