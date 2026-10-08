@@ -6,21 +6,14 @@
 #include <unistd.h>
 
 #include "lib/buffer.h"
-#include "lib/error.h"
 #include "lib/hash_map.h"
 #include "lib/parse.h"
 #include "lib/slice.h"
 #include "lib/sys.h"
 #include "shell_vars/eval.h"
+#include "shell_vars/functions.h"
 #include "shell_vars/lexer.h"
 #include "shell_vars/token.h"
-
-const char *const SHELL_VAR_KIND_NAMES[SV_COUNT] = {
-    [SV_NUMBER] = "number",
-    [SV_STRING] = "string",
-    [SV_BOOLEAN] = "boolean",
-    [SV_NULL] = "null"
-};
 
 ShellVar *var_create_string(Buffer string) {
   ShellVar *var = malloc(sizeof(ShellVar));
@@ -57,6 +50,18 @@ ShellVar *var_create_null(void) {
 
   var->kind = SV_NULL;
   var->ref_count = 1;
+
+  return var;
+}
+
+ShellVar *var_create_function(ShellVar *(*func)(ShellVar *const *args), unsigned arg_count) {
+  ShellVar *var = malloc(sizeof(ShellVar));
+
+  var->kind = SV_FUNCTION;
+  var->ref_count = 1;
+
+  var->function.arg_count = arg_count;
+  var->function.func = func;
 
   return var;
 }
@@ -107,8 +112,8 @@ Buffer var_to_string(const ShellVar *var) {
       return buffer_from_cstr(var->boolean ? "true" : "false");
     case SV_NULL:
       return buffer_from_cstr("null");
-    default:
-      unreachable();
+    case SV_FUNCTION:
+      return buffer_from_cstr("function");
   }
 
   return (Buffer){0};
@@ -132,8 +137,8 @@ bool var_to_boolean(const ShellVar *var) {
     case SV_NULL:
       return false;
       break;
-    default:
-      unreachable();
+    case SV_FUNCTION:
+      return true;
   }
 }
 
@@ -147,9 +152,9 @@ const char *var_kind_to_string(ShellVarKind kind) {
       return "boolean";
     case SV_NULL:
       return "null";
-    default:
-      unreachable();
-  }
+    case SV_FUNCTION:
+      return "function";
+    }
 
   return NULL;
 }
@@ -185,9 +190,10 @@ ShellVar *var_cast_to_number(const ShellVar *var) {
     case SV_NULL:
       number = 0;
       break;
-    default:
-      unreachable();
-  }
+    case SV_FUNCTION:
+      number = NAN;
+      break;
+    }
 
   return var_create_number(number);
 }
@@ -210,46 +216,62 @@ static void var_destructor(void *ptr) {
   var_release(var);
 }
 
+#define add_number(self, name, number)\
+do { \
+  ShellVar *var = var_create_number(number); \
+  var_state_var_set((self), (name), var); \
+  var_release(var); \
+} while(0)
+
+#define add_string(self, name, string)\
+do { \
+  ShellVar *var = var_create_string(string); \
+  var_state_var_set((self), (name), var); \
+  var_release(var); \
+} while(0)
+
+#define add_function(self, name, func_ptr, arg_count)\
+do { \
+  ShellVar *var = var_create_function((func_ptr), (arg_count)); \
+  var_state_var_set((self), (name), var); \
+  var_release(var); \
+} while(0)
+
 void var_state_init(VarState *self) {
   hash_map_init(&self->var_map, var_destructor);
 
-  ShellVar *pid = var_create_number((double)getpid());
-  var_state_var_set(self, "PID", pid);
-  var_release(pid);
+  add_number(self, "PID", (double)getpid());
 
-  ShellVar *last_status = var_create_number(0.0);
-  var_state_var_set(self, "LAST_STATUS", last_status);
-  var_release(last_status);
+  add_number(self, "LAST_STATUS", 0);
 
-  ShellVar *login = var_create_string(getlogin_buffer());
-  var_state_var_set(self, "LOGIN", login);
-  var_release(login);
+  add_string(self, "LOGIN", getlogin_buffer());
 
-  ShellVar *hostname = var_create_string(gethostname_buffer());
-  var_state_var_set(self, "HOSTNAME", hostname);
-  var_release(hostname);
+  add_string(self, "HOSTNAME", gethostname_buffer());
 
-  ShellVar *euid = var_create_number((double)geteuid());
-  var_state_var_set(self, "EUID", euid);
-  var_release(euid);
+  add_number(self, "EUID", (double)geteuid());
 
-  ShellVar *uid = var_create_number((double)getuid());
-  var_state_var_set(self, "UID", uid);
-  var_release(uid);
+  add_number(self, "UID", (double)getuid());
 
   Buffer cwd_buf = getcwd_buffer();
-  ShellVar *pwd = var_create_string(buffer_clone(&cwd_buf));
-  var_state_var_set(self, "PWD", pwd);
-  var_release(pwd);
+  add_string(self, "PWD", buffer_clone(&cwd_buf));
 
-  ShellVar *old_pwd = var_create_string(cwd_buf);
-  var_state_var_set(self, "OLD_PWD", old_pwd);
-  var_release(old_pwd);
+  add_string(self, "OLD_PWD", cwd_buf);
 
   // ppwd is short for pretty print word directory
-  ShellVar *ppwd = var_create_string(get_pretty_cwd_buffer());
-  var_state_var_set(self, "PPWD", ppwd);
-  var_release(ppwd);
+  add_string(self, "PPWD", get_pretty_cwd_buffer());
+
+  // functions to cast
+  add_function(self, "string", shell_func_string, 1);
+  add_function(self, "number", shell_func_number, 1);
+  add_function(self, "boolean", shell_func_boolean, 1);
+
+  // absolute value
+  add_function(self, "abs", shell_func_abs, 1);
+
+  // some trig function
+  add_function(self, "sin", shell_func_sin, 1);
+  add_function(self, "cos", shell_func_cos, 1);
+  add_function(self, "tan", shell_func_tan, 1);
 }
 
 void var_state_destroy(VarState *self) {

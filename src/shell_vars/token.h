@@ -31,9 +31,7 @@ typedef enum {
   TK_O_PAREN, // (
   TK_C_PAREN, // )
 
-  TK_STRING_TYPE,
-  TK_BOOLEAN_TYPE,
-  TK_NUMBER_TYPE,
+  TK_COMMA, // ,
 
   TK_STRING_LIT,
   TK_NUMBER_LIT,

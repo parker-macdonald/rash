@@ -3,6 +3,8 @@
 
 #include "lib/buffer.h"
 #include "lib/hash_map.h"
+#include "shell_vars/functions.h"
+
 #include <stdbool.h>
 
 typedef enum {
@@ -10,18 +12,17 @@ typedef enum {
   SV_STRING,
   SV_BOOLEAN,
   SV_NULL,
-  SV_COUNT
+  SV_FUNCTION,
 } ShellVarKind;
 
-extern const char *const SHELL_VAR_KIND_NAMES[SV_COUNT];
-
-typedef struct {
+typedef struct ShellVar {
   ShellVarKind kind;
   unsigned ref_count;
   union {
     Buffer string;
     double number;
     bool boolean;
+    ShellFunction function;
   };
 } ShellVar;
 

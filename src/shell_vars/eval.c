@@ -1,9 +1,11 @@
 #include "eval.h"
 
 #include "lib/buffer.h"
+#include "lib/vector.h"
 #include "lib/error.h"
 #include "global.h"
 #include "shell_vars.h"
+#include "shell_vars/functions.h"
 #include "shell_vars/token.h"
 
 #include <math.h>
@@ -83,6 +85,77 @@ static ShellVar *eval_term(EvalState *s);
 static ShellVar *eval_expr(EvalState *s);
 static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind op);
 
+static ShellVar *eval_function_call(EvalState *s, ShellVar *func, const Buffer *ident) {
+  rash_assert(func->kind == SV_FUNCTION, "called eval_function_call with a non-function variable. this should never be reached.");
+
+  if (!match(s, TK_O_PAREN)) {
+    // return the type of the function which is "function", only this way if i ever change the to string of a function, this reflects it
+    return var_create_string(
+      buffer_from_cstr(
+        var_kind_to_string(func->kind)
+      )
+    );
+  }
+
+  // functions with no arguments
+  if (match(s, TK_C_PAREN)) {
+    if (func->function.arg_count != 0) {
+      error_f("shell expression: function `%.*s` expects %u arguments but was provided 0.\n", (int)ident->length, ident->char_ptr, func->function.arg_count);
+      var_release(func);
+      return NULL;
+    }
+
+    ShellVar *return_val = func->function.func(NULL);
+    var_release(func);
+    return return_val;
+  }
+
+  VECTOR(ShellVar *) arguments;
+  VECTOR_INIT(arguments, 0);
+  
+  ShellVar *arg0 = eval_expr(s);
+
+  if (arg0 == NULL) {
+    goto error;
+  }
+
+  VECTOR_PUSH(arguments, arg0);
+
+  while (match(s, TK_COMMA)) {
+    ShellVar *arg = eval_expr(s);
+
+    if (arg == NULL) {
+      goto error;
+    }
+
+    VECTOR_PUSH(arguments, arg);
+  }
+
+  if (!match(s, TK_C_PAREN)) {
+    error("shell expression: expected closing `)` following function arguments.\n");
+    goto error;
+  }
+
+  if (arguments.length != func->function.arg_count) {
+    error_f("shell expression: function `%.*s` expects %u arguments but was provided %u.\n", (int)ident->length, ident->char_ptr, func->function.arg_count, (unsigned)arguments.length);
+    goto error;
+  }
+
+  ShellVar *return_val = func->function.func(arguments.data);
+  var_release(func);
+  for (size_t i = 0; i < arguments.length; i++) {
+    var_release(arguments.data[i]);
+  }
+  return return_val;
+
+  error:
+  var_release(func);
+  for (size_t i = 0; i < arguments.length; i++) {
+    var_release(arguments.data[i]);
+  }
+  return NULL;
+}
+
 static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
   if (check(s, TK_NUMBER_LIT)) {
     Token tk = advance(s);
@@ -103,6 +176,16 @@ static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
       return NULL;
     }
 
+    if (var->kind == SV_FUNCTION) {
+      return eval_function_call(s, var, &tk.identifier);
+    }
+
+    if (match(s, TK_O_PAREN)) {
+      error_f("shell expression: var `%.*s` is not a function, and thus isn't callable.\n", (int)tk.identifier.length, tk.identifier.char_ptr);
+      var_release(var);
+      return NULL;
+    }
+
     return var;
   }
 
@@ -116,78 +199,6 @@ static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
 
   if (match(s, TK_NULL_LIT)) {
     return var_create_null();
-  }
-
-  if (match(s, TK_STRING_TYPE)) {
-    if (!match(s, TK_O_PAREN)) {
-      error("shell expression: expected opening `(` after `string`.\n");
-      return NULL;
-    }
-
-    ShellVar *var = eval_expr(s);
-
-    if (var == NULL) {
-      return NULL;
-    }
-
-    if (!match(s, TK_C_PAREN)) {
-      error("shell expression: expected closing `)`.\n");
-      var_release(var);
-      return NULL;
-    }
-
-    ShellVar *string = var_cast_to_string(var);
-    var_release(var);
-
-    return string;
-  }
-
-  if (match(s, TK_NUMBER_TYPE)) {
-    if (!match(s, TK_O_PAREN)) {
-      error("shell expression: expected opening `(` after `number`.\n");
-      return NULL;
-    }
-
-    ShellVar *var = eval_expr(s);
-
-    if (var == NULL) {
-      return NULL;
-    }
-
-    if (!match(s, TK_C_PAREN)) {
-      error("shell expression: expected closing `)`.\n");
-      var_release(var);
-      return NULL;
-    }
-
-    ShellVar *string = var_cast_to_number(var);
-    var_release(var);
-
-    return string;
-  }
-
-  if (match(s, TK_BOOLEAN_TYPE)) {
-    if (!match(s, TK_O_PAREN)) {
-      error("shell expression: expected opening `(` after `boolean`.\n");
-      return NULL;
-    }
-
-    ShellVar *var = eval_expr(s);
-
-    if (var == NULL) {
-      return NULL;
-    }
-
-    if (!match(s, TK_C_PAREN)) {
-      error("shell expression: expected closing `)`.\n");
-      var_release(var);
-      return NULL;
-    }
-
-    ShellVar *string = var_cast_to_boolean(var);
-    var_release(var);
-
-    return string;
   }
 
   // unary plus
@@ -290,7 +301,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
         return var_create_number(lhs->number + rhs->number);
       }
 
-      error_f("shell expression: cannot add types %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: cannot add types %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
     case TK_SUB:
@@ -298,7 +309,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
         return var_create_number(lhs->number - rhs->number);
       }
 
-      error_f("shell expression: can only subtract number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only subtract number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
     case TK_MUL:
@@ -306,7 +317,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
         return var_create_number(lhs->number * rhs->number);
       }
 
-      error_f("shell expression: can only multiply number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only multiply number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
     case TK_POW:
@@ -314,7 +325,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
         return var_create_number(pow(lhs->number, rhs->number));
       }
 
-      error_f("shell expression: can only exponentiate number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only exponentiate number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
     case TK_DIV:
@@ -322,7 +333,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
         return var_create_number(lhs->number / rhs->number);
       }
 
-      error_f("shell expression: can only divide number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only divide number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
     case TK_MOD:
@@ -330,7 +341,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
         return var_create_number(fmod(lhs->number, rhs->number));
       }
 
-      error_f("shell expression: can only mod number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only mod number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
     case TK_EQ:
@@ -374,7 +385,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
         return var_create_boolean(lhs->number > rhs->number);
       }
 
-      error_f("shell expression: can only compare number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only compare number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
     case TK_LT:
@@ -382,7 +393,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
         return var_create_boolean(lhs->number < rhs->number);
       }
 
-      error_f("shell expression: can only compare number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only compare number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
     case TK_GTE:
@@ -390,7 +401,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
         return var_create_boolean(lhs->number >= rhs->number);
       }
 
-      error_f("shell expression: can only compare number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only compare number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
     case TK_LTE:
@@ -398,7 +409,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
         return var_create_boolean(lhs->number <= rhs->number);
       }
 
-      error_f("shell expression: can only compare number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only compare number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
     default:
       unreachable();

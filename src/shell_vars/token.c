@@ -18,9 +18,7 @@ const char *const TOKEN_KIND_NAMES[TK_COUNT] = {
   [TK_NOT] = "`!`",
   [TK_O_PAREN] = "`(`",
   [TK_C_PAREN] = "`)`",
-  [TK_STRING_TYPE] = "`string`",
-  [TK_NUMBER_TYPE] = "`number`",
-  [TK_BOOLEAN_TYPE] = "`boolean`",
+  [TK_COMMA] = "`,`",
   [TK_STRING_LIT] = "string literal",
   [TK_NUMBER_LIT] = "number literal",
   [TK_NULL_LIT] = "`null`",
@@ -57,9 +55,7 @@ bool is_binary_op(TokenKind kind) {
     case TK_TRUE_LIT:
     case TK_FALSE_LIT:
     case TK_IDENTIFIER:
-    case TK_BOOLEAN_TYPE:
-    case TK_STRING_TYPE:
-    case TK_NUMBER_TYPE:
+    case TK_COMMA:
     case TK_COUNT:
     case TK_COLON:
       return false;

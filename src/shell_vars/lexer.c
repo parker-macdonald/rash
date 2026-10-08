@@ -169,24 +169,6 @@ static int identifier(LexState *s) {
     return 0;
   }
 
-  if (buffer_compare_cstr(&identifier, "string") == 0) {
-    add_token(s, TK_STRING_TYPE);
-    buffer_destroy(&identifier);
-    return 0;
-  }
-
-  if (buffer_compare_cstr(&identifier, "number") == 0) {
-    add_token(s, TK_NUMBER_TYPE);
-    buffer_destroy(&identifier);
-    return 0;
-  }
-
-  if (buffer_compare_cstr(&identifier, "boolean") == 0) {
-    add_token(s, TK_BOOLEAN_TYPE);
-    buffer_destroy(&identifier);
-    return 0;
-  }
-
   add_identifier(s, &identifier);
 
   return 0;
@@ -268,6 +250,10 @@ static int scan_token(LexState *s) {
     
     case ':':
       add_token(s, TK_COLON);
+      break;
+
+    case ',':
+      add_token(s, TK_COMMA);
       break;
 
     case '"':
