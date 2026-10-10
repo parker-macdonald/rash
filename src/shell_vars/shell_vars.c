@@ -81,6 +81,10 @@ static void var_destroy(ShellVar *var) {
 }
 
 void var_release(ShellVar *var) {
+  if (var == NULL) {
+    return;
+  }
+  
   var->ref_count--;
 
   if (var->ref_count == 0) {

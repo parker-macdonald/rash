@@ -85,9 +85,9 @@ static bool match(EvalState *s, TokenKind kind) {
 
 static ShellVar *eval_term(EvalState *s);
 static ShellVar *eval_expr(EvalState *s);
-static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind op);
+static ShellVar *eval_binary_expr(const ShellVar *lhs, const ShellVar *rhs, TokenKind op);
 
-static ShellVar *eval_function_call(EvalState *s, ShellVar *func, const Buffer *ident) { // NOLINT(misc-no-recursion)
+static ShellVar *eval_function_call(EvalState *s, const ShellVar *func, const Buffer *ident) { // NOLINT(misc-no-recursion)
   rash_assert(func->kind == SV_FUNCTION, "called eval_function_call with a non-function variable. this should never be reached.");
 
   if (!match(s, TK_O_PAREN)) {
@@ -103,12 +103,10 @@ static ShellVar *eval_function_call(EvalState *s, ShellVar *func, const Buffer *
   if (match(s, TK_C_PAREN)) {
     if (func->function.arg_count != 0) {
       error_f("shell expression: function `%.*s` expects %u arguments but was provided 0.\n", (int)ident->length, ident->char_ptr, func->function.arg_count);
-      var_release(func);
       return NULL;
     }
 
     ShellVar *return_val = func->function.func(NULL);
-    var_release(func);
     return return_val;
   }
 
@@ -144,14 +142,12 @@ static ShellVar *eval_function_call(EvalState *s, ShellVar *func, const Buffer *
   }
 
   ShellVar *return_val = func->function.func(arguments.data);
-  var_release(func);
   for (size_t i = 0; i < arguments.length; i++) {
     var_release(arguments.data[i]);
   }
   return return_val;
 
   error:
-  var_release(func);
   for (size_t i = 0; i < arguments.length; i++) {
     var_release(arguments.data[i]);
   }
@@ -182,7 +178,9 @@ static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
     }
 
     if (var->kind == SV_FUNCTION) {
-      return eval_function_call(s, var, &tk->identifier);
+      ShellVar *return_val = eval_function_call(s, var, &tk->identifier);
+      var_release(var);
+      return return_val;
     }
 
     if (match(s, TK_O_PAREN)) {
@@ -280,7 +278,7 @@ static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
   return NULL;
 }
 
-static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind op) {
+static ShellVar *eval_binary_expr(const ShellVar *lhs, const ShellVar *rhs, TokenKind op) {
   rash_assert(lhs != NULL && rhs != NULL, "bad arguments");
 
   switch (op) {
@@ -437,6 +435,7 @@ static ShellVar *eval_expr_1(EvalState *s, ShellVar *lhs, OpPrec min_prec) { // 
       if (!match(s, TK_COLON)) {
         error("shell expression: expected `:` following `?` and expression.\n");
         var_release(lhs);
+        var_release(middle);
         return NULL;
       }
     }
@@ -445,6 +444,7 @@ static ShellVar *eval_expr_1(EvalState *s, ShellVar *lhs, OpPrec min_prec) { // 
 
     if (rhs == NULL) {
       var_release(lhs);
+      var_release(rhs);
       return NULL;
     }
 
@@ -453,37 +453,43 @@ static ShellVar *eval_expr_1(EvalState *s, ShellVar *lhs, OpPrec min_prec) { // 
     while (is_binary_op(lookahead) && OP_PREC_LOOKUP[lookahead] > OP_PREC_LOOKUP[op]) {
       ShellVar *tmp = eval_expr_1(s, rhs, OP_PREC_LOOKUP[op] + 1);
       var_release(rhs);
+      rhs = tmp;
 
-      if (tmp == NULL) {
+      if (rhs == NULL) {
         var_release(lhs);
+        var_release(rhs);
+        var_release(middle);
         return NULL;
       }
-
-      rhs = tmp;
 
       lookahead = peek(s)->kind;
     }
 
     if (middle != NULL) {
       bool value = var_to_boolean(lhs);
+      var_release(lhs);
 
       if (value) {
-        lhs = middle;
+        lhs = var_aquire(middle);
       } else {
-        lhs = rhs;
+        lhs = var_aquire(rhs);
       }
     } else {
-      ShellVar *tmp = eval_part(lhs, rhs, op);
+      ShellVar *tmp = eval_binary_expr(lhs, rhs, op);
       var_release(lhs);
-      var_release(rhs);
-  
-      if (tmp == NULL) {
+      lhs = tmp;
+      
+      if (lhs == NULL) {
+        var_release(lhs);
+        var_release(rhs);
+        var_release(middle);
         return NULL;
       }
   
-      lhs = tmp;
     }
 
+    var_release(middle);
+    var_release(rhs);
   }
 
   return lhs;
