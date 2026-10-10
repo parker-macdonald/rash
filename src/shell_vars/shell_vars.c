@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "lib/buffer.h"
+#include "lib/double_to_string.h"
 #include "lib/hash_map.h"
 #include "lib/parse.h"
 #include "lib/slice.h"
@@ -105,7 +106,7 @@ ShellVar *var_eval(const char *expr) {
 Buffer var_to_string(const ShellVar *var) {
   switch (var->kind) {
     case SV_NUMBER:
-      return buffer_from_format("%g", var->number);
+      return double_to_string(var->number);
     case SV_STRING:
       return buffer_clone(&var->string);
     case SV_BOOLEAN:

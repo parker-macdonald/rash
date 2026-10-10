@@ -49,27 +49,29 @@ static bool is_at_end(EvalState *s) {
   return s->current >= s->tokens->length;
 }
 
-static Token advance(EvalState *s) {
+static const Token NONE_TOKEN = { .kind = TK_NONE };
+
+static const Token *advance(EvalState *s) {
   if (is_at_end(s)) {
-    return (Token){.kind = TK_NONE};
+    return &NONE_TOKEN;
   }
 
-  return s->tokens->data[s->current++];
+  return s->tokens->data + (s->current++);
 }
 
-static Token peek(EvalState *s) {
+static const Token *peek(EvalState *s) {
   if (is_at_end(s)) {
-    return (Token){.kind = TK_NONE};
+    return &NONE_TOKEN;
   }
 
-  return s->tokens->data[s->current];
+  return s->tokens->data + s->current;
 }
 
 static bool check(EvalState *s, TokenKind kind) {
   if (is_at_end(s)) {
     return false;
   }
-  return peek(s).kind == kind;
+  return peek(s)->kind == kind;
 }
 
 static bool match(EvalState *s, TokenKind kind) {
@@ -158,30 +160,33 @@ static ShellVar *eval_function_call(EvalState *s, ShellVar *func, const Buffer *
 
 static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
   if (check(s, TK_NUMBER_LIT)) {
-    Token tk = advance(s);
-    return var_create_number(tk.num_lit);
+    const Token *tk = advance(s);
+    return var_create_number(tk->num_lit);
   }
 
   if (check(s, TK_STRING_LIT)) {
-    Token tk = advance(s);
-    return var_create_string(buffer_clone(&tk.str_lit));
+    const Token *tk = advance(s);
+    return var_create_string(buffer_clone(&tk->str_lit));
   }
 
   if (check(s, TK_IDENTIFIER)) {
-    Token tk = advance(s);
-    ShellVar *var = var_state_var_get(&instance.var_state, buffer_cstr(&tk.identifier));
+    const Token *tk = advance(s);
+
+    char *ident = buffer_clone_to_cstr(&tk->identifier);
+    ShellVar *var = var_state_var_get(&instance.var_state, ident);
+    free(ident);
 
     if (var == NULL) {
-      error_f("shell expression: var `%.*s` is not set.\n", (int)tk.identifier.length, tk.identifier.char_ptr);
+      error_f("shell expression: var `%.*s` is not set.\n", (int)tk->identifier.length, tk->identifier.char_ptr);
       return NULL;
     }
 
     if (var->kind == SV_FUNCTION) {
-      return eval_function_call(s, var, &tk.identifier);
+      return eval_function_call(s, var, &tk->identifier);
     }
 
     if (match(s, TK_O_PAREN)) {
-      error_f("shell expression: var `%.*s` is not a function, and thus isn't callable.\n", (int)tk.identifier.length, tk.identifier.char_ptr);
+      error_f("shell expression: var `%.*s` is not a function, and thus isn't callable.\n", (int)tk->identifier.length, tk->identifier.char_ptr);
       var_release(var);
       return NULL;
     }
@@ -271,7 +276,7 @@ static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
     return var;
   }
 
-  error_f("shell expression: expected term but found %s.\n", TOKEN_KIND_NAMES[peek(s).kind]);
+  error_f("shell expression: expected term but found %s.\n", TOKEN_KIND_NAMES[peek(s)->kind]);
   return NULL;
 }
 
@@ -419,7 +424,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
 static ShellVar *eval_expr_1(EvalState *s, ShellVar *lhs, OpPrec min_prec) { // NOLINT(misc-no-recursion)
   var_aquire(lhs);
 
-  TokenKind lookahead = peek(s).kind;
+  TokenKind lookahead = peek(s)->kind;
 
   while (is_binary_op(lookahead) && OP_PREC_LOOKUP[lookahead] >= min_prec) {
     TokenKind op = lookahead;
@@ -443,7 +448,7 @@ static ShellVar *eval_expr_1(EvalState *s, ShellVar *lhs, OpPrec min_prec) { // 
       return NULL;
     }
 
-    lookahead = peek(s).kind;
+    lookahead = peek(s)->kind;
 
     while (is_binary_op(lookahead) && OP_PREC_LOOKUP[lookahead] > OP_PREC_LOOKUP[op]) {
       ShellVar *tmp = eval_expr_1(s, rhs, OP_PREC_LOOKUP[op] + 1);
@@ -456,7 +461,7 @@ static ShellVar *eval_expr_1(EvalState *s, ShellVar *lhs, OpPrec min_prec) { // 
 
       rhs = tmp;
 
-      lookahead = peek(s).kind;
+      lookahead = peek(s)->kind;
     }
 
     if (middle != NULL) {
