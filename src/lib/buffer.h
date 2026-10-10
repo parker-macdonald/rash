@@ -128,6 +128,10 @@ void buffer_grow_by(Buffer *self, size_t grow_by);
 // this returns a pointer to the buffer's data casted to a `char *`
 char *buffer_cstr(Buffer *self);
 
+// returns a clone of the data in `self` that is null terminated and cast to a char *
+// the returned pointer must be free'd
+char *buffer_clone_to_cstr(const Buffer *self);
+
 // set the length of a buffer to zero
 void buffer_clear(Buffer *self);
 

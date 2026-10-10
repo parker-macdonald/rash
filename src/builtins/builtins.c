@@ -8,7 +8,7 @@
 #include "lib/vector.h"
 
 void builtins_init(Builtins *self) {
-  TrieNode *root = malloc(sizeof(TrieNode));
+  TrieNode *root = calloc(1, sizeof(TrieNode));
 
   trie_init(root);
 
