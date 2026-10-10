@@ -21,4 +21,6 @@ ShellVar *shell_func_sin(ShellVar *const *args);
 ShellVar *shell_func_cos(ShellVar *const *args);
 ShellVar *shell_func_tan(ShellVar *const *args);
 
+ShellVar *shell_func_arcsin(ShellVar *const *args);
+
 #endif

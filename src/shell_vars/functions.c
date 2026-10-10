@@ -45,3 +45,11 @@ ShellVar *shell_func_tan(ShellVar *const *args) {
 
   return var_create_number(tan(args[0]->number));
 }
+
+ShellVar *shell_func_arcsin(ShellVar *const *args) {
+  if (args[0]->kind != SV_NUMBER) {
+    return var_create_number(NAN);
+  }
+
+  return var_create_number(asin(args[0]->number));
+}

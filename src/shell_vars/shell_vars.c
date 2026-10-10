@@ -273,6 +273,7 @@ void var_state_init(VarState *self) {
   add_function(self, "sin", shell_func_sin, 1);
   add_function(self, "cos", shell_func_cos, 1);
   add_function(self, "tan", shell_func_tan, 1);
+  add_function(self, "arcsin", shell_func_arcsin, 1);
 }
 
 void var_state_destroy(VarState *self) {
