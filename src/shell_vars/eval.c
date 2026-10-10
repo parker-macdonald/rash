@@ -85,7 +85,7 @@ static ShellVar *eval_term(EvalState *s);
 static ShellVar *eval_expr(EvalState *s);
 static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind op);
 
-static ShellVar *eval_function_call(EvalState *s, ShellVar *func, const Buffer *ident) {
+static ShellVar *eval_function_call(EvalState *s, ShellVar *func, const Buffer *ident) { // NOLINT(misc-no-recursion)
   rash_assert(func->kind == SV_FUNCTION, "called eval_function_call with a non-function variable. this should never be reached.");
 
   if (!match(s, TK_O_PAREN)) {

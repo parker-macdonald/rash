@@ -18,7 +18,8 @@ Checks: >
   -readability-isolate-declaration,
   -readability-function-size,
   -readability-braces-around-statements,
-  -readability-implicit-bool-conversion
+  -readability-implicit-bool-conversion,
+  -readability-trailing-comma
 WarningsAsErrors: >
   *,
   -misc-include-cleaner,

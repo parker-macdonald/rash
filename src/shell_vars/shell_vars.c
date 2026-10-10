@@ -54,7 +54,7 @@ ShellVar *var_create_null(void) {
   return var;
 }
 
-ShellVar *var_create_function(ShellVar *(*func)(ShellVar *const *args), unsigned arg_count) {
+static ShellVar *var_create_function(ShellVar *(*func)(ShellVar *const *args), unsigned arg_count) {
   ShellVar *var = malloc(sizeof(ShellVar));
 
   var->kind = SV_FUNCTION;
