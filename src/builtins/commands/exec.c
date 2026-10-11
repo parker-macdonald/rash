@@ -5,6 +5,7 @@
 
 #include "builtins/builtin_funcs.h"
 #include "builtins/builtins.h"
+#include "builtins/trie.h"
 #include "lib/error.h"
 #include "lib/search_path.h"
 #include "global.h"

@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 typedef struct {
   const TokenList *tokens;
@@ -145,12 +146,14 @@ static ShellVar *eval_function_call(EvalState *s, const ShellVar *func, const Bu
   for (size_t i = 0; i < arguments.length; i++) {
     var_release(arguments.data[i]);
   }
+  VECTOR_DESTROY(arguments);
   return return_val;
 
   error:
   for (size_t i = 0; i < arguments.length; i++) {
     var_release(arguments.data[i]);
   }
+  VECTOR_DESTROY(arguments);
   return NULL;
 }
 

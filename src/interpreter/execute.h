@@ -26,7 +26,7 @@ typedef struct {
   int stdin_fd;
   // fd to redirect stderr, or -1
   int stderr_fd;
-  int flags;
+  unsigned flags;
 } ExecutionContext;
 
 int execute(ExecutionContext context);

@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "builtins/builtins.h"
+#include "builtins/trie.h"
 #include "jobs.h"
 #include "lib/error.h"
 #include "lib/search_path.h"

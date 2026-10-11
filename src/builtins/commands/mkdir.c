@@ -156,12 +156,10 @@ int builtin_mkdir(char *const *argv) {
 
   argv--;
 
-  if (!last_failed && cd_flag) {
-    if (chdir(*argv) == -1) {
-      error_f("mkdir: cd: %s: %s\n", *argv, strerror(errno));
+  if (!last_failed && cd_flag && chdir(*argv) == -1) {
+    error_f("mkdir: cd: %s: %s\n", *argv, strerror(errno));
 
-      return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
   }
 
   return EXIT_SUCCESS;

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/utsname.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "lib/buffer.h"
 #include "lib/error.h"
