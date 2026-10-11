@@ -1,8 +1,10 @@
 #!/bin/sh
 
+set -e
+
 mkdir -p test/output/
 
-for i in test/tests/* ; do
+for i in test/end_to_end/* ; do
   echo $i
   if [ -d "$i" ]; then
     output=test/output/$(basename "$i").txt

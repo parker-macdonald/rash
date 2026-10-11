@@ -83,17 +83,17 @@ install:
 	cp -f ${BUILD}/${OUT} ${DESTDIR}${PREFIX}/bin
 	chmod 755 ${DESTDIR}${PREFIX}/bin/${out}
 
-test_buffer: test/test_buffer.c src/lib/buffer.c src/lib/next_pow_2.c src/lib/error.c
+test_buffer: test/unit/test_buffer.c src/lib/buffer.c src/lib/next_pow_2.c src/lib/error.c
 	mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) $(CFLAG_ERRORS) test/test_buffer.c src/lib/buffer.c src/lib/next_pow_2.c src/lib/error.c -o $(BUILD)/$@
+	$(CC) $(CFLAGS) $(CFLAG_ERRORS) test/unit/test_buffer.c src/lib/buffer.c src/lib/next_pow_2.c src/lib/error.c -o $(BUILD)/$@
 
-test_ll: test/test_ll.c src/lib/linked_list.h
+test_ll: test/unit/test_ll.c src/lib/linked_list.h
 	mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) $(CFLAG_ERRORS) test/test_ll.c -o $(BUILD)/$@
+	$(CC) $(CFLAGS) $(CFLAG_ERRORS) test/unit/test_ll.c -o $(BUILD)/$@
 
-test_hash_map: test/test_hash_map.c src/lib/hash_map.c src/lib/hash_map.h
+test_hash_map: test/unit/test_hash_map.c src/lib/hash_map.c src/lib/hash_map.h
 	mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) $(CFLAG_ERRORS) test/test_hash_map.c src/lib/hash_map.c -o $(BUILD)/$@
+	$(CC) $(CFLAGS) $(CFLAG_ERRORS) test/unit/test_hash_map.c src/lib/hash_map.c -o $(BUILD)/$@
 
 .PHONY: test
 
