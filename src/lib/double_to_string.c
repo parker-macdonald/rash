@@ -3,6 +3,8 @@
 #include "lib/buffer.h"
 #include "lib/dynamic_sprintf.h"
 #include "lib/parse.h"
+
+#include <stdlib.h>
 #include <math.h>
 
 Buffer double_to_string(double x) {

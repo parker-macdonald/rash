@@ -9,12 +9,8 @@
 #include "lib/double_to_string.h"
 #include "lib/hash_map.h"
 #include "lib/parse.h"
-#include "lib/slice.h"
 #include "lib/sys.h"
-#include "shell_vars/eval.h"
 #include "shell_vars/functions.h"
-#include "shell_vars/lexer.h"
-#include "shell_vars/token.h"
 
 ShellVar *var_create_string(Buffer string) {
   ShellVar *var = malloc(sizeof(ShellVar));
@@ -93,18 +89,20 @@ void var_release(ShellVar *var) {
 }
 
 ShellVar *var_eval(const char *expr) {
-  Slice source = slice_from_cstr(expr);
-  TokenList list = lex_shell_expr(&source);
+  (void)expr;
+  return NULL;
+  // Slice source = slice_from_cstr(expr);
+  // TokenList list = lex_shell_expr(&source);
 
-  if (list.length == 0) {
-    return NULL;
-  }
+  // if (list.length == 0) {
+  //   return NULL;
+  // }
 
-  ShellVar *var = evaluate_tokens(&list);
+  // ShellVar *var = evaluate_tokens(&list);
 
-  token_list_free(&list);
+  // token_list_free(&list);
 
-  return var;
+  // return var;
 }
 
 Buffer var_to_string(const ShellVar *var) {

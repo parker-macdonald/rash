@@ -115,8 +115,8 @@ int execute(ExecutionContext context) {
     // which kills all child processes.
     _exit(EXIT_FAILURE);
   }
+  
   // in the parent now
-
   if (context.stderr_fd != -1) {
     close_assert(context.stderr_fd);
   }
