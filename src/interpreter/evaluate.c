@@ -642,6 +642,10 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
       continue;
     }
     if (match(s, TK_STDIN_REDIR)) {
+      if (!match(s, TK_ARG_BEGIN)) {
+        error("rash: expected filename after `<`.\n");
+        goto error;
+      }
       char *filename = evaluate_arg(s);
       if (filename == NULL) {
         goto error;
@@ -651,6 +655,10 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
       continue;
     }
     if (match(s, TK_STDIN_REDIR_STRING)) {
+      if (!match(s, TK_ARG_BEGIN)) {
+        error("rash: expected string after `<<<`.\n");
+        goto error;
+      }
       char *string = evaluate_arg(s);
       if (string == NULL) {
         goto error;
@@ -660,6 +668,10 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
       continue;
     }
     if (match(s, TK_STDOUT_REDIR)) {
+      if (!match(s, TK_ARG_BEGIN)) {
+        error("rash: expected string after `>`.\n");
+        goto error;
+      }
       char *filename = evaluate_arg(s);
       if (filename == NULL) {
         goto error;
@@ -669,6 +681,10 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
       continue;
     }
     if (match(s, TK_STDOUT_REDIR_APPEND)) {
+      if (!match(s, TK_ARG_BEGIN)) {
+        error("rash: expected string after `>>`.\n");
+        goto error;
+      }
       char *filename = evaluate_arg(s);
       if (filename == NULL) {
         goto error;
@@ -678,6 +694,10 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
       continue;
     }
     if (match(s, TK_STDERR_REDIR)) {
+      if (!match(s, TK_ARG_BEGIN)) {
+        error("rash: expected string after `2>`.\n");
+        goto error;
+      }
       char *filename = evaluate_arg(s);
       if (filename == NULL) {
         goto error;
@@ -687,6 +707,10 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
       continue;
     }
     if (match(s, TK_STDERR_REDIR_APPEND)) {
+      if (!match(s, TK_ARG_BEGIN)) {
+        error("rash: expected string after `2>>`.\n");
+        goto error;
+      }
       char *filename = evaluate_arg(s);
       if (filename == NULL) {
         goto error;
@@ -696,6 +720,10 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
       continue;
     }
     if (match(s, TK_STDOUT_ERR_REDIR)) {
+      if (!match(s, TK_ARG_BEGIN)) {
+        error("rash: expected string after `&>`.\n");
+        goto error;
+      }
       char *filename = evaluate_arg(s);
       if (filename == NULL) {
         goto error;
@@ -707,6 +735,10 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
       continue;
     }
     if (match(s, TK_STDOUT_ERR_REDIR_APPEND)) {
+      if (!match(s, TK_ARG_BEGIN)) {
+        error("rash: expected string after `&>>`.\n");
+        goto error;
+      }
       char *filename = evaluate_arg(s);
       if (filename == NULL) {
         goto error;
