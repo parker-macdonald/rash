@@ -1,0 +1,3 @@
+echo {2 + 7 * 3}
+echo {2 * 7 + 3}
+echo {"hello " + 67}

@@ -3,3 +3,5 @@ build/
 result
 compile_commands.json
 .cache/
+
+test/output
