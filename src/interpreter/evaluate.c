@@ -16,7 +16,6 @@
 #include "interpreter/execute.h"
 #include "interpreter/glob.h"
 #include "interpreter/token.h"
-#include "lib/attrib.h"
 #include "lib/buffer.h"
 #include "lib/cstrlist.h"
 #include "lib/error.h"
@@ -33,36 +32,29 @@ static bool is_at_end(EvalState *s) {
   return s->current >= s->tokens->length;
 }
 
-static Token advance(EvalState *s) {
+static const Token NONE_TOKEN = { .kind = TK_NONE };
+
+static const Token *advance(EvalState *s) {
   if (is_at_end(s)) {
-    return (Token){.kind = TK_NONE};
+    return &NONE_TOKEN;
   }
 
-  return s->tokens->data[s->current++];
+  return s->tokens->data + (s->current++);
 }
 
-static Token peek(EvalState *s) {
+static const Token *peek(EvalState *s) {
   if (is_at_end(s)) {
-    return (Token){.kind = TK_NONE};
+    return &NONE_TOKEN;
   }
 
-  return s->tokens->data[s->current];
-}
-
-ATTRIB_UNUSED
-static Token peek_prev(EvalState *s) {
-  if (s->current == 0) {
-    return (Token){.kind = TK_NONE};
-  }
-
-  return s->tokens->data[s->current - 1];
+  return s->tokens->data + s->current;
 }
 
 static bool check(EvalState *s, TokenKind kind) {
   if (is_at_end(s)) {
     return false;
   }
-  return peek(s).kind == kind;
+  return peek(s)->kind == kind;
 }
 
 static bool match(EvalState *s, TokenKind kind) {
@@ -74,187 +66,6 @@ static bool match(EvalState *s, TokenKind kind) {
   return false;
 }
 
-static bool match_argument(EvalState *s) {
-  if (!match(s, TK_ARG_BEGIN)) {
-    return false;
-  }
-
-  while (advance(s).kind != TK_ARG_END) {
-    rash_assert(!is_at_end(s), "missing TK_ARG_END token");
-  }
-
-  return true;
-}
-
-static bool bad_syntax(const TokenList *tokens) {
-  EvalState s = {.tokens = tokens, .current = 0};
-
-  if (!match_argument(&s)) {
-    error("rash: invalid first token.\n");
-    return true;
-  }
-
-  int stdout_count = 0;
-  int stderr_count = 0;
-  int stdin_count = 0;
-
-  while (!is_at_end(&s)) {
-    if (match_argument(&s)) {
-      continue;
-    }
-
-    if (match(&s, TK_STDIN_REDIR)) {
-      if (!match_argument(&s)) {
-        error_f("rash: expected filename after ‘<’.\n");
-        return true;
-      }
-
-      stdin_count++;
-    }
-
-    if (match(&s, TK_STDIN_REDIR_STRING)) {
-      if (!match_argument(&s)) {
-        error_f("rash: expected string after ‘<<<’.\n");
-        return true;
-      }
-
-      stdin_count++;
-    }
-
-    if (match(&s, TK_STDOUT_REDIR)) {
-      if (!match_argument(&s)) {
-        error_f("rash: expected filename after ‘>’.\n");
-        return true;
-      }
-
-      stdout_count++;
-    }
-
-    if (match(&s, TK_STDOUT_REDIR_APPEND)) {
-      if (!match_argument(&s)) {
-        error_f("rash: expected filename after ‘>>’.\n");
-        return true;
-      }
-
-      stdout_count++;
-    }
-
-    if (match(&s, TK_STDERR_REDIR)) {
-      if (!match_argument(&s)) {
-        error_f("rash: expected filename after ‘2>’.\n");
-        return true;
-      }
-
-      stderr_count++;
-    }
-
-    if (match(&s, TK_STDERR_REDIR_APPEND)) {
-      if (!match_argument(&s)) {
-        error_f("rash: expected filename after ‘2>>’.\n");
-        return true;
-      }
-
-      stderr_count++;
-    }
-
-    if (match(&s, TK_STDOUT_ERR_REDIR)) {
-      if (!match_argument(&s)) {
-        error_f("rash: expected filename after ‘&>’.\n");
-        return true;
-      }
-
-      stdout_count++;
-      stderr_count++;
-    }
-
-    if (match(&s, TK_STDOUT_ERR_REDIR_APPEND)) {
-      if (!match_argument(&s)) {
-        error_f("rash: expected filename after ‘&>>’.\n");
-        return true;
-      }
-
-      stdout_count++;
-      stderr_count++;
-    }
-
-    bool pipe_flag = false;
-    if (match(&s, TK_PIPE)) {
-      pipe_flag = true;
-
-      if (stdout_count > 0) {
-        error("rash: cannot redirect stdout and pipe into another command.\n");
-        return true;
-      }
-
-      if (!match_argument(&s)) {
-        error_f("rash: expected command after ‘|’.\n");
-        return true;
-      }
-
-      stdout_count++;
-    }
-
-    if (stderr_count > 1) {
-      error_f("rash: cannot redirect stderr more than once.\n");
-      return true;
-    }
-
-    if (stdout_count > 1) {
-      error_f("rash: cannot redirect stdout more than once.\n");
-      return true;
-    }
-
-    if (stdin_count > 1) {
-      error_f("rash: cannot redirect stdin more than once.\n");
-      return true;
-    }
-
-    // set redirection conditions for next command after the pipe
-    if (pipe_flag) {
-      stdout_count = 0;
-      stdin_count = 1;
-      stderr_count = 0;
-    }
-
-    if (match(&s, TK_LOGICAL_OR)) {
-      if (!match_argument(&s)) {
-        error_f("rash: expected command after ‘||’.\n");
-        return true;
-      }
-
-      stdout_count = 0;
-      stdin_count = 0;
-      stderr_count = 0;
-    }
-
-    if (match(&s, TK_LOGICAL_AND)) {
-      if (!match_argument(&s)) {
-        error_f("rash: expected command after ‘&&’.\n");
-        return true;
-      }
-
-      stdout_count = 0;
-      stdin_count = 0;
-      stderr_count = 0;
-    }
-
-    if (match(&s, TK_SEMI)) {
-      stdout_count = 0;
-      stdin_count = 0;
-      stderr_count = 0;
-    }
-
-    if (match(&s, TK_AMP)) {
-      stdout_count = 0;
-      stdin_count = 0;
-      stderr_count = 0;
-    }
-  }
-
-  return false;
-}
-
-ATTRIB_UNUSED
 static void set_exit_code_var(int code) {
   ShellVar *var = var_create_number((double)(code & 0xff));
 
@@ -388,22 +199,22 @@ static char *internal_evaluate_arg(EvalState *s, bool *needs_globbing) {
 
   while (1) {
     if (check(s, TK_ARG_STRING)) {
-      Token token = advance(s);
-      buffer_append(&buffer, &token.buffer);
+      const Token *token = advance(s);
+      buffer_append(&buffer, &token->buffer);
       continue;
     }
 
     if (check(s, TK_ARG_ENV)) {
-      Token token = advance(s);
-      if (insert_env(&buffer, &token.buffer)) {
+      const Token *token = advance(s);
+      if (insert_env(&buffer, &token->buffer)) {
         goto error;
       }
       continue;
     }
 
     if (check(s, TK_ARG_TILDE)) {
-      Token token = advance(s);
-      if (insert_tilde(&buffer, &token.buffer)) {
+      const Token *token = advance(s);
+      if (insert_tilde(&buffer, &token->buffer)) {
         goto error;
       }
       continue;
@@ -417,8 +228,8 @@ static char *internal_evaluate_arg(EvalState *s, bool *needs_globbing) {
     }
 
     if (check(s, TK_ARG_SUBSHELL)) {
-      Token token = advance(s);
-      if (insert_subshell(&buffer, &token.buffer)) {
+      const Token *token = advance(s);
+      if (insert_subshell(&buffer, &token->buffer)) {
         goto error;
       }
       continue;
@@ -563,6 +374,8 @@ typedef enum {
 typedef struct Command {
   char *const *argv;
 
+  bool background;
+
   struct {
     StdoutKind kind;
     union {
@@ -625,11 +438,20 @@ static void command_destroy(Command *cmd) { // NOLINT(misc-no-recursion)
   }
 }
 
+static char *read_string_after_token(EvalState *s, TokenKind kind) {
+  if (!match(s, TK_ARG_BEGIN)) {
+    error_f("rash: expected string after %s.\n", get_token_kind_name(kind));
+    return NULL;
+  }
+  return evaluate_arg(s);
+}
+
 static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
   CStrList argv = {0};
 
   Command *command = malloc(sizeof(Command));
   command->argv = NULL;
+  command->background = false;
   command->stderr_.kind = STDERR_DEFAULT;
   command->stdin_.kind = STDIN_DEFAULT;
   command->stdout_.kind = STDOUT_DEFAULT;
@@ -647,91 +469,128 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
       VECTOR_DESTROY(args);
       continue;
     }
-    if (match(s, TK_STDIN_REDIR)) {
-      if (!match(s, TK_ARG_BEGIN)) {
-        error("rash: expected filename after `<`.\n");
+
+    if (match(s, TK_AMP)) {
+      if (command->background) {
+        error("rash: duplicate `&` on command.\n");
         goto error;
       }
-      char *filename = evaluate_arg(s);
+      command->background = true;
+    }
+
+    if (match(s, TK_STDIN_REDIR)) {
+      char *filename = read_string_after_token(s, TK_STDIN_REDIR);
+
       if (filename == NULL) {
         goto error;
       }
+
+      if (command->stdin_.kind != STDIN_DEFAULT) {
+        error("rash: cannot redirect stdin more than once.\n");
+        goto error;
+      }
+      
       command->stdin_.kind = STDIN_FILE;
       command->stdin_.filename = filename;
       continue;
     }
+
     if (match(s, TK_STDIN_REDIR_STRING)) {
-      if (!match(s, TK_ARG_BEGIN)) {
-        error("rash: expected string after `<<<`.\n");
-        goto error;
-      }
-      char *string = evaluate_arg(s);
-      if (string == NULL) {
-        goto error;
-      }
-      command->stdin_.kind = STDIN_STRING;
-      command->stdin_.string = string;
-      continue;
-    }
-    if (match(s, TK_STDOUT_REDIR)) {
-      if (!match(s, TK_ARG_BEGIN)) {
-        error("rash: expected string after `>`.\n");
-        goto error;
-      }
-      char *filename = evaluate_arg(s);
+      char *filename = read_string_after_token(s, TK_STDIN_REDIR_STRING);
+
       if (filename == NULL) {
         goto error;
       }
+
+      if (command->stdin_.kind != STDIN_DEFAULT) {
+        error("rash: cannot redirect stdin more than once.\n");
+        goto error;
+      }
+
+      command->stdin_.kind = STDIN_STRING;
+      command->stdin_.string = filename;
+      continue;
+    }
+
+    if (match(s, TK_STDOUT_REDIR)) {
+      char *filename = read_string_after_token(s, TK_STDOUT_REDIR);
+
+      if (filename == NULL) {
+        goto error;
+      }
+
+      if (command->stdout_.kind != STDOUT_DEFAULT) {
+        error("rash: cannot redirect stdout more than once.\n");
+        goto error;
+      }
+
       command->stdout_.kind = STDOUT_FILE_TRUNCATE;
       command->stdout_.filename = filename;
       continue;
     }
+
     if (match(s, TK_STDOUT_REDIR_APPEND)) {
-      if (!match(s, TK_ARG_BEGIN)) {
-        error("rash: expected string after `>>`.\n");
-        goto error;
-      }
-      char *filename = evaluate_arg(s);
+      char *filename = read_string_after_token(s, TK_STDOUT_REDIR_APPEND);
+
       if (filename == NULL) {
         goto error;
       }
+
+      if (command->stdout_.kind != STDOUT_DEFAULT) {
+        error("rash: cannot redirect stdout more than once.\n");
+        goto error;
+      }
+
       command->stdout_.kind = STDOUT_FILE_APPEND;
       command->stdout_.filename = filename;
       continue;
     }
+
     if (match(s, TK_STDERR_REDIR)) {
-      if (!match(s, TK_ARG_BEGIN)) {
-        error("rash: expected string after `2>`.\n");
+      char *filename = read_string_after_token(s, TK_STDERR_REDIR);
+
+      if (filename == NULL) {
         goto error;
       }
-      char *filename = evaluate_arg(s);
-      if (filename == NULL) {
+
+      if (command->stderr_.kind != STDERR_DEFAULT) {
+        error("rash: cannot redirect stdout more than once.\n");
         goto error;
       }
       command->stderr_.kind = STDERR_FILE_TRUNCATE;
       command->stderr_.filename = filename;
       continue;
     }
+
     if (match(s, TK_STDERR_REDIR_APPEND)) {
-      if (!match(s, TK_ARG_BEGIN)) {
-        error("rash: expected string after `2>>`.\n");
+      char *filename = read_string_after_token(s, TK_STDERR_REDIR);
+
+      if (filename == NULL) {
         goto error;
       }
-      char *filename = evaluate_arg(s);
-      if (filename == NULL) {
+
+      if (command->stderr_.kind != STDERR_DEFAULT) {
+        error("rash: cannot redirect stderr more than once.\n");
         goto error;
       }
       command->stderr_.kind = STDERR_FILE_APPEND;
       command->stderr_.filename = filename;
       continue;
     }
+
     if (match(s, TK_STDOUT_ERR_REDIR)) {
-      if (!match(s, TK_ARG_BEGIN)) {
-        error("rash: expected string after `&>`.\n");
+      char *filename = read_string_after_token(s, TK_STDOUT_ERR_REDIR);
+
+      if (filename == NULL) {
         goto error;
       }
-      char *filename = evaluate_arg(s);
-      if (filename == NULL) {
+
+      if (command->stdout_.kind != STDOUT_DEFAULT) {
+        error("rash: cannot redirect stdout more than once.\n");
+        goto error;
+      }
+      if (command->stderr_.kind != STDERR_DEFAULT) {
+        error("rash: cannot redirect stdout more than once.\n");
         goto error;
       }
       command->stderr_.kind = STDERR_FILE_TRUNCATE;
@@ -741,12 +600,18 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
       continue;
     }
     if (match(s, TK_STDOUT_ERR_REDIR_APPEND)) {
-      if (!match(s, TK_ARG_BEGIN)) {
-        error("rash: expected string after `&>>`.\n");
+      char *filename = read_string_after_token(s, TK_STDOUT_ERR_REDIR_APPEND);
+
+      if (filename == NULL) {
         goto error;
       }
-      char *filename = evaluate_arg(s);
-      if (filename == NULL) {
+
+      if (command->stdout_.kind != STDOUT_DEFAULT) {
+        error("rash: cannot redirect stdout more than once.\n");
+        goto error;
+      }
+      if (command->stderr_.kind != STDERR_DEFAULT) {
+        error("rash: cannot redirect stdout more than once.\n");
         goto error;
       }
       command->stderr_.kind = STDERR_FILE_APPEND;
@@ -755,9 +620,18 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
       command->stdout_.filename = strdup(filename);
       continue;
     }
+
     if (match(s, TK_PIPE)) {
-      command->stdout_.kind = STDOUT_PIPE;
+      if (command->stdout_.kind != STDOUT_DEFAULT) {
+        error("rash: cannot redirect stdout more than once.\n");
+        goto error;
+      }
+
       command->stdout_.pipe_to = parse_command(s);
+      if (command->stdout_.pipe_to == NULL) {
+        goto error;
+      }
+      command->stdout_.kind = STDOUT_PIPE;
     }
     break;
   }
@@ -775,7 +649,9 @@ error:
 /// returns the fd of the stdin to the next command in the pipeline, or 0 if no
 /// further commands exist, -1 is returned on error
 static int command_to_execution_context(
-    ExecutionContext *out, const Command *command, int stdin_fd
+  ExecutionContext *out,
+  const Command *command,
+  int stdin_fd
 ) {
   int stdout_fd = -1;
   int stderr_fd = -1;
@@ -869,6 +745,10 @@ static int command_to_execution_context(
   out->stderr_fd = stderr_fd;
   out->stdout_fd = stdout_fd;
   out->stdin_fd = stdin_fd;
+  out->flags = 0;
+  if (command->background) {
+    out->flags |= EC_BACKGROUND_JOB;
+  }
 
   return next_fd;
 
@@ -916,7 +796,7 @@ static int dispatch_external_command(Command *command) {
   for (size_t i = 0; i < list.length - 1; i++) {
     // if execute fails it will free all resources associated with the execution
     // context, so not really much else we can do...
-    list.data[i].flags = EC_NO_WAIT;
+    list.data[i].flags |= EC_NO_WAIT;
     pids[i] = execute(list.data[i]);
   }
 
@@ -940,10 +820,6 @@ error:
 }
 
 int evaluate(const TokenList *tokens) {
-  if (bad_syntax(tokens)) {
-    return EXIT_FAILURE;
-  }
-
   EvalState s = {.tokens = tokens, .current = 0};
 
   int status = 0;
@@ -985,7 +861,9 @@ int evaluate(const TokenList *tokens) {
       // short circuit
       break;
     }
-    unreachable();
+
+    error_f("rash: expected some type of command separator (i.e. `||`, `&&`, or `|`) but found %s.\n", get_token_kind_name(peek(&s)->kind));
+    return -1;
   }
 
   return status;

@@ -6,18 +6,24 @@
 
 // the string `echo "shell lvl: ${SHLVL}"; echo c files: src/*.c` lexed looks like:
 
+// TK_ARG_BEING
 // TK_ARG_STRING("echo")
 // TK_ARG_END
+// TK_ARG_BEGIN
 // TK_ARG_STRING("shell lvl: ")
 // TK_ARG_ENV("SHLVL")
 // TK_ARG_END
 // TK_SEMI
+// TK_ARG_BEGIN
 // TK_ARG_STRING("echo")
 // TK_ARG_END
+// TK_ARG_BEGIN
 // TK_ARG_STRING("c")
 // TK_ARG_END
+// TK_ARG_BEGIN
 // TK_ARG_STRING("files:")
 // TK_ARG_END
+// TK_ARG_BEGIN
 // TK_ARG_STRING("src/")
 // TK_ARG_WILDCARD
 // TK_ARG_STRING(".c")
@@ -28,9 +34,11 @@
 // connected argument tokens make up a single element of argv in a command.
 // for example `~/$EXAMPLE_FOLDER` will lex to:
 
+// TK_ARG_BEGIN
 // TK_ARG_TILDE("")
 // TK_ARG_STRING("/")
 // TK_ARG_ENV("EXAMPLE_FOLDER")
+// TK_ARG_END
 
 // when this gets evaluated these operations will be preformed one after another appending to a string
 // that contains the final element of argv. that element might look like `/root/example`
@@ -147,5 +155,7 @@ typedef VECTOR(Token) TokenList;
 void token_destroy(Token *token);
 
 void token_list_destroy(TokenList *list);
+
+const char *get_token_kind_name(TokenKind kind);
 
 #endif

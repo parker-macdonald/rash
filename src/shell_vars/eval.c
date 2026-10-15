@@ -42,32 +42,6 @@ static const OpPrec OP_PREC_LOOKUP[] = {
   [TK_SE_QUESTION] = PREC_TERNARY
 };
 
-static const char *TOKEN_KIND_NAMES[] = {
-  [TK_SE_NONE] = "None",
-  [TK_SE_ADD] = "`+`",
-  [TK_SE_SUB] = "`-`",
-  [TK_SE_MUL] = "`*`",
-  [TK_SE_POW] = "`**`",
-  [TK_SE_DIV] = "`/`",
-  [TK_SE_MOD] = "`%`",
-  [TK_SE_EQ] = "`==`",
-  [TK_SE_NEQ] = "`!=`",
-  [TK_SE_GT] = "`>`",
-  [TK_SE_LT] = "`<`",
-  [TK_SE_GTE] = "`>=`",
-  [TK_SE_LTE] = "`<=`",
-  [TK_SE_NOT] = "`!`",
-  [TK_SE_O_PAREN] = "`(`",
-  [TK_SE_C_PAREN] = "`)`",
-  [TK_SE_STRING_LIT] = "string literal",
-  [TK_SE_NUMBER_LIT] = "number literal",
-  [TK_SE_NULL_LIT] = "`null`",
-  [TK_SE_TRUE_LIT] = "`true`",
-  [TK_SE_FALSE_LIT] = "`false`",
-  [TK_SE_IDENTIFIER] = "identifier"
-};
-
-
 static bool is_at_end(EvalState *s) {
   return s->current >= s->tokens->length;
 }
@@ -299,7 +273,7 @@ static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
     return var;
   }
 
-  error_f("shell expression: expected term but found %s.\n", TOKEN_KIND_NAMES[peek(s)->kind]);
+  error_f("shell expression: expected term but found %s.\n", get_token_kind_name(peek(s)->kind));
   return NULL;
 }
 
