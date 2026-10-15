@@ -287,6 +287,12 @@ static int insert_shell_expr(Buffer *buffer, EvalState *s) {
     return -1;
   }
 
+  if (!match(s, TK_SE_END)) {
+    error("shell expression: expected end of input.\n");
+    var_release(var);
+    return -1;
+  }
+
   Buffer var_str = var_to_string(var);
   var_release(var);
 

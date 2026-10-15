@@ -1,7 +1,6 @@
 #include "interactive_reader.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 
 #include "lib/buffer.h"
 #include "lib/utf_8.h"
@@ -28,15 +27,11 @@ void interactive_reader_destroy(InteractiveReader *self) {
 static void reader_begin(InteractiveReader *self) {
   enable_raw_mode();
 
-  char *prompt_cstr = var_eval_to_string(buffer_cstr(&instance.interactive_prompt));
-
-  if (prompt_cstr == NULL) {
+  if (var_eval_to_string(&instance.interactive_prompt, &self->prompt)) {
+    // on error set the prompt to "$ "
     self->prompt = buffer_from_cstr("$ ");
-  } else {
-    self->prompt = buffer_from_cstr(prompt_cstr);
   }
 
-  free(prompt_cstr);
   self->prompt_length = utf8_count_codepoint(&self->prompt);
 
   self->buffer = buffer_create(16);

@@ -5,11 +5,15 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "interpreter/evaluate.h"
+#include "interpreter/lex.h"
+#include "interpreter/token.h"
 #include "lib/buffer.h"
 #include "lib/double_to_string.h"
 #include "lib/hash_map.h"
 #include "lib/parse.h"
 #include "lib/sys.h"
+#include "shell_vars/eval.h"
 #include "shell_vars/functions.h"
 
 ShellVar *var_create_string(Buffer string) {
@@ -88,21 +92,26 @@ void var_release(ShellVar *var) {
   }
 }
 
-ShellVar *var_eval(const char *expr) {
-  (void)expr;
-  return NULL;
-  // Slice source = slice_from_cstr(expr);
-  // TokenList list = lex_shell_expr(&source);
+ShellVar *var_eval(const Buffer *expr) {
+  TokenList list = lex_shell_expr(expr);
 
-  // if (list.length == 0) {
-  //   return NULL;
-  // }
+  if (list.length == 0) {
+    return NULL;
+  }
 
-  // ShellVar *var = evaluate_tokens(&list);
+  EvalState state = { .tokens = &list, .current = 0 };
+  ShellVar *var = evaluate_tokens(&state);
 
-  // token_list_free(&list);
+  // !is_at_end
+  if (state.current < state.tokens->length) {
+    error("shell expression: expected end of input.\n");
+    var_release(var);
+    return NULL;
+  }
 
-  // return var;
+  token_list_destroy(&list);
+
+  return var;
 }
 
 Buffer var_to_string(const ShellVar *var) {
@@ -201,17 +210,18 @@ ShellVar *var_cast_to_number(const ShellVar *var) {
   return var_create_number(number);
 }
 
-char *var_eval_to_string(const char *expr) {
+int var_eval_to_string(const Buffer *expr, Buffer *out) {
   ShellVar *var = var_eval(expr);
 
   if (var == NULL) {
-    return NULL;
+    return -1;
   }
 
   Buffer buffer = var_to_string(var);
   var_release(var);
 
-  return buffer_cstr(&buffer);
+  *out = buffer;
+  return 0;
 }
 
 static void var_destructor(void *ptr) {

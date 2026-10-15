@@ -135,7 +135,8 @@ static int shell_expr_string(LexState *s) {
 
   // Trim the surrounding quotes.
   Buffer value = buffer_from_ptr(
-      s->source->u8_ptr + s->start + 1, s->current - s->start - 2
+    s->source->u8_ptr + s->start + 1,
+    s->current - s->start - 2
   );
   add_buffer_token(s, TK_SE_STRING_LIT, value);
   return 0;
@@ -198,134 +199,165 @@ static int shell_expr_identifier(LexState *s) {
   return 0;
 }
 
-static int shell_expr(LexState *s) {
-  add_token(s, TK_SE_BEGIN);
-
-  while (1) {
-    uint8_t c = advance(s);
-
-    switch (c) {
-      case '(':
+static int standalone_shell_expr(LexState *s) {
+  while (!is_at_end(s)) {
+    s->start = s->current;
+    
+      if (match(s, '(')) {
         add_token(s, TK_SE_O_PAREN);
-        break;
+        continue;
+      }
 
-      case ')':
+      if (match(s, ')')) {
         add_token(s, TK_SE_C_PAREN);
-        break;
+        continue;
+      }
 
-      case '+':
+      if (match(s, '+')) {
         add_token(s, TK_SE_ADD);
-        break;
+        continue;
+      }
 
-      case '-':
+      if (match(s, '-')) {
         add_token(s, TK_SE_SUB);
-        break;
+        continue;
+      }
 
-      case '*':
+      if (match(s, '*')) {
         if (match(s, '*')) {
           add_token(s, TK_SE_POW);
-          break;
+          continue;
         }
         add_token(s, TK_SE_MUL);
-        break;
+        continue;
+      }
 
-      case '/':
+      if (match(s, '/')) {
         add_token(s, TK_SE_DIV);
-        break;
+        continue;
+      }
 
-      case '%':
+      if (match(s, '%')) {
         add_token(s, TK_SE_MOD);
-        break;
+        continue;
+      }
 
-      case '=':
+      if (match(s, '=')) {
         if (match(s, '=')) {
           add_token(s, TK_SE_EQ);
-          break;
+          continue;
         }
 
-        // TODO: error handling
         error("shell expression: found stray `=`.\n");
         return -1;
+      }
 
-      case '!':
+      if (match(s, '!')) {
         if (match(s, '=')) {
           add_token(s, TK_SE_NEQ);
-          break;
+          continue;
         }
         add_token(s, TK_SE_NOT);
-        break;
+        continue;
+      }
 
-      case '>':
+      if (match(s, '>')) {
         if (match(s, '=')) {
           add_token(s, TK_SE_GTE);
-          break;
+          continue;
         }
         add_token(s, TK_SE_GT);
-        break;
+        continue;
+      }
 
-      case '<':
+      if (match(s, '<')) {
         if (match(s, '=')) {
           add_token(s, TK_SE_LTE);
-          break;
+          continue;
         }
         add_token(s, TK_SE_LT);
-        break;
+        continue;
+      }
 
-      case '?':
+      if (match(s, '?')) {
         add_token(s, TK_SE_QUESTION);
-        break;
+        continue;
+      }
 
-      case ':':
+      if (match(s, ':')) {
         add_token(s, TK_SE_COLON);
-        break;
+        continue;
+      }
 
-      case ',':
+      if (match(s, ',')) {
         add_token(s, TK_SE_COMMA);
-        break;
+        continue;
+      }
 
-      case '"':
+      if (match(s, '"')) {
         if (shell_expr_string(s)) {
           return -1;
         }
-        break;
+        continue;
+      }
 
-      case ' ':
-      case '\r':
-      case '\t':
-      case '\n':
-        // Ignore whitespace.
-        break;
+      if (match(s, ' ')) {
+        continue;
+      }
 
-      // end of shell expression
-      case '}':
-        add_token(s, TK_SE_END);
-        return 0;
-
-      default:
-        if (isdigit((int)c)) {
-          if (shell_expr_number(s)) {
-            return -1;
-          }
-          break;
+      if (isdigit((int)peek(s))) {
+        advance(s);
+        if (shell_expr_number(s)) {
+          return -1;
         }
-        if (is_begin_ident(c)) {
-          if (shell_expr_identifier(s)) {
-            return -1;
-          }
-          break;
+        continue;
+      }
+      if (is_begin_ident(peek(s))) {
+        advance(s);
+        if (shell_expr_identifier(s)) {
+          return -1;
         }
+        continue;
+      }
 
-        error_f("shell expression: unrecognized character `%c`.\n", c);
-        return -1;
-    }
-
-    if (is_at_end(s)) {
-      error_f("rash: expected closing ‘}’ character.\n");
-      return -1;
-    }
+      // unrecognized character, stop lexing shell expr
+      break;
   }
 
   return 0;
+}
+
+static int shell_expr(LexState *s) {
+  add_token(s, TK_SE_BEGIN);
+  if (standalone_shell_expr(s)) {
+    return -1;
+  }
+  if (!match(s, '}')) {
+    error_f("rash: expected closing ‘}’ character.\n");
+    return -1;
+  }
+  add_token(s, TK_SE_END);
+  return 0;
+}
+
+TokenList lex_shell_expr(const Buffer *source) {
+  LexState state = {.source = source, .current = 0, .start = 0};
+
+  VECTOR_INIT(state.tokens);
+
+  
+  if (standalone_shell_expr(&state)) {
+    token_list_destroy(&state.tokens);
+    return (TokenList){.length = 0, ._capacity = 0, .data = NULL};
+  }
+
+  if (!is_at_end(&state)) {
+    error_f("shell expression: unrecognized character `%c`.\n", peek(&state));
+    token_list_destroy(&state.tokens);
+    return (TokenList){.length = 0, ._capacity = 0, .data = NULL};
+  }
+
+  return state.tokens;
 }
 
 // what is and isn't allowed in a username isn't set in stone. i'm limiting it
@@ -488,6 +520,7 @@ static int single_quote(LexState *s, Buffer *current_word) {
 }
 
 static int argument(LexState *s) {
+  s->start = s->current;
   add_token(s, TK_ARG_BEGIN);
 
   Buffer current_word = buffer_create(16);
@@ -663,9 +696,7 @@ static int scan_token(LexState *s) {
 }
 
 TokenList lex(const Buffer *source) {
-  LexState state = {
-      .source = source, .current = 0, .start = 0
-  };
+  LexState state = {.source = source, .current = 0, .start = 0};
 
   VECTOR_INIT(state.tokens);
 

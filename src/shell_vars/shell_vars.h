@@ -43,9 +43,9 @@ ShellVar *var_cast_to_string(const ShellVar *var);
 ShellVar *var_cast_to_boolean(const ShellVar *var);
 ShellVar *var_cast_to_number(const ShellVar *var);
 
-ShellVar *var_eval(const char *expr);
+ShellVar *var_eval(const Buffer *expr);
 
-char *var_eval_to_string(const char *expr);
+int var_eval_to_string(const Buffer *expr, Buffer *out);
 
 // functions below for messing with the internal hashmap of shellvars to
 // identifiers

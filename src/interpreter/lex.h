@@ -6,4 +6,6 @@
 
 TokenList lex(const Buffer *source);
 
+TokenList lex_shell_expr(const Buffer *source);
+
 #endif

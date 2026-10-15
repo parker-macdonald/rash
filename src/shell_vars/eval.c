@@ -540,11 +540,5 @@ ShellVar *evaluate_tokens(EvalState *s) {
     return NULL;
   }
 
-  if (!match(s, TK_SE_END)) {
-    error("shell expression: expected end of input.\n");
-    var_release(result);
-    return NULL;
-  }
-
   return result;
 }
