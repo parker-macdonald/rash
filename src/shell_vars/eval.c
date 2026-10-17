@@ -3,6 +3,7 @@
 #include "lib/buffer.h"
 #include "lib/vector.h"
 #include "lib/error.h"
+#include "interpreter/token.h"
 #include "global.h"
 #include "shell_vars/shell_vars.h"
 #include "shell_vars/functions.h"

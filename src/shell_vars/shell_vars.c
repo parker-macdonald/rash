@@ -179,7 +179,7 @@ ShellVar *var_cast_to_boolean(const ShellVar *var) {
 }
 
 ShellVar *var_cast_to_number(const ShellVar *var) {
-  double number;
+  double number = 0.0;
 
   switch (var->kind) {
     case SV_NUMBER:

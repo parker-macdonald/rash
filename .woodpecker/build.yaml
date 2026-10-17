@@ -1,9 +1,12 @@
+when:
+  - event: push
+
 matrix:
   COMPILER:
-    - gcc:16
+    - gcc:latest
     - gcc:15
     - gcc:14
-    - silkeh/clang:23
+    - silkeh/clang:latest
     - silkeh/clang:22
     - silkeh/clang:21
 
@@ -12,4 +15,7 @@ steps:
     image: ${COMPILER}
     commands:
       - make CC=cc DEBUG=0
+  - name: test
+    image: ${COMPILER}
+    commands:
       - make test CC=cc DEBUG=0

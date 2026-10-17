@@ -2,7 +2,6 @@
 #define ERROR_H
 
 #include "lib/attrib.h"
-#include <unistd.h>
 
 void error(const char *str);
 

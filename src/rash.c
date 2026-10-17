@@ -77,7 +77,7 @@ static RashInstanceInitResult rash_instance_interactive(Rash *out, char *argv0) 
 
   set_shlvl();
 
-  // load_rashrc();
+  load_rashrc();
 
   return INIT_SUCCESS;
 }

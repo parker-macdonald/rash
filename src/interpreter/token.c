@@ -3,6 +3,8 @@
 #include "lib/error.h"
 #include "lib/vector.h"
 
+#include <stddef.h>
+
 void token_destroy(Token *token) {
   if (IS_BUFFER_TOKEN(token->kind)) {
     buffer_destroy(&token->buffer);

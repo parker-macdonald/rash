@@ -6,6 +6,7 @@
 #include "readers/generic_reader.h"
 #include "readers/interactive_reader/types.h"
 #include "shell_vars/shell_vars.h"
+#include "lib/buffer.h"
 
 typedef struct {
   char *argv0;

@@ -2,6 +2,7 @@
 #define REPL_H
 
 #include "readers/generic_reader.h"
+#include "lib/buffer.h"
 
 int repl(GenericReader *reader);
 

@@ -1,5 +1,6 @@
 #include "token.h"
 #include "lib/error.h"
+#include "interpreter/token.h"
 
 bool is_binary_op(TokenKind kind) {
   switch (kind) {

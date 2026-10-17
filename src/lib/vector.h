@@ -145,21 +145,26 @@ printf("%s", string.data); // hi
 #define VECTOR_INIT(...)                                                       \
   USE_VECTOR_INIT_INSTEAD_OF_THIS(__VA_ARGS__, VECTOR_DEFAULT_SIZE, unused)
 
-#define VECTOR_PUSH(vector, value)                                             \
-  do {                                                                         \
-    if ((vector)._capacity <= (vector).length) {                               \
-      if ((vector)._capacity == 0)                                             \
-        (vector)._capacity = (vector).length + 1;                              \
-      else                                                                     \
-        (vector)._capacity *= 2;                                               \
-      void *_data =                                                            \
-          realloc((vector).data, sizeof(*(vector).data) * (vector)._capacity); \
-      if (_data == NULL)                                                       \
-        abort();                                                               \
-      (vector).data = _data;                                                   \
-    }                                                                          \
-    (vector).data[(vector).length] = value;                                    \
-    (vector).length++;                                                         \
+#define VECTOR_PUSH(vector, value) \
+  do { \
+    if ((vector)._capacity <= (vector).length) { \
+      if ((vector)._capacity == 0) { \
+        (vector)._capacity = (vector).length + 1; \
+      } \
+      else { \
+        (vector)._capacity *= 2; \
+      } \
+      void *_data = realloc( \
+        (vector).data, \
+        sizeof(*(vector).data) * (vector)._capacity /* NOLINT(bugprone-sizeof-expression) */ \
+      ); \
+      if (_data == NULL) { \
+        abort(); \
+      } \
+      (vector).data = _data; \
+    } \
+    (vector).data[(vector).length] = value; \
+    (vector).length++; \
   } while (0)
 
 #define VECTOR_PUSH_NOTHING(vector)                                            \

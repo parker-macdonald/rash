@@ -6,16 +6,16 @@
 
 // this flag tells execute not to wait for the program to finish and add it to
 // the registered jobs
-#define EC_BACKGROUND_JOB (1)
+#define EC_BACKGROUND_JOB (1U)
 // this flag tells execute not to wait for the program to finish and instead
 // return the pid (pids and ints are the same size). this flag is mutually
 // exclusive with EC_BACKGROUND_JOB
-#define EC_NO_WAIT (1 << 1)
+#define EC_NO_WAIT (1U << 1U)
 // this flag tells execute to not call tcsetpgrp (sets the process to the
 // foreground process of the tty) on the spawned process. this is useful for
 // spawning pipelines where only the last command of the pipeline is the only
 // foreground process. this flag is also implied by EC_BACKGROUND_JOB
-#define EC_DONT_REGISTER_FOREGROUND (1 << 2)
+#define EC_DONT_REGISTER_FOREGROUND (1U << 2U)
 
 typedef struct {
   // arguments for command

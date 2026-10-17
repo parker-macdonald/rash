@@ -5,7 +5,6 @@
 #include "lib/error.h"
 
 #include <signal.h>
-#include <unistd.h>
 
 #define signal_assert(sig, handler) rash_assert(signal((sig), (handler)) != SIG_ERR, "signal failed")
 #define dup2_assert(fd1, fd2) rash_assert(dup2((fd1), (fd2)) != -1, "dup2 failed")

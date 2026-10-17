@@ -2,6 +2,7 @@
 #define PARSER_H
 
 #include "interpreter/token.h"
+#include <stddef.h>
 
 typedef struct {
   const TokenList *tokens;

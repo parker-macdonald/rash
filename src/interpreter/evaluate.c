@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/wait.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "global.h"
@@ -67,7 +67,7 @@ static bool match(EvalState *s, TokenKind kind) {
 }
 
 static void set_exit_code_var(int code) {
-  ShellVar *var = var_create_number((double)(code & 0xff));
+  ShellVar *var = var_create_number((double)((unsigned)code & 0xffU));
 
   var_state_var_set(&instance.var_state, "LAST_STATUS", var);
 
@@ -436,6 +436,8 @@ static void command_destroy(Command *cmd) { // NOLINT(misc-no-recursion)
       free(cmd->stdin_.string);
       break;
   }
+
+  free(cmd);
 }
 
 static char *read_string_after_token(EvalState *s, TokenKind kind) {
@@ -642,6 +644,7 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
   return command;
 
 error:
+  VECTOR_DESTROY(argv);
   command_destroy(command);
   return NULL;
 }
@@ -791,9 +794,19 @@ static int dispatch_external_command(Command *command) {
     assert(command != NULL);
   }
 
-  pid_t *pids = malloc(sizeof(pid_t) * (list.length - 1));
+  rash_assert(list.length != 0, "command list length should never be zero.");
 
-  for (size_t i = 0; i < list.length - 1; i++) {
+  if (list.length == 1) {
+    int status = execute(list.data[list.length - 1]);
+    VECTOR_DESTROY(list);
+    return status;
+  }
+
+  size_t background_cmd_count = list.length - 1;
+
+  pid_t *pids = malloc(sizeof(pid_t) * background_cmd_count);
+
+  for (size_t i = 0; i < background_cmd_count; i++) {
     // if execute fails it will free all resources associated with the execution
     // context, so not really much else we can do...
     list.data[i].flags |= EC_NO_WAIT;
@@ -801,14 +814,14 @@ static int dispatch_external_command(Command *command) {
   }
 
   int status = execute(list.data[list.length - 1]);
-  for (size_t i = 0; i < list.length - 1; i++) {
+  for (size_t i = 0; i < background_cmd_count; i++) {
     if (pids[i] != -1) {
       status = status || wait_process(pids[i]);
     }
   }
 
   free(pids);
-  free(list.data);
+  VECTOR_DESTROY(list);
 
   return status;
 
