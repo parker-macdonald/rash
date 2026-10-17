@@ -1,11 +1,11 @@
 matrix:
   COMPILER:
-    - gcc:12
-    - gcc:13
-    - gcc:14
-    - gcc:15
     - gcc:16
-    - silkeh/clang
+    - gcc:15
+    - gcc:14
+    - silkeh/clang:23
+    - silkeh/clang:22
+    - silkeh/clang:21
 
 steps:
   - name: build
