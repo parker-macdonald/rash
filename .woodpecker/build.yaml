@@ -9,6 +9,7 @@ matrix:
     - silkeh/clang:latest
     - silkeh/clang:22
     - silkeh/clang:21
+    - silkeh/clang:20
 
 steps:
   - name: build
