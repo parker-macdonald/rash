@@ -10,6 +10,7 @@
 #include "interpreter/token.h"
 #include "lib/buffer.h"
 #include "lib/double_to_string.h"
+#include "lib/error.h"
 #include "lib/hash_map.h"
 #include "lib/parse.h"
 #include "lib/sys.h"
@@ -152,6 +153,8 @@ bool var_to_boolean(const ShellVar *var) {
     case SV_FUNCTION:
       return true;
   }
+
+  unreachable();
 }
 
 const char *var_kind_to_string(ShellVarKind kind) {

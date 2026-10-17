@@ -107,8 +107,7 @@ static ShellVar *eval_function_call(EvalState *s, const ShellVar *func, const Bu
     return return_val;
   }
 
-  VECTOR(ShellVar *) arguments;
-  VECTOR_INIT(arguments, 0);
+  VECTOR(ShellVar *) arguments = {0};
   
   ShellVar *arg0 = eval_expr(s);
 

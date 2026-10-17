@@ -1,5 +1,6 @@
 #include "interpreter/token.h"
 #include "lib/buffer.h"
+#include "lib/error.h"
 #include "lib/vector.h"
 
 void token_destroy(Token *token) {
@@ -117,4 +118,6 @@ const char *get_token_kind_name(TokenKind kind) {
     case TK_SE_IDENTIFIER:
       return "identifier";
   }
+
+  unreachable();
 }
