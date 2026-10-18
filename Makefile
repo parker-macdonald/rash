@@ -6,10 +6,7 @@ PREFIX := /usr/local
 SANITIZER :=
 INCLUDE := -Isrc/
 CFLAGS := -std=c17 -D_DEFAULT_SOURCE -DVERSION=\"$(VERSION)\" -DRELEASED=\"$(RELEASED)\" $(INCLUDE)
-# before you say im a masocist for using -Wnewline-eof willingly, old versions
-# of clang enable it with -Wall or -Wextra, so if i dont enable it here builds 
-# will fail on older versions of clang
-CFLAG_ERRORS := -Werror -Wall -Wvla -Wextra -Wunreachable-code -Wshadow -Wpedantic -Wconversion -Wnewline-eof
+CFLAG_ERRORS := -Werror -Wall -Wvla -Wextra -Wunreachable-code -Wshadow -Wpedantic -Wconversion
 LDFLAGS := -lm
 CC := clang
 LINTER := clang-tidy
