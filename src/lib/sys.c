@@ -64,3 +64,14 @@ Buffer gethostname_buffer(void) {
 
   return buffer_from_cstr(name.nodename);
 }
+
+int getenv_buffer(const char *name, Buffer *out) {
+  const char *value = getenv(name);
+
+  if (value == NULL) {
+    return -1;
+  }
+
+  *out = buffer_from_cstr(value);
+  return 0;
+}

@@ -19,4 +19,7 @@ Buffer getlogin_buffer(void);
 
 Buffer gethostname_buffer(void);
 
+// returns 0 on success, -1 on failure
+int getenv_buffer(const char *name, Buffer *out);
+
 #endif
