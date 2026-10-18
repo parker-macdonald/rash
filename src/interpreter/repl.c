@@ -34,10 +34,10 @@ int repl_once(const Buffer *line) {
 
   if (tokens.length > 0) {
     status = evaluate(&tokens);
-    token_list_destroy(&tokens);
   } else {
     status = EXIT_FAILURE;
   }
+  token_list_destroy(&tokens);
 
   return status;
 }

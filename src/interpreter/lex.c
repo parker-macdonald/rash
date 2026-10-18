@@ -19,6 +19,9 @@ typedef struct {
   TokenList tokens;
   size_t start;
   size_t current;
+
+  bool is_in_argument;
+  Buffer current_word;
 } LexState;
 
 // if c is alpha numeric or an underscore
@@ -467,26 +470,26 @@ static int dollar(LexState *s) {
   return environment(s);
 }
 
-static void add_string_token_if_needed(LexState *s, Buffer *current_word) {
-  if (current_word->length > 0) {
-    add_buffer_token(s, TK_ARG_STRING, *current_word);
+static void add_string_token_if_needed(LexState *s) {
+  if (s->current_word.length > 0) {
+    add_buffer_token(s, TK_ARG_STRING, s->current_word);
 
-    *current_word = buffer_create(16);
+    s->current_word = buffer_create(0);
   }
 }
 
-static int double_quote(LexState *s, Buffer *current_word) {
+static int double_quote(LexState *s) {
   while (1) {
     // we need to set this so that dollar, and shell_expr know where they are
     s->start = s->current;
 
     if (match(s, '$')) {
-      add_string_token_if_needed(s, current_word);
+      add_string_token_if_needed(s);
       return dollar(s);
     }
 
     if (match(s, '{')) {
-      add_string_token_if_needed(s, current_word);
+      add_string_token_if_needed(s);
       return shell_expr(s);
     }
 
@@ -499,11 +502,11 @@ static int double_quote(LexState *s, Buffer *current_word) {
       return -1;
     }
 
-    buffer_append(current_word, advance(s));
+    buffer_append(&s->current_word, advance(s));
   }
 }
 
-static int single_quote(LexState *s, Buffer *current_word) {
+static int single_quote(LexState *s) {
   while (1) {
     if (match(s, '\'')) {
       return 0;
@@ -514,184 +517,172 @@ static int single_quote(LexState *s, Buffer *current_word) {
       return -1;
     }
 
-    buffer_append(current_word, advance(s));
+    buffer_append(&s->current_word, advance(s));
   }
 }
 
-static int argument(LexState *s) {
-  s->start = s->current;
-  add_token(s, TK_ARG_BEGIN);
-
-  Buffer current_word = buffer_create(16);
-
-  while (1) {
-    if (match_many(s, "**")) {
-      add_string_token_if_needed(s, &current_word);
-      add_token(s, TK_ARG_DOUBLESTAR);
-      continue;
-    }
-
-    if (match(s, '*')) {
-      add_string_token_if_needed(s, &current_word);
-      add_token(s, TK_ARG_WILDCARD);
-      continue;
-    }
-
-    if (match(s, '~')) {
-      add_string_token_if_needed(s, &current_word);
-      if (tilde(s)) {
-        goto error;
-      }
-      continue;
-    }
-
-    if (match(s, '$')) {
-      add_string_token_if_needed(s, &current_word);
-      if (dollar(s)) {
-        goto error;
-      }
-      continue;
-    }
-
-    if (match(s, '{')) {
-      add_string_token_if_needed(s, &current_word);
-      if (shell_expr(s)) {
-        goto error;
-      }
-      continue;
-    }
-
-    if (match(s, '\'')) {
-      add_string_token_if_needed(s, &current_word);
-      if (single_quote(s, &current_word)) {
-        goto error;
-      }
-      continue;
-    }
-
-    if (match(s, '"')) {
-      if (double_quote(s, &current_word)) {
-        goto error;
-      }
-      continue;
-    }
-
-    if (is_at_end(s)) {
-      break;
-    }
-
-    if (match(s, ' ')) {
-      while (match(s, ' ')) {}
-      break;
-    }
-
-    buffer_append(&current_word, advance(s));
+static void end_argument_if_needed(LexState *s) {
+  if (s->is_in_argument) {
+    add_string_token_if_needed(s);
+    add_token(s, TK_ARG_END);
+    s->is_in_argument = false;
   }
-
-  add_string_token_if_needed(s, &current_word);
-  add_token(s, TK_ARG_END);
-  return 0;
-
-error:
-  buffer_destroy(&current_word);
-  return -1;
 }
 
 static int scan_token(LexState *s) {
-  // stdin redirects
+  // ------- stdin redirects -------
   if (match_many(s, "<<<")) {
+    end_argument_if_needed(s);
     add_token(s, TK_STDIN_REDIR_STRING);
     return 0;
   }
 
   if (match(s, '<')) {
+    end_argument_if_needed(s);
     add_token(s, TK_STDIN_REDIR);
     return 0;
   }
 
-  // stdout redirects
+  // ------- stdout redirects -------
   if (match_many(s, ">>")) {
+    end_argument_if_needed(s);
     add_token(s, TK_STDOUT_REDIR_APPEND);
     return 0;
   }
 
   if (match(s, '>')) {
+    end_argument_if_needed(s);
     add_token(s, TK_STDOUT_REDIR);
     return 0;
   }
 
   if (match_many(s, "1>>")) {
+    end_argument_if_needed(s);
     add_token(s, TK_STDOUT_REDIR_APPEND);
     return 0;
   }
 
   if (match_many(s, "1>")) {
+    end_argument_if_needed(s);
     add_token(s, TK_STDOUT_REDIR);
     return 0;
   }
 
-  // stderr redirects
+  // ------- stderr redirects -------
   if (match_many(s, "2>>")) {
+    end_argument_if_needed(s);
     add_token(s, TK_STDERR_REDIR_APPEND);
     return 0;
   }
 
   if (match_many(s, "2>")) {
+    end_argument_if_needed(s);
     add_token(s, TK_STDERR_REDIR);
     return 0;
   }
 
-  // stdout and stderr redirects
+  // ------- stdout and stderr redirects -------
   if (match_many(s, "&>>")) {
+    end_argument_if_needed(s);
     add_token(s, TK_STDOUT_ERR_REDIR_APPEND);
     return 0;
   }
 
   if (match_many(s, "&>")) {
+    end_argument_if_needed(s);
     add_token(s, TK_STDOUT_ERR_REDIR);
     return 0;
   }
 
+  // ------- command separators -------
+
   if (match_many(s, "||")) {
+    end_argument_if_needed(s);
     add_token(s, TK_LOGICAL_OR);
     return 0;
   }
 
   if (match(s, '|')) {
+    end_argument_if_needed(s);
     add_token(s, TK_PIPE);
     return 0;
   }
 
   if (match(s, ';')) {
+    end_argument_if_needed(s);
     add_token(s, TK_SEMI);
     return 0;
   }
 
   if (match_many(s, "&&")) {
+    end_argument_if_needed(s);
     add_token(s, TK_LOGICAL_AND);
     return 0;
   }
 
   if (match(s, '&')) {
+    end_argument_if_needed(s);
     add_token(s, TK_AMP);
     return 0;
   }
 
   if (match_many(s, "&&")) {
+    end_argument_if_needed(s);
     add_token(s, TK_LOGICAL_AND);
     return 0;
   }
 
-  if (match(s, '&')) {
-    add_token(s, TK_AMP);
-    return 0;
-  }
-
   if (match(s, ' ')) {
+    end_argument_if_needed(s);
     return 0;
   }
 
-  return argument(s);
+  // ------- argument things -------
+
+  if (!s->is_in_argument) {
+    s->is_in_argument = true;
+    add_token(s, TK_ARG_BEGIN);
+  }
+
+  if (match_many(s, "**")) {
+    add_string_token_if_needed(s);
+    add_token(s, TK_ARG_DOUBLESTAR);
+    return 0;
+  }
+
+  if (match(s, '*')) {
+    add_string_token_if_needed(s);
+    add_token(s, TK_ARG_WILDCARD);
+    return 0;
+  }
+
+  if (match(s, '~')) {
+    add_string_token_if_needed(s);
+    return tilde(s);
+  }
+
+  if (match(s, '$')) {
+    add_string_token_if_needed(s);
+    return dollar(s);
+  }
+
+  if (match(s, '{')) {
+    add_string_token_if_needed(s);
+    return shell_expr(s);
+  }
+
+  if (match(s, '\'')) {
+    add_string_token_if_needed(s);
+    return single_quote(s);
+  }
+
+  if (match(s, '"')) {
+    return double_quote(s);
+  }
+
+  buffer_append(&s->current_word, advance(s));
+
+  return 0;
 }
 
 TokenList lex(const Buffer *source) {
@@ -704,9 +695,12 @@ TokenList lex(const Buffer *source) {
     state.start = state.current;
     if (scan_token(&state)) {
       token_list_destroy(&state.tokens);
+      buffer_destroy(&state.current_word);
       return (TokenList){.length = 0, ._capacity = 0, .data = NULL};
     }
   }
+
+  end_argument_if_needed(&state);
 
   return state.tokens;
 }

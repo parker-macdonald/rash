@@ -371,7 +371,7 @@ typedef enum {
 } StdinKind;
 
 typedef struct Command {
-  char *const *argv;
+  char **argv;
 
   bool background;
 
@@ -403,6 +403,8 @@ static void command_destroy(Command *cmd) { // NOLINT(misc-no-recursion)
       free(cmd->argv[i]);
     }
   }
+
+  free(cmd->argv);
 
   switch (cmd->stdout_.kind) {
     case STDOUT_DEFAULT:
@@ -448,6 +450,11 @@ static char *read_string_after_token(EvalState *s, TokenKind kind) {
 }
 
 static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
+  if (!check(s, TK_ARG_BEGIN)) {
+    error_f("rash: expected command argument before %s.\n", get_token_kind_name(peek(s)->kind));
+    return NULL;
+  }
+
   CStrList argv = {0};
 
   Command *command = malloc(sizeof(Command));
@@ -488,6 +495,7 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
 
       if (command->stdin_.kind != STDIN_DEFAULT) {
         error("rash: cannot redirect stdin more than once.\n");
+        free(filename);
         goto error;
       }
       
@@ -505,6 +513,7 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
 
       if (command->stdin_.kind != STDIN_DEFAULT) {
         error("rash: cannot redirect stdin more than once.\n");
+        free(filename);
         goto error;
       }
 
@@ -522,6 +531,7 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
 
       if (command->stdout_.kind != STDOUT_DEFAULT) {
         error("rash: cannot redirect stdout more than once.\n");
+        free(filename);
         goto error;
       }
 
@@ -539,6 +549,7 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
 
       if (command->stdout_.kind != STDOUT_DEFAULT) {
         error("rash: cannot redirect stdout more than once.\n");
+        free(filename);
         goto error;
       }
 
@@ -556,6 +567,7 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
 
       if (command->stderr_.kind != STDERR_DEFAULT) {
         error("rash: cannot redirect stdout more than once.\n");
+        free(filename);
         goto error;
       }
       command->stderr_.kind = STDERR_FILE_TRUNCATE;
@@ -572,6 +584,7 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
 
       if (command->stderr_.kind != STDERR_DEFAULT) {
         error("rash: cannot redirect stderr more than once.\n");
+        free(filename);
         goto error;
       }
       command->stderr_.kind = STDERR_FILE_APPEND;
@@ -588,10 +601,12 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
 
       if (command->stdout_.kind != STDOUT_DEFAULT) {
         error("rash: cannot redirect stdout more than once.\n");
+        free(filename);
         goto error;
       }
       if (command->stderr_.kind != STDERR_DEFAULT) {
         error("rash: cannot redirect stdout more than once.\n");
+        free(filename);
         goto error;
       }
       command->stderr_.kind = STDERR_FILE_TRUNCATE;
@@ -609,10 +624,12 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
 
       if (command->stdout_.kind != STDOUT_DEFAULT) {
         error("rash: cannot redirect stdout more than once.\n");
+        free(filename);
         goto error;
       }
       if (command->stderr_.kind != STDERR_DEFAULT) {
         error("rash: cannot redirect stdout more than once.\n");
+        free(filename);
         goto error;
       }
       command->stderr_.kind = STDERR_FILE_APPEND;
@@ -643,7 +660,7 @@ static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
   return command;
 
 error:
-  VECTOR_DESTROY(argv);
+  cstr_list_destroy(&argv);
   command_destroy(command);
   return NULL;
 }
@@ -767,7 +784,7 @@ error:
   return -1;
 }
 
-static int dispatch_external_command(Command *command) {
+static int dispatch_external_command(const Command *command) {
   VECTOR(ExecutionContext) list = {0};
 
   int next_fd = -1;
@@ -828,6 +845,7 @@ error:
   for (size_t i = 0; i < list.length; i++) {
     execution_context_destroy(list.data + i);
   }
+  VECTOR_DESTROY(list);
   return -1;
 }
 
@@ -844,6 +862,8 @@ int evaluate(const TokenList *tokens) {
     }
 
     status = dispatch_external_command(command);
+
+    command_destroy(command);
 
     set_exit_code_var(status);
 
