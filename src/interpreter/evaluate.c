@@ -451,7 +451,7 @@ static char *read_string_after_token(EvalState *s, TokenKind kind) {
 
 static Command *parse_command(EvalState *s) { // NOLINT(misc-no-recursion)
   if (!check(s, TK_ARG_BEGIN)) {
-    error_f("rash: expected command argument before %s.\n", get_token_kind_name(peek(s)->kind));
+    error_f("rash: expected command argument, found: %s.\n", get_token_kind_name(peek(s)->kind));
     return NULL;
   }
 
@@ -873,6 +873,10 @@ int evaluate(const TokenList *tokens) {
 
     // go again!
     if (match(&s, TK_SEMI)) {
+      // trailing semicolons are ok
+      if (is_at_end(&s)) {
+        break;
+      }
       continue;
     }
 
