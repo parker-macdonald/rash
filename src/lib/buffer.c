@@ -336,7 +336,7 @@ bool buffer_starts_with_ptr(
   }
 
   for (size_t i = 0; i < starts_with_length; i++) {
-    if (self->u8_ptr[i] != ((uint8_t *)starts_with)[i]) {
+    if (self->u8_ptr[i] != ((const uint8_t *)starts_with)[i]) {
       return false;
     }
   }

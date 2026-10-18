@@ -140,16 +140,12 @@ bool var_to_boolean(const ShellVar *var) {
   switch (var->kind) {
     case SV_NUMBER:
       return var->number != 0;
-      break;
     case SV_STRING:
       return var->string.length != 0;
-      break;
     case SV_BOOLEAN:
       return var->boolean;
-      break;
     case SV_NULL:
       return false;
-      break;
     case SV_FUNCTION:
       return true;
   }

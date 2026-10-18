@@ -122,7 +122,6 @@ static int insert_tilde(Buffer *buffer, const Buffer *username) {
     }
     error_f("cannot expand ‘~’, HOME is not set.\n");
     return -1;
-    ;
   }
 
   char *user_cstr = buffer_clone_to_cstr(username);

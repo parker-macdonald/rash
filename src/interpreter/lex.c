@@ -72,7 +72,6 @@ static uint8_t peek(LexState *s) {
   return s->source->u8_ptr[s->current];
 }
 
-ATTRIB_UNUSED
 static uint8_t peek_next(LexState *s) {
   if (s->current + 1 >= s->source->length) {
     rash_panic();
