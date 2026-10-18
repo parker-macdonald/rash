@@ -7,6 +7,7 @@ static const char *const HELP_STRING =
     "Welcome to rash, the rat ass shell!\n"
     "These are all of the builtin commands:\n"
     "  bg: run a paused job in the background.\n"
+    "  config: set various rash configurations.\n"
     "  cd: set the current working directory to the specified path.\n"
     "  env: list all environment variables.\n"
     "  exec: replace rash with a specified program.\n"
@@ -27,7 +28,7 @@ static const char *const HELP_STRING =
     "  unsetvar: remove a shell variable.\n"
     "  var: list all shell variables.\n"
     "  version: display the version of rash.\n"
-    "  which: search the PATH environment variable for an executable.\n"
+    "  which: search the $PATH environment variable for an executable.\n"
     "For more help with builtin commands type the command followed by --help";
 
 int builtin_help(char *const *argv) {
