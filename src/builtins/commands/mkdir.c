@@ -3,10 +3,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 #include "lib/buffer.h"
 #include "lib/error.h"
 
@@ -92,7 +93,7 @@ error:
   return -1;
 }
 
-int builtin_mkdir(char **argv) {
+int builtin_mkdir(char *const *argv) {
   argv++;
 
   if (*argv == NULL) {
@@ -156,12 +157,10 @@ int builtin_mkdir(char **argv) {
 
   argv--;
 
-  if (!last_failed && cd_flag) {
-    if (chdir(*argv) == -1) {
-      error_f("mkdir: cd: %s: %s\n", *argv, strerror(errno));
+  if (!last_failed && cd_flag && chdir(*argv) == -1) {
+    error_f("mkdir: cd: %s: %s\n", *argv, strerror(errno));
 
-      return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
   }
 
   return EXIT_SUCCESS;

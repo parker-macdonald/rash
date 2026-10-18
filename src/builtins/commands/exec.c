@@ -3,11 +3,12 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "builtins/builtin_funcs.h"
 #include "builtins/builtins.h"
-#include "builtins/find_builtin.h"
-#include "interactive.h"
+#include "builtins/trie.h"
 #include "lib/error.h"
 #include "lib/search_path.h"
+#include "global.h"
 
 extern char **environ;
 
@@ -16,7 +17,7 @@ static const char *const EXEC_HELP =
     "Replace rash with the command given. If the command fails to run, rash\n"
     "continues to run in interactive mode and exits in scripting mode.";
 
-int builtin_exec(char **const argv) {
+int builtin_exec(char *const *argv) {
   if (argv[1] == NULL) {
     puts(EXEC_HELP);
     return EXIT_FAILURE;
@@ -27,39 +28,39 @@ int builtin_exec(char **const argv) {
     return EXIT_SUCCESS;
   }
 
-  builtin_t builtin = find_builtin(argv[1]);
+  BuiltinFunc builtin = find_builtin(&instance.builtins, argv[1]);
 
   if (builtin != NULL) {
     exit(builtin(&argv[1]));
   }
 
+  const char *exec_path = argv[0];
   // search path for executable
   if (strchr(argv[1], '/') == NULL) {
-    char *argv0 = search_path(argv[1]);
+    exec_path = search_path(argv[1]);
 
-    if (argv0 == NULL) {
+    if (exec_path == NULL) {
       error_f("%s: command not found\n", argv[1]);
 
-      if (interactive) {
+      if (instance.interactive) {
         return EXIT_FAILURE;
       }
       exit(EXIT_FAILURE);
     }
-
-    free(argv[1]);
-    argv[1] = argv0;
   }
 
-  int status = execve(argv[1], &argv[1], environ);
+  int status = execve(exec_path, argv + 1, environ);
 
   if (status == -1) {
     perror("rash");
   }
 
-  if (interactive) {
+  // dont quit the shell if we're in interactive mode
+  if (instance.interactive) {
     return EXIT_FAILURE;
   }
 
+  // do quit the shell if we are not in interactive mode
   exit(EXIT_FAILURE);
 
   return 0;

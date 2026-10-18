@@ -1,8 +1,14 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "lex.h"
+#include "interpreter/token.h"
+#include <stddef.h>
 
-int evaluate(const Token *tokens);
+typedef struct {
+  const TokenList *tokens;
+  size_t current;
+} EvalState;
+
+int evaluate(const TokenList *tokens);
 
 #endif

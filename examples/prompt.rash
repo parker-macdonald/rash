@@ -1,1 +1,2 @@
-setvar PS1 '\u@\h:\w\$ '
+# you can just do shell expression stuff in here
+config set interactive.prompt 'LOGIN + "@" + HOSTNAME + ":" + PPWD + (EUID == 0 ? "#" : "$") + " "'

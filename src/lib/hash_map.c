@@ -14,12 +14,12 @@ static uint32_t hash_string(const char *const str) {
   while (str[i] != '\0') {
     uint32_t tmp = (uint32_t)str[i++];
     hash += tmp;
-    hash += hash << 10;
-    hash ^= hash >> 6;
+    hash += hash << 10U;
+    hash ^= hash >> 6U;
   }
-  hash += hash << 3;
-  hash ^= hash >> 11;
-  hash += hash << 15;
+  hash += hash << 3U;
+  hash ^= hash >> 11U;
+  hash += hash << 15U;
   return hash;
 }
 
@@ -126,6 +126,10 @@ void *hash_map_get(HashMap *map, const char *key) {
   return NULL;
 }
 
+const void *hash_map_get_const(const HashMap *map, const char *key) {
+  return hash_map_get((HashMap *)map, key);
+}
+
 void hash_map_destroy(HashMap *map) {
   for (size_t i = 0; i < map->table_size; i++) {
     LL_ITER_CREATE(iter, map->table[i]);
@@ -157,4 +161,8 @@ void hash_map_iter(HashMap *map, HashMapIterCallback cb) {
       LL_ITER_NEXT(iter);
     }
   }
+}
+
+void hash_map_iter_const(const HashMap *map, ConstHashMapIterCallback cb) {
+  hash_map_iter((HashMap *)map, (HashMapIterCallback)cb);
 }

@@ -2,13 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 #include "lib/error.h"
 
 static const char *const UNSETENV_HELP = "Usage: unsetenv KEY\n"
                                          "Remove the environment variable KEY.";
 
-int builtin_unsetenv(char **argv) {
+int builtin_unsetenv(char *const *argv) {
   if (argv[1] == NULL) {
     error_f("%s\n", UNSETENV_HELP);
     return EXIT_FAILURE;

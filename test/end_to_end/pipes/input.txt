@@ -1,0 +1,2 @@
+echo hello | cat
+echo world | cat | cat

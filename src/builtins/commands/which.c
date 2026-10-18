@@ -4,10 +4,11 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "builtins/builtin_funcs.h"
 #include "builtins/builtins.h"
-#include "builtins/find_builtin.h"
 #include "lib/error.h"
 #include "lib/search_path.h"
+#include "global.h"
 
 static const char *const WHICH_HELP =
     "Usage: which FILE...\n"
@@ -15,7 +16,7 @@ static const char *const WHICH_HELP =
     "shell builtin, a path to an executable, or an executable in the users \n"
     "PATH enviroment variable.";
 
-int builtin_which(char **argv) {
+int builtin_which(char *const *argv) {
   if (argv[1] == NULL) {
     error_f("%s\n", WHICH_HELP);
     return EXIT_FAILURE;
@@ -34,7 +35,7 @@ int builtin_which(char **argv) {
       }
     }
 
-    if (find_builtin(argv[i]) != NULL) {
+    if (find_builtin(&instance.builtins, argv[i]) != NULL) {
       printf("%s: shell builtin\n", argv[i]);
       continue;
     }

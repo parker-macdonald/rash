@@ -3,17 +3,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "builtins/builtins.h"
-#include "file_reader.h"
+#include "builtins/builtin_funcs.h"
+#include "readers/file_reader.h"
 #include "interpreter/repl.h"
 #include "lib/error.h"
+#include "readers/generic_reader.h"
 
 static const char *const SOURCE_HELP =
     "Usage: source FILENAME\n"
     "Read and execute the contents of FILENAME, this will modify the current\n"
     "state of the shell (shell variables, jobs, etc.).";
 
-int builtin_source(char **argv) {
+int builtin_source(char *const *argv) {
   static int recursion_count = 0;
 
   if (argv[1] == NULL) {
@@ -26,15 +27,12 @@ int builtin_source(char **argv) {
     return EXIT_SUCCESS;
   }
 
-  FILE *file = fopen(argv[1], "r");
-
-  if (file == NULL) {
+  GenericReader file_reader;
+  
+  if (file_reader_create(&file_reader, argv[1])) {
     error_f("source: %s: %s\n", argv[1], strerror(errno));
     return EXIT_FAILURE;
   }
-
-  FileReader reader_data;
-  file_reader_init(&reader_data, file);
 
   if (recursion_count > 10000) {
     recursion_count = 0;
@@ -44,7 +42,8 @@ int builtin_source(char **argv) {
 
   recursion_count++;
 
-  int status_code = repl(file_reader_read_void, &reader_data);
+  int status_code = repl(&file_reader);
+  generic_reader_destroy(&file_reader);
 
   recursion_count--;
 

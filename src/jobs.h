@@ -2,11 +2,14 @@
 #define SIG_HANDLERS_H
 
 #include <signal.h>
+#include <stdbool.h>
 
-#define JOB_EXITED 0
-#define JOB_STOPPED 1
-#define JOB_RUNNING 2
-#define NUM_JOB_STATUSES 3
+typedef enum {
+  JOB_EXITED,
+  JOB_STOPPED,
+  JOB_RUNNING,
+  NUM_JOB_STATUSES
+} JobState;
 
 // string versions for job statuses
 extern const char *const JOB_STATUSES[NUM_JOB_STATUSES];
@@ -14,23 +17,30 @@ extern const char *const JOB_STATUSES[NUM_JOB_STATUSES];
 typedef struct job_t {
   pid_t pid;
   int id;
-  int state;
+  JobState state;
   struct job_t *p_next;
 } Job;
 
-// the file descriptor of the controlling tty
-extern int tty_fd;
+typedef struct {
+  Job *root_job;
+  Job *last_job;
+
+  pid_t root_pid;
+  int tty_fd;
+} Jobs;
 
 /**
  * @brief initializes all signal handlers used by rash
  */
-void sig_handler_init(void);
+void jobs_init(Jobs *self, int tty_fd);
+
+void jobs_destroy(Jobs *self);
 
 /**
  * @brief removes reaped children from the job list, good to call this
  * occasionally
  */
-void clean_jobs(void);
+void jobs_clean(Jobs *self);
 
 /**
  * @brief adds a job with the given pid to the job list
@@ -38,7 +48,7 @@ void clean_jobs(void);
  * @param state the state to give the job, i.e. JOB_STOPPED or JOB_RUNNING
  * @return the job id assigned to the new job
  */
-int register_job(pid_t pid, int state);
+int jobs_register(Jobs *self, pid_t pid, JobState state);
 
 /**
  * @brief returns a job with the given id
@@ -46,25 +56,23 @@ int register_job(pid_t pid, int state);
  * the last job in the job list
  * @return a pointer to the job with the id, or null if no job exists
  */
-Job *get_job(int id);
+Job *jobs_get(Jobs *self, int id);
 
 /**
  * @brief gets the pid of the job with the given id and removes it from the job
  * list. this is useful if you are bringing a job to the foreground since it is
  * no longer needed on the job list.
- * @param id a pointer to the job id, when this function returns it puts the
- * real job id of the returned job in id, so if you pass -1 as your job id, id
- * will contain the job id of the last job in the job list on return.
+ * @param id the job id to get and remove
  * @return the pid of the found job, or 0 if no such job exists.
  */
-pid_t get_pid_and_remove(int *id);
+pid_t jobs_get_pid_and_remove(Jobs *self, int id);
 
 /**
  * @brief prints all jobs in the job list in a nicely formatted way. this is
  * used by the jobs command.
  */
-void print_jobs(void);
+void jobs_print(const Jobs *self);
 
-void reset_fg_process(void);
+void jobs_set_rash_to_foreground(const Jobs *self);
 
 #endif

@@ -2,6 +2,9 @@
 #define SHELL_VARS_H
 
 #include "lib/buffer.h"
+#include "lib/hash_map.h"
+#include "shell_vars/functions.h"
+
 #include <stdbool.h>
 
 typedef enum {
@@ -9,18 +12,17 @@ typedef enum {
   SV_STRING,
   SV_BOOLEAN,
   SV_NULL,
-  SV_COUNT
+  SV_FUNCTION,
 } ShellVarKind;
 
-extern const char *SHELL_VAR_KIND_NAMES[SV_COUNT];
-
-typedef struct {
+typedef struct ShellVar {
   ShellVarKind kind;
   unsigned ref_count;
   union {
     Buffer string;
     double number;
     bool boolean;
+    ShellFunction function;
   };
 } ShellVar;
 
@@ -33,35 +35,46 @@ ShellVar *var_aquire(ShellVar *var);
 void var_release(ShellVar *var);
 
 Buffer var_to_string(const ShellVar *var);
+bool var_to_boolean(const ShellVar *var);
+
+const char *var_kind_to_string(ShellVarKind kind);
 
 ShellVar *var_cast_to_string(const ShellVar *var);
 ShellVar *var_cast_to_boolean(const ShellVar *var);
 ShellVar *var_cast_to_number(const ShellVar *var);
 
-ShellVar *var_eval(const char *expr);
+ShellVar *var_eval(const Buffer *expr);
 
-char *var_eval_to_string(const char *expr);
+int var_eval_to_string(const Buffer *expr, Buffer *out);
 
 // functions below for messing with the internal hashmap of shellvars to
 // identifiers
 
-void var_init(void);
+typedef struct {
+  HashMap var_map;
+} VarState;
+
+void var_state_init(VarState *self);
+
+void var_state_destroy(VarState *self);
 
 /**
  * @brief prints all registered shell variables in a list.
  */
-void var_print(void);
+void var_state_print(const VarState *self);
 
-void var_set(const char *key, ShellVar *var);
+void var_state_var_set(VarState *self, const char *key, ShellVar *var);
 
-ShellVar *var_get(const char *key);
+ShellVar *var_state_var_get(VarState *self, const char *key);
 
-bool var_exists(const char *key);
+bool var_state_var_exists(const VarState *self, const char *key);
 
 /**
  * @brief unset a shell variable given a key
  * @param key the key of the variable
  */
-void var_unset(const char *key);
+void var_state_var_unset(VarState *self, const char *key);
+
+void var_state_update_cwd_vars(VarState *self, Buffer old_cwd);
 
 #endif

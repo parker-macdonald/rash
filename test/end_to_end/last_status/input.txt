@@ -1,0 +1,12 @@
+true
+echo {LAST_STATUS}
+false
+echo {LAST_STATUS}
+false | true
+echo {LAST_STATUS}
+true | false
+echo {LAST_STATUS}
+true | true
+echo {LAST_STATUS}
+false | false
+echo {LAST_STATUS}

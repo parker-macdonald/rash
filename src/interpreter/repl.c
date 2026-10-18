@@ -4,32 +4,22 @@
 #include <stdlib.h>
 
 #include "evaluate.h"
+#include "interpreter/token.h"
 #include "jobs.h"
 #include "lex.h"
 #include "lib/buffer.h"
+#include "global.h"
+#include "readers/generic_reader.h"
 
-int repl(const Buffer *(*reader)(void *), void *reader_data) {
+int repl(GenericReader *reader) {
   while (1) {
-    const Buffer *line = reader(reader_data);
-
-    clean_jobs();
+    const Buffer *line = generic_reader_read(reader);
 
     if (line == NULL) {
       break;
     }
 
-    // need to refactor lex to use a buffer instead of a null terminated string
-    Buffer null_terminated_line = buffer_clone(line);
-    buffer_append(&null_terminated_line, '\0');
-
-    Token *tokens = lex(null_terminated_line.u8_ptr);
-
-    buffer_destroy(&null_terminated_line);
-
-    if (tokens != NULL) {
-      evaluate(tokens);
-      free_tokens(&tokens);
-    }
+    repl_once(line);
   }
 
   return 0;
@@ -38,22 +28,16 @@ int repl(const Buffer *(*reader)(void *), void *reader_data) {
 int repl_once(const Buffer *line) {
   int status = EXIT_SUCCESS;
 
-  clean_jobs();
+  jobs_clean(&instance.jobs);
 
-  // need to refactor lex to use a buffer instead of a null terminated string
-  Buffer null_terminated_line = buffer_clone(line);
-  buffer_append(&null_terminated_line, '\0');
+  TokenList tokens = lex(line);
 
-  Token *tokens = lex(null_terminated_line.u8_ptr);
-
-  buffer_destroy(&null_terminated_line);
-
-  if (tokens != NULL) {
-    status = evaluate(tokens);
-    free_tokens(&tokens);
+  if (tokens.length > 0) {
+    status = evaluate(&tokens);
   } else {
     status = EXIT_FAILURE;
   }
+  token_list_destroy(&tokens);
 
   return status;
 }

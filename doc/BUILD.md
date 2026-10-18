@@ -18,18 +18,18 @@ First off, you need to get GNU make and a C compiler to build rash, lets go over
 
 ### Ubuntu, Linux Mint, Debian, etc.
 
-If you're running Ubuntu, Debian, Linux Mint, or some other Debian derivative can get GNU make and a C compiler with the `build-essential` package.
+If you're running Ubuntu, Debian, Linux Mint, or some other Debian you need the `gcc`, `libc6-dev`, and `make` packages. All these packages are included in the `build-essential` meta-package.
 
-```bash
-sudo apt install build-essential
+```console
+$ apt install build-essential
 ```
 
 ### Arch Linux, Manjaro, EndeavourOS, etc.
 
-If you're running Arch Linux, Manjaro, or another Arch derivative, you can get GNU make and a C compiler with the `base-devel` package.
+If you're running Arch Linux, Manjaro, or another Arch derivative you need the `gcc`, and `make` packages. All these packages are included in the `base-devel` meta-package.
 
-```bash
-sudo pacman -S base-devel
+```console
+$ pacman -S base-devel
 ```
 
 rash is also packaged in the AUR under [`rash-sh`](https://aur.archlinux.org/packages/rash-sh) if you would prefer to install it that way.
@@ -42,27 +42,36 @@ In theory, you should be able to run `nix build` and get a binary in `./result/b
 
 You can also run rash on NixOS using the `nix run` command. For example:
 
-```bash
-nix run github:parker-macdonald/rash # download from the github mirror
-nix run git+https://git.myriation.xyz/parker_macdonald/rash.git # download rash from the official repository
+```console
+$ nix run github:parker-macdonald/rash # download from the github mirror
+$ nix run git+https://git.myriation.xyz/parker_macdonald/rash.git # download rash from the official repository
 ```
 
 Keep in mind though using `nix run` will compile the latest changes on the main branch, which, while they should be stable, won't be as well tested as an official release.
+
+### Alpine Linux
+
+If you're running Alpine Linux, you need the `gcc`, `make`, and `musl-dev` packages. All these packages are included in the `build-base` meta-package.
+
+```console
+$ apk add build-base
+```
+
 
 ## OpenBSD
 
 OpenBSD comes preinstalled with `clang` as it's default C compiler, so all you have to do is install GNU make from the `gmake` package.
 
-```bash
-doas pkg_add gmake
+```console
+$ pkg_add gmake
 ```
 
 ## FreeBSD
 
 FreeBSD comes preinstalled with `clang` as it's default C compiler, so all you have to do is install GNU make from the `gmake` package.
 
-```bash
-sudo pkg install gmake
+```console
+$ pkg install gmake
 ```
 
 ## Windows

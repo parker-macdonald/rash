@@ -1,20 +1,20 @@
-#include <errno.h>
-#include <limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 #include "jobs.h"
 #include "lib/error.h"
+#include "global.h"
+#include "lib/parse.h"
 
 static const char *const BG_HELP =
     "Usage: bg [JOB_ID]\n"
     "Run a paused job in the background based on the job id.\n"
     "If no job id is specified, the most recent job is used instead.";
 
-int builtin_bg(char **argv) {
+int builtin_bg(char *const *argv) {
   int job_id;
 
   if (argv[1] == NULL) {
@@ -25,19 +25,17 @@ int builtin_bg(char **argv) {
       return EXIT_FAILURE;
     }
 
-    char *endptr;
-    errno = 0;
-    long num = strtol(argv[1], &endptr, 10);
+    OptionInt num = parse_int(argv[1]);
 
-    if (errno != 0 || *endptr != '\0' || num < 1 || num > INT_MAX) {
+    if (!num.has_value || num.value < 1) {
       error_f("bg: %s: number 1 or greater expected\n", argv[1]);
       return EXIT_FAILURE;
     }
 
-    job_id = (int)num;
+    job_id = num.value;
   }
 
-  Job *job = get_job(job_id);
+  Job *job = jobs_get(&instance.jobs, job_id);
 
   if (job == NULL) {
     if (job_id == -1) {

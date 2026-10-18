@@ -1,23 +1,22 @@
-#include <assert.h>
-#include <errno.h>
-#include <limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 #include "interpreter/execute.h"
 #include "jobs.h"
 #include "lib/error.h"
+#include "global.h"
+#include "lib/parse.h"
 
 static const char *const FG_HELP =
     "Usage: fg [JOB_ID]\n"
     "Run a paused job in the foreground based on the job id.\n"
     "If no job id is specified, the most recent job is used instead.";
 
-int builtin_fg(char **argv) {
+int builtin_fg(char *const *argv) {
   int job_id;
 
   if (argv[1] == NULL) {
@@ -28,19 +27,17 @@ int builtin_fg(char **argv) {
       return EXIT_FAILURE;
     }
 
-    char *endptr;
-    errno = 0;
-    long num = strtol(argv[1], &endptr, 10);
+    OptionInt num = parse_int(argv[1]);
 
-    if (errno != 0 || *endptr != '\0' || num < 1 || num > INT_MAX) {
+    if (!num.has_value || num.value < 1) {
       error_f("fg: %s: number 1 or greater expected\n", argv[1]);
       return EXIT_FAILURE;
     }
 
-    job_id = (int)num;
+    job_id = num.value;
   }
 
-  pid_t pid = get_pid_and_remove(&job_id);
+  pid_t pid = jobs_get_pid_and_remove(&instance.jobs, job_id);
 
   if (pid == 0) {
     if (job_id == -1) {
@@ -59,9 +56,8 @@ int builtin_fg(char **argv) {
 
   printf("[%d] PID: %d, continued in foreground\n", job_id, pid);
 
-  if (tty_fd != -1) {
-    int status = tcsetpgrp(tty_fd, pid);
-    assert(status == 0);
+  if (instance.jobs.tty_fd != -1) {
+    rash_assert(tcsetpgrp(instance.jobs.tty_fd, pid) == 0, "tcsetpgrp failed");
   }
 
   return wait_process(pid);

@@ -269,6 +269,17 @@ char *buffer_cstr(Buffer *self) {
   return self->char_ptr;
 }
 
+// returns a clone of the data in `self` that is null terminated and cast to a char *
+char *buffer_clone_to_cstr(const Buffer *self) {
+  char *cstr = malloc(self->length + 1);
+
+  memcpy(cstr, self->void_ptr, self->length);
+
+  cstr[self->length] = '\0';
+
+  return cstr;
+}
+
 // set the length of a buffer to zero
 void buffer_clear(Buffer *self) {
   self->length = 0;
@@ -325,7 +336,7 @@ bool buffer_starts_with_ptr(
   }
 
   for (size_t i = 0; i < starts_with_length; i++) {
-    if (self->u8_ptr[i] != ((uint8_t *)starts_with)[i]) {
+    if (self->u8_ptr[i] != ((const uint8_t *)starts_with)[i]) {
       return false;
     }
   }

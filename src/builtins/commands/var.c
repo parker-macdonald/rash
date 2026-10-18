@@ -1,19 +1,20 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
+#include "global.h"
 #include "shell_vars/shell_vars.h"
 
 static const char *const VAR_HELP = "Usage: var\n"
                                     "Prints all declared shell variables.";
 
-int builtin_var(char **argv) {
+int builtin_var(char *const *argv) {
   if (argv[1] != NULL && strcmp(argv[1], "--help") == 0) {
     puts(VAR_HELP);
     return 0;
   }
 
-  var_print();
+  var_state_print(&instance.var_state);
 
   return 0;
 }

@@ -1,108 +1,23 @@
-#include <ctype.h>
-#include <errno.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "argv0.h"
-#include "builtins/find_builtin.h"
-#include "file_reader.h"
-#include "interactive.h"
 #include "interpreter/repl.h"
-#include "jobs.h"
-#include "lib/buffer.h"
-#include "lib/error.h"
-#include "line_reader/line_reader.h"
-#include "rashrc.h"
-#include "shell_vars/shell_vars.h"
-#include "shlvl.h"
-#include "strings/version.h"
+#include "rash.h"
+#include "global.h"
 
-bool interactive = false;
-
-char *argv0;
-
-static const char *const HELP_STRING =
-    "Usage: %s [-c] [FILENAME]\n"
-    "If a filename is specified, rash will run the file as a script.\n"
-    "If no filename is specified rash will run in interactive mode.\n"
-    "The -c option specifies one-shot mode, rash will run one command \n"
-    "specified in the next argument, then exit.\n"
-    "For example: \n"
-    "  rash -c 'echo hello'\n"
-    "rash will run 'echo hello', then exit.\n";
+Rash instance;
 
 int main(int argc, char **argv) {
-  trie_init();
-  set_shlvl();
-  var_init();
+  RashInstanceInitResult result = rash_instance_init(&instance, argc, argv);
 
-  // this can happen if argv is not populated in a call to execve
-  if (argc == 0) {
-    error_f(HELP_STRING, argv[0]);
+  if (result == UNEXPECTED_FAILURE) {
     return 1;
   }
 
-  argv0 = argv[0];
-
-  // no arguments means interactive mode
-  if (argc == 1) {
-    interactive = true;
-    // interactive must be set before calling sig_handler_init
-    sig_handler_init();
-    load_rashrc();
-
-    line_reader_init();
-    int status = repl(line_reader_read_void, NULL);
-    line_reader_destroy();
-    return status;
+  if (result == EXPECTED_FAILURE) {
+    return 0;
   }
 
-  if (argc == 2) {
-    if (strcmp(argv[1], "--version") == 0) {
-      puts(VERSION_STRING);
-      return 0;
-    }
+  repl(&instance.reader);
 
-    if (strcmp(argv[1], "--help") == 0) {
-      printf(HELP_STRING, argv[0]);
-      return 0;
-    }
+  rash_instance_delete(&instance);
 
-    FILE *file = fopen(argv[1], "r");
-
-    if (file == NULL) {
-      error_f("rash: %s: %s\n", argv[1], strerror(errno));
-      return 1;
-    }
-
-    FileReader reader_data;
-    file_reader_init(&reader_data, file);
-    sig_handler_init();
-    return repl(file_reader_read_void, &reader_data);
-  }
-
-  if (argc == 3) {
-    // one-shot mode
-    if (strcmp(argv[1], "-c") != 0) {
-      error_f(HELP_STRING, argv[0]);
-      return 1;
-    }
-
-    Buffer command = buffer_create(16);
-
-    for (size_t i = 0; argv[2][i] != '\0'; i++) {
-      if (!iscntrl((int)argv[2][i])) {
-        buffer_append(&command, argv[2][i]);
-      }
-    }
-
-    int status = repl_once(&command);
-    buffer_destroy(&command);
-
-    return status;
-  }
-
-  error_f(HELP_STRING, argv[0]);
-  return 1;
+  return 0;
 }

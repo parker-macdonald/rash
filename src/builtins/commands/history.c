@@ -1,12 +1,12 @@
-#include <errno.h>
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 #include "lib/error.h"
-#include "line_reader/line_reader.h"
+#include "global.h"
+#include "lib/parse.h"
+#include "readers/interactive_reader/interactive_reader.h"
 
 static const char *const HISTORY_HELP =
     "Usage: history [-c] [COUNT]\n"
@@ -16,12 +16,17 @@ static const char *const HISTORY_HELP =
     "nothing\n"
     "is displayed.";
 
-int builtin_history(char **const argv) {
+int builtin_history(char *const *argv) {
   int count = -1;
+
+  if (!instance.interactive) {
+    error("history: this rash session is not interactive, no history exists.\n");
+    return EXIT_SUCCESS;
+  }
 
   if (argv[1] != NULL) {
     if (strcmp(argv[1], "-c") == 0) {
-      line_reader_hist_clear();
+      interactive_reader_hist_clear(&instance.interactive_reader);
       return EXIT_SUCCESS;
     }
 
@@ -30,18 +35,16 @@ int builtin_history(char **const argv) {
       return EXIT_SUCCESS;
     }
 
-    char *endptr;
-    errno = 0;
-    const long num = strtol(argv[1], &endptr, 10);
-    if (errno != 0 || *endptr != '\0' || num < 0 || num > INT_MAX) {
+    OptionInt num = parse_int(argv[1]);
+    if (!num.has_value || num.value < 0) {
       error_f("history: %s: positive number expected\n", argv[1]);
       return EXIT_FAILURE;
     }
 
-    count = (int)num;
+    count = num.value;
   }
 
-  line_reader_hist_print(count);
+  interactive_reader_hist_print(&instance.interactive_reader, count);
 
   return EXIT_SUCCESS;
 }

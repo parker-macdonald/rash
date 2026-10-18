@@ -3,6 +3,11 @@
 #include <ctype.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
+
+Slice slice_from_cstr(const char *cstr) {
+  return slice_from_ptr(cstr, strlen(cstr));
+}
 
 void slice_trim_left(Slice *self) {
   while (1) {

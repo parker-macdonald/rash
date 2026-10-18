@@ -28,6 +28,8 @@ void hash_map_remove(HashMap *map, const char *key);
 
 void *hash_map_get(HashMap *map, const char *key);
 
+const void *hash_map_get_const(const HashMap *map, const char *key);
+
 void hash_map_set(HashMap *map, const char *key, void *value);
 
 void hash_map_destroy(HashMap *map);
@@ -35,5 +37,9 @@ void hash_map_destroy(HashMap *map);
 typedef void (*HashMapIterCallback)(const char *key, void *value);
 
 void hash_map_iter(HashMap *map, HashMapIterCallback cb);
+
+typedef void (*ConstHashMapIterCallback)(const char *key, const void *value);
+
+void hash_map_iter_const(const HashMap *map, ConstHashMapIterCallback cb);
 
 #endif

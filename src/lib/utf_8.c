@@ -5,13 +5,13 @@
 
 #include "lib/buffer.h"
 
-#define LAST_BIT_OF_BYTE_MASK 0x80
+#define LAST_BIT_OF_BYTE_MASK 0x80U
 
 static unsigned int count_leading_ones(uint8_t byte) {
   unsigned int count;
 
   for (count = 0; byte & LAST_BIT_OF_BYTE_MASK; count++) {
-    byte <<= 1;
+    byte <<= 1U;
   }
 
   return count;

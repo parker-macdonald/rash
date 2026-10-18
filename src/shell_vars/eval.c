@@ -1,22 +1,24 @@
-#include "eval.h"
+#include "shell_vars/eval.h"
 
 #include "lib/buffer.h"
+#include "lib/vector.h"
 #include "lib/error.h"
-#include "shell_vars.h"
+#include "interpreter/token.h"
+#include "global.h"
+#include "shell_vars/shell_vars.h"
+#include "shell_vars/functions.h"
 #include "shell_vars/token.h"
+#include "interpreter/evaluate.h"
 
 #include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <unistd.h>
-
-typedef struct {
-  const TokenList *tokens;
-  size_t current;
-} EvalState;
+#include <stdlib.h>
 
 typedef enum {
   PREC_MIN = 0,
+  PREC_TERNARY,
   PREC_EQ_NEQ,
   PREC_GT_LT_GTE_LTE,
   PREC_ADD_SUB,
@@ -26,45 +28,48 @@ typedef enum {
 } OpPrec;
 
 static const OpPrec OP_PREC_LOOKUP[] = {
-  [TK_ADD] = PREC_ADD_SUB,
-  [TK_SUB] = PREC_ADD_SUB,
-  [TK_MUL] = PREC_MUL_DIV,
-  [TK_DIV] = PREC_MUL_DIV,
-  [TK_MOD] = PREC_MUL_DIV,
-  [TK_POW] = PREC_POW,
-  [TK_EQ]  = PREC_EQ_NEQ,
-  [TK_NEQ] = PREC_EQ_NEQ,
-  [TK_GT]  = PREC_GT_LT_GTE_LTE,
-  [TK_LT]  = PREC_GT_LT_GTE_LTE,
-  [TK_GTE] = PREC_GT_LT_GTE_LTE,
-  [TK_LTE] = PREC_GT_LT_GTE_LTE
+  [TK_SE_ADD] = PREC_ADD_SUB,
+  [TK_SE_SUB] = PREC_ADD_SUB,
+  [TK_SE_MUL] = PREC_MUL_DIV,
+  [TK_SE_DIV] = PREC_MUL_DIV,
+  [TK_SE_MOD] = PREC_MUL_DIV,
+  [TK_SE_POW] = PREC_POW,
+  [TK_SE_EQ]  = PREC_EQ_NEQ,
+  [TK_SE_NEQ] = PREC_EQ_NEQ,
+  [TK_SE_GT]  = PREC_GT_LT_GTE_LTE,
+  [TK_SE_LT]  = PREC_GT_LT_GTE_LTE,
+  [TK_SE_GTE] = PREC_GT_LT_GTE_LTE,
+  [TK_SE_LTE] = PREC_GT_LT_GTE_LTE,
+  [TK_SE_QUESTION] = PREC_TERNARY
 };
 
 static bool is_at_end(EvalState *s) {
   return s->current >= s->tokens->length;
 }
 
-static Token advance(EvalState *s) {
+static const Token NONE_TOKEN = { .kind = TK_SE_NONE };
+
+static const Token *advance(EvalState *s) {
   if (is_at_end(s)) {
-    return (Token){.kind = TK_NONE};
+    return &NONE_TOKEN;
   }
 
-  return s->tokens->data[s->current++];
+  return s->tokens->data + (s->current++);
 }
 
-static Token peek(EvalState *s) {
+static const Token *peek(EvalState *s) {
   if (is_at_end(s)) {
-    return (Token){.kind = TK_NONE};
+    return &NONE_TOKEN;
   }
 
-  return s->tokens->data[s->current];
+  return s->tokens->data + s->current;
 }
 
 static bool check(EvalState *s, TokenKind kind) {
   if (is_at_end(s)) {
     return false;
   }
-  return peek(s).kind == kind;
+  return peek(s)->kind == kind;
 }
 
 static bool match(EvalState *s, TokenKind kind) {
@@ -78,117 +83,128 @@ static bool match(EvalState *s, TokenKind kind) {
 
 static ShellVar *eval_term(EvalState *s);
 static ShellVar *eval_expr(EvalState *s);
-static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind op);
+static ShellVar *eval_binary_expr(const ShellVar *lhs, const ShellVar *rhs, TokenKind op);
+
+static ShellVar *eval_function_call(EvalState *s, const ShellVar *func, const Buffer *ident) { // NOLINT(misc-no-recursion)
+  rash_assert(func->kind == SV_FUNCTION, "called eval_function_call with a non-function variable. this should never be reached.");
+
+  if (!match(s, TK_SE_O_PAREN)) {
+    // return the type of the function which is "function", only this way if i ever change the to string of a function, this reflects it
+    return var_create_string(
+      buffer_from_cstr(
+        var_kind_to_string(func->kind)
+      )
+    );
+  }
+
+  // functions with no arguments
+  if (match(s, TK_SE_C_PAREN)) {
+    if (func->function.arg_count != 0) {
+      error_f("shell expression: function `%.*s` expects %u arguments but was provided 0.\n", (int)ident->length, ident->char_ptr, func->function.arg_count);
+      return NULL;
+    }
+
+    ShellVar *return_val = func->function.func(NULL);
+    return return_val;
+  }
+
+  VECTOR(ShellVar *) arguments = {0};
+  
+  ShellVar *arg0 = eval_expr(s);
+
+  if (arg0 == NULL) {
+    goto error;
+  }
+
+  VECTOR_PUSH(arguments, arg0);
+
+  while (match(s, TK_SE_COMMA)) {
+    ShellVar *arg = eval_expr(s);
+
+    if (arg == NULL) {
+      goto error;
+    }
+
+    VECTOR_PUSH(arguments, arg);
+  }
+
+  if (!match(s, TK_SE_C_PAREN)) {
+    error("shell expression: expected closing `)` following function arguments.\n");
+    goto error;
+  }
+
+  if (arguments.length != func->function.arg_count) {
+    error_f("shell expression: function `%.*s` expects %u arguments but was provided %u.\n", (int)ident->length, ident->char_ptr, func->function.arg_count, (unsigned)arguments.length);
+    goto error;
+  }
+
+  ShellVar *return_val = func->function.func(arguments.data);
+  for (size_t i = 0; i < arguments.length; i++) {
+    var_release(arguments.data[i]);
+  }
+  VECTOR_DESTROY(arguments);
+  return return_val;
+
+  error:
+  for (size_t i = 0; i < arguments.length; i++) {
+    var_release(arguments.data[i]);
+  }
+  VECTOR_DESTROY(arguments);
+  return NULL;
+}
 
 static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
-  if (check(s, TK_NUMBER_LIT)) {
-    Token tk = advance(s);
-    return var_create_number(tk.num_lit);
+  if (check(s, TK_SE_NUMBER_LIT)) {
+    const Token *tk = advance(s);
+    return var_create_number(tk->number);
   }
 
-  if (check(s, TK_STRING_LIT)) {
-    Token tk = advance(s);
-    return var_create_string(buffer_clone(&tk.str_lit));
+  if (check(s, TK_SE_STRING_LIT)) {
+    const Token *tk = advance(s);
+    return var_create_string(buffer_clone(&tk->buffer));
   }
 
-  if (check(s, TK_IDENTIFIER)) {
-    Token tk = advance(s);
-    ShellVar *var = var_get(buffer_cstr(&tk.identifier));
+  if (check(s, TK_SE_IDENTIFIER)) {
+    const Token *tk = advance(s);
+
+    char *ident = buffer_clone_to_cstr(&tk->buffer);
+    ShellVar *var = var_state_var_get(&instance.var_state, ident);
+    free(ident);
 
     if (var == NULL) {
-      error_f("shell expression: var `%.*s` is not set.\n", (int)tk.identifier.length, tk.identifier.char_ptr);
+      error_f("shell expression: var `%.*s` is not set.\n", (int)tk->buffer.length, tk->buffer.char_ptr);
+      return NULL;
+    }
+
+    if (var->kind == SV_FUNCTION) {
+      ShellVar *return_val = eval_function_call(s, var, &tk->buffer);
+      var_release(var);
+      return return_val;
+    }
+
+    if (match(s, TK_SE_O_PAREN)) {
+      error_f("shell expression: var `%.*s` is not a function, and thus isn't callable.\n", (int)tk->buffer.length, tk->buffer.char_ptr);
+      var_release(var);
       return NULL;
     }
 
     return var;
   }
 
-  if (match(s, TK_TRUE_LIT)) {
+  if (match(s, TK_SE_TRUE_LIT)) {
     return var_create_boolean(true);
   }
 
-  if (match(s, TK_FALSE_LIT)) {
+  if (match(s, TK_SE_FALSE_LIT)) {
     return var_create_boolean(false);
   }
 
-  if (match(s, TK_NULL_LIT)) {
+  if (match(s, TK_SE_NULL_LIT)) {
     return var_create_null();
   }
 
-  if (match(s, TK_STRING_TYPE)) {
-    if (!match(s, TK_O_PAREN)) {
-      error("shell expression: expected opening `(` after `string`.\n");
-      return NULL;
-    }
-
-    ShellVar *var = eval_expr(s);
-
-    if (var == NULL) {
-      return NULL;
-    }
-
-    if (!match(s, TK_C_PAREN)) {
-      error("shell expression: expected closing `)`.\n");
-      var_release(var);
-      return NULL;
-    }
-
-    ShellVar *string = var_cast_to_string(var);
-    var_release(var);
-
-    return string;
-  }
-
-  if (match(s, TK_NUMBER_TYPE)) {
-    if (!match(s, TK_O_PAREN)) {
-      error("shell expression: expected opening `(` after `number`.\n");
-      return NULL;
-    }
-
-    ShellVar *var = eval_expr(s);
-
-    if (var == NULL) {
-      return NULL;
-    }
-
-    if (!match(s, TK_C_PAREN)) {
-      error("shell expression: expected closing `)`.\n");
-      var_release(var);
-      return NULL;
-    }
-
-    ShellVar *string = var_cast_to_number(var);
-    var_release(var);
-
-    return string;
-  }
-
-  if (match(s, TK_BOOLEAN_TYPE)) {
-    if (!match(s, TK_O_PAREN)) {
-      error("shell expression: expected opening `(` after `boolean`.\n");
-      return NULL;
-    }
-
-    ShellVar *var = eval_expr(s);
-
-    if (var == NULL) {
-      return NULL;
-    }
-
-    if (!match(s, TK_C_PAREN)) {
-      error("shell expression: expected closing `)`.\n");
-      var_release(var);
-      return NULL;
-    }
-
-    ShellVar *string = var_cast_to_boolean(var);
-    var_release(var);
-
-    return string;
-  }
-
   // unary plus
-  if (match(s, TK_ADD)) {
+  if (match(s, TK_SE_ADD)) {
     ShellVar *var = eval_term(s);
 
     if (var == NULL) {
@@ -205,7 +221,7 @@ static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
   }
 
   // unary minus
-  if (match(s, TK_SUB)) {
+  if (match(s, TK_SE_SUB)) {
     ShellVar *var = eval_term(s);
 
     if (var == NULL) {
@@ -223,7 +239,7 @@ static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
     return var;
   }
 
-  if (match(s, TK_NOT)) {
+  if (match(s, TK_SE_NOT)) {
     ShellVar *var = eval_term(s);
 
     if (var == NULL) {
@@ -241,14 +257,14 @@ static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
     return var;
   }
 
-  if (match(s, TK_O_PAREN)) {
+  if (match(s, TK_SE_O_PAREN)) {
     ShellVar *var = eval_expr(s);
 
     if (var == NULL) {
       return NULL;
     }
 
-    if (!match(s, TK_C_PAREN)) {
+    if (!match(s, TK_SE_C_PAREN)) {
       error("shell expression: expected closing `)`.\n");
       var_release(var);
       return NULL;
@@ -257,15 +273,15 @@ static ShellVar *eval_term(EvalState *s) { // NOLINT(misc-no-recursion)
     return var;
   }
 
-  error_f("shell expression: expected term but found %s.\n", TOKEN_KIND_NAMES[peek(s).kind]);
+  error_f("shell expression: expected term but found %s.\n", get_token_kind_name(peek(s)->kind));
   return NULL;
 }
 
-static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind op) {
+static ShellVar *eval_binary_expr(const ShellVar *lhs, const ShellVar *rhs, TokenKind op) {
   rash_assert(lhs != NULL && rhs != NULL, "bad arguments");
 
   switch (op) {
-    case TK_ADD:
+    case TK_SE_ADD:
       if (lhs->kind == SV_STRING) {
         // promote rhs to a string
         Buffer right_str = var_to_string(rhs);
@@ -287,50 +303,50 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
         return var_create_number(lhs->number + rhs->number);
       }
 
-      error_f("shell expression: cannot add types %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: cannot add types %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
-    case TK_SUB:
+    case TK_SE_SUB:
       if (lhs->kind == SV_NUMBER && rhs->kind == SV_NUMBER) {
         return var_create_number(lhs->number - rhs->number);
       }
 
-      error_f("shell expression: can only subtract number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only subtract number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
-    case TK_MUL:
+    case TK_SE_MUL:
       if (lhs->kind == SV_NUMBER && rhs->kind == SV_NUMBER) {
         return var_create_number(lhs->number * rhs->number);
       }
 
-      error_f("shell expression: can only multiply number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only multiply number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
-    case TK_POW:
+    case TK_SE_POW:
       if (lhs->kind == SV_NUMBER && rhs->kind == SV_NUMBER) {
         return var_create_number(pow(lhs->number, rhs->number));
       }
 
-      error_f("shell expression: can only exponentiate number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only exponentiate number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
-    case TK_DIV:
+    case TK_SE_DIV:
       if (lhs->kind == SV_NUMBER && rhs->kind == SV_NUMBER) {
         return var_create_number(lhs->number / rhs->number);
       }
 
-      error_f("shell expression: can only divide number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only divide number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
-    case TK_MOD:
+    case TK_SE_MOD:
       if (lhs->kind == SV_NUMBER && rhs->kind == SV_NUMBER) {
         return var_create_number(fmod(lhs->number, rhs->number));
       }
 
-      error_f("shell expression: can only mod number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only mod number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
-    case TK_EQ:
+    case TK_SE_EQ:
       if (lhs->kind != rhs->kind) {
         return var_create_boolean(false);
       }
@@ -348,7 +364,7 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
           unreachable();
       }
       
-    case TK_NEQ:
+    case TK_SE_NEQ:
       if (lhs->kind != rhs->kind) {
         return var_create_boolean(true);
       }
@@ -366,36 +382,36 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
           unreachable();
       }
 
-    case TK_GT:
+    case TK_SE_GT:
       if (lhs->kind == SV_NUMBER && rhs->kind == SV_NUMBER) {
         return var_create_boolean(lhs->number > rhs->number);
       }
 
-      error_f("shell expression: can only compare number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only compare number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
-    case TK_LT:
+    case TK_SE_LT:
       if (lhs->kind == SV_NUMBER && rhs->kind == SV_NUMBER) {
         return var_create_boolean(lhs->number < rhs->number);
       }
 
-      error_f("shell expression: can only compare number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only compare number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
-    case TK_GTE:
+    case TK_SE_GTE:
       if (lhs->kind == SV_NUMBER && rhs->kind == SV_NUMBER) {
         return var_create_boolean(lhs->number >= rhs->number);
       }
 
-      error_f("shell expression: can only compare number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only compare number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
 
-    case TK_LTE:
+    case TK_SE_LTE:
       if (lhs->kind == SV_NUMBER && rhs->kind == SV_NUMBER) {
         return var_create_boolean(lhs->number <= rhs->number);
       }
 
-      error_f("shell expression: can only compare number and number, not %s and %s.\n", SHELL_VAR_KIND_NAMES[lhs->kind], SHELL_VAR_KIND_NAMES[rhs->kind]);
+      error_f("shell expression: can only compare number and number, not %s and %s.\n", var_kind_to_string(lhs->kind), var_kind_to_string(rhs->kind));
       return NULL;
     default:
       unreachable();
@@ -405,44 +421,74 @@ static ShellVar *eval_part(const ShellVar *lhs, const ShellVar *rhs, TokenKind o
 static ShellVar *eval_expr_1(EvalState *s, ShellVar *lhs, OpPrec min_prec) { // NOLINT(misc-no-recursion)
   var_aquire(lhs);
 
-  TokenKind lookahead = peek(s).kind;
+  TokenKind lookahead = peek(s)->kind;
 
   while (is_binary_op(lookahead) && OP_PREC_LOOKUP[lookahead] >= min_prec) {
     TokenKind op = lookahead;
     advance(s);
 
+    ShellVar *middle = NULL;
+    if (op == TK_SE_QUESTION) {
+      middle = eval_expr(s);
+
+      if (!match(s, TK_SE_COLON)) {
+        error("shell expression: expected `:` following `?` and expression.\n");
+        var_release(lhs);
+        var_release(middle);
+        return NULL;
+      }
+    }
+
     ShellVar *rhs = eval_term(s);
 
     if (rhs == NULL) {
       var_release(lhs);
+      var_release(rhs);
       return NULL;
     }
 
-    lookahead = peek(s).kind;
+    lookahead = peek(s)->kind;
 
     while (is_binary_op(lookahead) && OP_PREC_LOOKUP[lookahead] > OP_PREC_LOOKUP[op]) {
       ShellVar *tmp = eval_expr_1(s, rhs, OP_PREC_LOOKUP[op] + 1);
       var_release(rhs);
+      rhs = tmp;
 
-      if (tmp == NULL) {
+      if (rhs == NULL) {
         var_release(lhs);
+        var_release(rhs);
+        var_release(middle);
         return NULL;
       }
 
-      rhs = tmp;
-
-      lookahead = peek(s).kind;
+      lookahead = peek(s)->kind;
     }
 
-    ShellVar *tmp = eval_part(lhs, rhs, op);
-    var_release(lhs);
+    if (middle != NULL) {
+      bool value = var_to_boolean(lhs);
+      var_release(lhs);
+
+      if (value) {
+        lhs = var_aquire(middle);
+      } else {
+        lhs = var_aquire(rhs);
+      }
+    } else {
+      ShellVar *tmp = eval_binary_expr(lhs, rhs, op);
+      var_release(lhs);
+      lhs = tmp;
+      
+      if (lhs == NULL) {
+        var_release(lhs);
+        var_release(rhs);
+        var_release(middle);
+        return NULL;
+      }
+  
+    }
+
+    var_release(middle);
     var_release(rhs);
-
-    if (tmp == NULL) {
-      return NULL;
-    }
-
-    lhs = tmp;
   }
 
   return lhs;
@@ -461,18 +507,10 @@ static ShellVar *eval_expr(EvalState *s) { // NOLINT(misc-no-recursion)
   return var;
 }
 
-ShellVar *evaluate_tokens(const TokenList *tokens) {
-  EvalState state = {.tokens = tokens, .current = 0};
-
-  ShellVar *result = eval_expr(&state);
+ShellVar *evaluate_tokens(EvalState *s) {
+  ShellVar *result = eval_expr(s);
 
   if (result == NULL) {
-    return NULL;
-  }
-
-  if (!is_at_end(&state)) {
-    error("shell expression: expected end of input.\n");
-    var_release(result);
     return NULL;
   }
 

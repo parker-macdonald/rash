@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 
 extern char **environ;
 
@@ -9,7 +9,7 @@ static const char *const ENV_HELP =
     "Usage: env\n"
     "Prints all declared environment variables.";
 
-int builtin_env(char **argv) {
+int builtin_env(char *const *argv) {
   if (argv[1] != NULL && strcmp(argv[1], "--help") == 0) {
     puts(ENV_HELP);
     return 0;

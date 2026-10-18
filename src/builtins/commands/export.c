@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 #include "lib/error.h"
 
 static const char *const EXPORT_HELP =
@@ -11,7 +11,7 @@ static const char *const EXPORT_HELP =
     "By convention, enivroment variables must start with an capital letter, \n"
     "and only contain capital letters, numbers, and underscores.";
 
-int builtin_export(char **const argv) {
+int builtin_export(char *const *argv) {
   if (argv[1] == NULL) {
     error_f("%s\n", EXPORT_HELP);
     return EXIT_FAILURE;

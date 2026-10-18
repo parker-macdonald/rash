@@ -2,15 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "builtins/builtins.h"
+#include "builtins/builtin_funcs.h"
 #include "lib/error.h"
+#include "global.h"
 #include "shell_vars/shell_vars.h"
 #include "shell_vars/util.h"
 
 static const char *const UNSETVAR_HELP = "Usage: unsetvar KEY\n"
                                          "Remove the shell variable KEY.";
 
-int builtin_unsetvar(char **argv) {
+int builtin_unsetvar(char *const *argv) {
   if (argv[1] == NULL) {
     error_f("%s\n", UNSETVAR_HELP);
     return EXIT_FAILURE;
@@ -26,7 +27,7 @@ int builtin_unsetvar(char **argv) {
     return EXIT_FAILURE;
   }
 
-  var_unset(argv[1]);
+  var_state_var_unset(&instance.var_state, argv[1]);
 
   return EXIT_SUCCESS;
 }
