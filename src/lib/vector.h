@@ -133,7 +133,7 @@ printf("%s", string.data); // hi
     (vector)._capacity = capacity;                                             \
     (vector).length = 0;                                                       \
     if (capacity != 0) {                                                       \
-      (vector).data = malloc(sizeof(*(vector).data) * capacity);               \
+      (vector).data = malloc(sizeof(*(vector).data) * capacity); /* NOLINT(bugprone-sizeof-expression) */ \
       if ((vector).data == NULL) {                                             \
         abort();                                                               \
       }                                                                        \
