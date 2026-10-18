@@ -14,13 +14,30 @@ You can type out commands and run them just as with other shells.
 
 ### Prompts
 
-Like most shells you can set a custom prompt, but in rash this is accomplished with the PS1 shell variable instead of the environment variable.
+Like most shells you can set a custom prompt, but in rash this is accomplished using the `config` builtin along with a shell expression.
 
 For example:
 
 ```bash
-setvar PS1 '\u@\h:\w\$ ' # sets prompt to user@hostname:/path/to/working/dir$
+config set interactive.prompt 'LOGIN + "<- thats me "' # sets prompt to username <- thats me
 ```
+
+There's a bunch of builtin variables you can use for different things, a few include:
+
+- `LAST_STATUS`: status of the last command to run
+- `HOSTNAME`: system hostname
+- `PWD`: current working directory
+- `PPWD`: short for pretty print working directory, this variable is equivalent to `PWD` except that `$HOME` is replaced by a tilde (~)
+
+You can view the whole list of available variables with the `var` command.
+
+A common prompt might be:
+
+``` console
+$ config set interactive.prompt 'LOGIN + "@" + HOSTNAME + ":" + PPWD + (EUID == 0 ? "#" : "$") + " "'
+```
+
+This prompt is: `user@host:/working/dir$ ` or `root@host:/working/dir# ` if the user is root.
 
 ### .rashrc file
 
@@ -28,9 +45,9 @@ If you have a `.rashrc` file in the root of your HOME folder, it will get execut
 
 For example:
 
-```bash
+```console
 $ cat ~/.rashrc
-setvar PS1 '\u@\h:\w\$ '
+config set interactive.prompt 'LOGIN + "@" + HOSTNAME + ":" + PPWD + (EUID == 0 ? "#" : "$") + " "'
 $ rash
 user@hostname:~$ 
 ```
@@ -43,7 +60,7 @@ While rash is not designed to be used for shell scripting, you still can run com
 
 For example:
 
-```bash
+```console
 $ cat example.rash
 setvar a hello
 setvar b world
@@ -63,14 +80,14 @@ When you run rash with the `-c` option, rash is run in one-shot mode. This is us
 
 For example:
 
-```bash
+```console
 $ rash -c "echo hello world!"
 hello world!
 ```
 
 You can also can use a semicolon to run multiple commands, for example:
 
-```bash
+```console
 $ rash -c "setvar a 'hello world!'; echo {a}"
 hello world!
 ```
@@ -154,7 +171,7 @@ To unset a shell variable, you use the `unsetvar` command, and you can list all 
 
 For example:
 
-```bash
+```console
 $ setvar key value
 $ setvar key2 value2
 $ var

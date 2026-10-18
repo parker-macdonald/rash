@@ -2,4 +2,4 @@
 eval $(ssh-agent)
 
 # set a prompt user@host:/working/dir$
-setvar PS1 '\u@\h:\w\$ '
+config set interactive.prompt 'LOGIN + "@" + HOSTNAME + ":" + PPWD + (EUID == 0 ? "#" : "$") + " "'
