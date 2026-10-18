@@ -632,8 +632,18 @@ static int scan_token(LexState *s) {
     return 0;
   }
 
+  // ------- whitespace -------
+
   if (match(s, ' ')) {
     end_argument_if_needed(s);
+    return 0;
+  }
+
+  // ------- comments -------
+
+  if (match_many(s, "# ")) {
+    end_argument_if_needed(s);
+    s->current = s->source->length;
     return 0;
   }
 
