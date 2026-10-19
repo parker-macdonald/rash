@@ -25,8 +25,6 @@ void interactive_reader_destroy(InteractiveReader *self) {
 }
 
 static void reader_begin(InteractiveReader *self) {
-  enable_raw_mode();
-
   if (var_eval_to_string(&instance.interactive_prompt, &self->prompt)) {
     // on error set the prompt to "$ "
     self->prompt = buffer_from_cstr("$ ");
@@ -41,6 +39,7 @@ static void reader_begin(InteractiveReader *self) {
 
   self->history_curr = self->history.length;
 
+  enable_raw_mode();
   printf("\r%.*s", (int)self->prompt.length, self->prompt.char_ptr);
   (void)fflush(stdout);
 }
