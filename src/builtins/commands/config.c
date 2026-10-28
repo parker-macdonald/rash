@@ -72,5 +72,5 @@ int builtin_config(char *const *argv) {
   }
 
   (void)fprintf(stderr, "config: unknown subcommand `%s`, try `get`, `set`, or `--help`.\n", argv[1]);
-  return EXIT_SUCCESS;
+  return EXIT_FAILURE;
 }
